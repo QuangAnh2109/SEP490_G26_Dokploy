@@ -1,4 +1,4 @@
-﻿// Global Configuration
+// Global Configuration
 const API_BASE_URL = "https://localhost:7167";
 
 // Setup global Ajax defaults (chỉ chạy khi có jQuery; trang Assign Exam không load jQuery nên bỏ qua)

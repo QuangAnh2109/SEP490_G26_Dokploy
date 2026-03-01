@@ -19,17 +19,15 @@ namespace Frontend.Controllers
             return View();
         }
 
-        // POST: /StudentExam/ExamPreview
-        [HttpPost]
+        // GET: /StudentExam/ExamPreview?examId=1
+        [HttpGet]
         public IActionResult ExamPreview(int examId)
         {
-            if (examId <= 0)
-            {
-                return RedirectToAction("Index", "Home");
-            }
+            if (examId <= 0) return RedirectToAction("Index", "Home");
 
-            ViewBag.ExamId = examId;
+            ViewBag.ExamId = examId; 
             return View();
         }
+
     }
 }

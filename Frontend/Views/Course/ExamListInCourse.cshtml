@@ -255,22 +255,18 @@
                 const status = getExamStatus(exam.openAt, exam.closeAt);
 
                 let actions = `
-                    <form action="/StudentExam/ExamPreview" method="post" class="d-inline">
-                        <input type="hidden" name="examId" value="${exam.examId}" />
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">
-                            Chi tiết
-                        </button>
-                    </form>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="/StudentExam/ExamPreview?examId=${exam.examId}">
+                        Chi tiết
+                    </a>
                 `;
 
                 if (isStudent && status === "open") {
                     actions += `
-                        <form action="/StudentExam/TakeExam" method="post" class="d-inline">
-                            <input type="hidden" name="examId" value="${exam.examId}" />
-                            <button type="submit" class="btn btn-sm btn-primary">
-                                Vào làm
-                            </button>
-                        </form>
+                        <a class="btn btn-sm btn-primary"
+                           href="/StudentExam/TakeExam/${exam.examId}">
+                            Vào làm
+                        </a>
                     `;
                 }
 

@@ -1,3 +1,4 @@
+using Backend.DTOs.StudentExam;
 using Backend.Models;
 
 namespace Backend.Repositories.Interfaces
