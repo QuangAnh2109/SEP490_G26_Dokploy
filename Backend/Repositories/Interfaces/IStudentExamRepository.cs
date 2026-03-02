@@ -14,6 +14,7 @@ namespace Backend.Repositories.Interfaces
         Task<int> GetExamSubmissionCountAsync(int studentId, int examId);
         Task<Paper?> GetPaperWithExamAsync(int paperId);
         Task<Paper?> GetRandomPaperForExamAsync(int examId);
+        Task<int?> GetPreviousPaperIdAsync(int studentId, int examId);
         
         // Security and validations
         Task<bool> CanStudentTakeExamAsync(int studentId, int examId);

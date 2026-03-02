@@ -37,6 +37,26 @@ namespace Backend.Services.Implements
 
             int seed = activeSubmission.SubmissionId;
 
+            var questions = paper.PaperQuestions.Select(pq => 
+            {
+                var dto = new QuestionDto
+                {
+                    QuestionId = pq.Question.QuestionId,
+                    ContentLatex = pq.Question.ContentLatex,
+                    QuestionType = pq.Question.QuestionType,
+                    Difficulty = pq.Question.Difficulty,
+                };
+
+                ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
+                return dto;
+            }).ToList();
+
+            if (paper.Exam.ShuffleQuestion)
+            {
+                var random = new Random(seed);
+                questions = questions.OrderBy(q => random.Next()).ToList();
+            }
+
             return new ExamPaperDto
             {
                 ExamId = paper.Exam.ExamId,
@@ -46,19 +66,7 @@ namespace Backend.Services.Implements
                 Duration = paper.Exam.Duration,
                 PaperId = paper.PaperId,
                 Code = paper.Code,
-                Questions = paper.PaperQuestions.Select(pq => 
-                {
-                    var dto = new QuestionDto
-                    {
-                        QuestionId = pq.Question.QuestionId,
-                        ContentLatex = pq.Question.ContentLatex,
-                        QuestionType = pq.Question.QuestionType,
-                        Difficulty = pq.Question.Difficulty,
-                    };
-
-                    ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
-                    return dto;
-                }).ToList()
+                Questions = questions
             };
         }
 

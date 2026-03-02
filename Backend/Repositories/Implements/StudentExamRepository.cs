@@ -111,6 +111,15 @@ namespace Backend.Repositories.Implements
             return await _context.Papers.FindAsync(selectedPaperId);
         }
 
+        public async Task<int?> GetPreviousPaperIdAsync(int studentId, int examId)
+        {
+            return await _context.Submissions
+                .Where(s => s.StudentId == studentId && s.Paper.ExamId == examId)
+                .OrderByDescending(s => s.CreatedAtUtc)
+                .Select(s => (int?)s.PaperId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<bool> CanStudentTakeExamAsync(int studentId, int examId)
         {
             var exam = await _context.Exams.FindAsync(examId);

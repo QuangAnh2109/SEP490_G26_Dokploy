@@ -9,6 +9,9 @@ $(document).ready(function () {
         return;
     }
 
+    // Thiết lập MathLive Virtual Keyboard Container
+    setupCustomMathKeyboard();
+
     // 1. Khởi tạo bài làm (Start Submission)
     // Hệ thống sẽ tự bốc thăm hoặc ưu tiên bài đanh làm dở theo cấu hình backend
     apiClient.post('/api/student/exams/submission/start', { ExamId: parseInt(examId) })
@@ -65,7 +68,46 @@ $(document).ready(function () {
         });
 });
 
+function setupCustomMathKeyboard() {
+    // Thêm container cho bàn phím ảo ngay dưới cột bên phải
+    const rightCol = $('.col-xl-4');
+    if (rightCol.length > 0 && $('#custom-keyboard-wrapper').length === 0) {
+        rightCol.append(`
+            <div class="mt-4 p-3 border rounded bg-white shadow-sm" id="custom-keyboard-wrapper" style="min-height: 250px;">
+                <h5 class="text-primary fw-bold mb-3" style="font-size: 1rem;"><i class="bi bi-keyboard"></i> Bàn phím công thức & Hướng dẫn</h5>
+                <div class="alert alert-info py-2" style="font-size: 0.85rem; line-height: 1.5;">
+                    <ul class="mb-0 ps-3">
+                        <li>Sử dụng bàn phím bên dưới để nhập công thức toán học, phân số, số mũ,...</li>
+                        <li>Đối với các câu hỏi <strong>chỉ điền số hoặc chữ đơn giản</strong>, bạn có thể gõ trực tiếp từ bàn phím vật lý.</li>
+                        <li>Chỉ nhập các giá trị hợp lệ với yêu cầu của từng bài toán.</li>
+                    </ul>
+                </div>
+                <div id="math-keyboard-container" style="width: 100%; min-height: 200px; position: relative;"></div>
+            </div>
+        `);
 
+        // Thêm CSS để ẩn icon bàn phím mặc định của MathLive
+        if ($('#mathlive-custom-style').length === 0) {
+            $('<style id="mathlive-custom-style">').text(`
+                math-field::part(virtual-keyboard-toggle) {
+                    display: none !important;
+                }
+            `).appendTo('head');
+        }
+
+        // Cấu hình MathLive sử dụng container này
+        // Cần đợi một chút để đảm bảo mathlive object được nạp
+        setTimeout(() => {
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.container = document.getElementById('math-keyboard-container');
+
+                // Mặc định luôn hiện bàn phím khi có thẻ math-field được focus, 
+                // vì giờ khung chứa đã cố định bên phải
+                window.mathVirtualKeyboard.show();
+            }
+        }, 500);
+    }
+}
 
 // Hàm Helper: Khắc phục lỗi MathLive không tự xuống dòng và dính ký tự bằng cách tách riêng Text (html thường) và Math (MathLive)
 function renderMixedContent(str, isFillInTheBlank = false, questionId = null) {
@@ -100,7 +142,7 @@ function renderMixedContent(str, isFillInTheBlank = false, questionId = null) {
                 let mathContent = segment;
                 mathContent = mathContent.replace(blankRegex, function () { return `\\placeholder[p${pCount++}]{}`; });
                 mathContent = mathContent.replace(generalBlankRegex, function () { return `\\placeholder[p${pCount++}]{}`; });
-                html += `<math-field class="math-input answer-field d-inline-block align-middle mx-1" style="min-width: 60px; padding: 0.2rem; --placeholder-background-color: #ffffff; --placeholder-color: #333333; background: transparent; border: none; border-bottom: 2px dashed #007bff; border-radius: 0;" data-qid="${questionId}" data-is-fill="true" oninput="autoSaveFillInTheBlank(${questionId}, this)">${mathContent}</math-field>`;
+                html += `<math-field class="math-input answer-field d-inline-block align-middle mx-1" style="min-width: 60px; padding: 0.2rem; --placeholder-background-color: #ffffff; --placeholder-color: #333333; background: transparent; border: none; border-bottom: 2px dashed #007bff; border-radius: 0;" data-qid="${questionId}" data-is-fill="true" onfocus="showKeyboardOverlay()" oninput="autoSaveFillInTheBlank(${questionId}, this)">${mathContent}</math-field>`;
             } else {
                 // Biểu thức toán học thuần túy (không chứa placeholder điền khuyết)
                 html += `<math-field read-only class="math-display d-inline-block align-middle mx-0 px-1" style="border:none !important; background:transparent !important; min-height:auto;">${segment}</math-field>`;
@@ -115,9 +157,9 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
     $('#examTitle').text(paper.title);
     $('#examSubtitle').text(paper.description || 'Sinh viên đang làm bài tự động lưu');
 
-    // Display Exam ID instead of Paper Code
-    if (examId) {
-        $('#paperCodeDisplay').text(examId);
+    // Display Paper Code instead of Exam ID
+    if (paper && paper.code) {
+        $('#paperCodeDisplay').text(paper.code);
     } else {
         $('#paperCodeDisplay').text('N/A');
     }
@@ -189,7 +231,7 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
                         <h6 class="fw-bold text-primary mb-2">Bước ${s}:</h6>
                         <!-- Mốc để học sinh điền kết quả vào -->
                         <label class="form-label mt-2">Trả lời bước ${s}:</label>
-                        <math-field class="math-input answer-field mb-2" id="input-${q.questionId}-${s}" data-qid="${q.questionId}" data-step="${s}" oninput="autoSaveAnswer(${q.questionId}, this.value, '${s}')"></math-field>
+                        <math-field class="math-input answer-field mb-2" id="input-${q.questionId}-${s}" data-qid="${q.questionId}" data-step="${s}" onfocus="showKeyboardOverlay()" oninput="autoSaveAnswer(${q.questionId}, this.value, '${s}')"></math-field>
                 `;
                 if (hint) {
                     stepHtml += `
@@ -240,7 +282,7 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
             }
         } else {
             answerAreaHtml = `
-                <math-field class="math-input answer-field" data-qid="${q.questionId}" oninput="autoSaveAnswer(${q.questionId}, this.value)"></math-field>
+                <math-field class="math-input answer-field w-100 p-2 border rounded bg-light text-dark" style="min-height: 50px; font-size: 1.25rem;" data-qid="${q.questionId}" onfocus="showKeyboardOverlay()" oninput="autoSaveAnswer(${q.questionId}, this.value)"></math-field>
             `;
         }
 
@@ -250,6 +292,13 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
         else if (q.questionType === 'ShortAnswer' || q.questionType === 'Trả lời ngắn') typeLabel = '(Trả lời ngắn)';
         else if (q.questionType === 'FillInBlank') typeLabel = '(Điền khuyết - Điền trực tiếp)';
         else if (q.questionType) typeLabel = `(${q.questionType})`;
+
+        // Support for MathLive overlay
+        window.showKeyboardOverlay = function () {
+            if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.container) {
+                window.mathVirtualKeyboard.show();
+            }
+        };
 
         // Build Question HTML (Pagination style)
         const displayStyle = qIndex === 1 ? 'block' : 'none';
