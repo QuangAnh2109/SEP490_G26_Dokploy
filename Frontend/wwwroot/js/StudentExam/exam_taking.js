@@ -347,8 +347,8 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
     // Fill saved answers
     if (savedAnswers && savedAnswers.length > 0) {
         savedAnswers.forEach(ans => {
-            const rowIdx = ans.questionIndex;
-            const block = $(`#question-index-${rowIdx}`);
+            const qId = ans.questionId;
+            const block = $(`.question-block[data-question-id='${qId}']`);
             if (block.length > 0) {
                 const inputs = block.find('.answer-field');
                 let isAnswered = false;
@@ -444,7 +444,7 @@ function savePendingBatch() {
     const submissionId = $('#SubmissionId').val();
     const bulkData = questionIndicesToSave.map(qIndex => {
         return {
-            QuestionIndex: parseInt(qIndex),
+            QuestionIndex: pendingSaves[qIndex].questionId, // Sending questionId instead of visual index
             ResponseText: pendingSaves[qIndex].responseText
         };
     });

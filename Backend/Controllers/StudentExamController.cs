@@ -100,7 +100,7 @@ namespace Backend.Controllers
 
             var savedAnswers = submission.StudentAnswers?.Select(a => new 
             {
-                questionIndex = a.QuestionIndex,
+                questionId = a.QuestionIndex,
                 responseText = a.ResponseText ?? string.Empty
             }).Cast<object>().ToList() ?? new List<object>();
 
