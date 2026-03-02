@@ -2,26 +2,31 @@ let examSignalRConnection = null;
 
 $(document).ready(function () {
     const examId = $('#ExamId').val();
-    const paperId = $('#PaperId').val();
 
-    if (!examId || !paperId) {
+    if (!examId) {
         Swal.fire('Lỗi', 'Thiếu định danh đề thi!', 'error');
         return;
     }
 
     // 1. Khởi tạo bài làm (Start Submission)
-    // Hệ thống sẽ tự bốc thăm PaperId nếu không gửi lên
-    apiClient.post('/api/student/exams/submission/start', { ExamId: parseInt(examId), PaperId: parseInt(paperId) })
+    // Hệ thống sẽ tự bốc thăm hoặc ưu tiên bài đanh làm dở theo cấu hình backend
+    apiClient.post('/api/student/exams/submission/start', { ExamId: parseInt(examId) })
         .then(function (res) {
             $('#SubmissionId').val(res.submissionId);
-            const assignedPaperId = res.paperId || paperId;
-            loadExamPaper(examId, assignedPaperId, res.remainingSeconds, res.savedAnswers);
+
+            // Render UI directy using the paper object returned from the start endpoint
+            if (res.paper) {
+                renderExamUI(res.paper, res.remainingSeconds, res.savedAnswers);
+            } else {
+                Swal.fire('Không thể tìm thấy', 'Không thể tải hệ thống đề thi.', 'error');
+                return;
+            }
 
             // 2. Khởi tạo kết nối SignalR để giám sát
             initSignalRConnection(examId);
 
             // 3. Khởi tạo Anti-Cheat
-            initAntiCheat();
+            // initAntiCheat(); // Tạm tắt để debug giao diện
         })
         .catch(function (error) {
             console.error("Start submission error:", error);
@@ -29,38 +34,7 @@ $(document).ready(function () {
         });
 });
 
-function loadExamPaper(examId, paperId, remainingSeconds, savedAnswers) {
-    apiClient.get(`/api/student/exams/${examId}/paper/${paperId}`)
-        .then(function (paper) {
-            renderExamUI(paper, remainingSeconds, savedAnswers);
-        })
-        .catch(function (error) {
-            console.error("Load paper error:", error);
-            Swal.fire('Không thể tìm thấy', 'Không thể tải hệ thống đề thi.', 'error');
-        });
-}
 
-// Simple Seeded PRNG
-function mulberry32(a) {
-    return function () {
-        var t = a += 0x6D2B79F5;
-        t = Math.imul(t ^ t >>> 15, t | 1);
-        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-        return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
-}
-
-// Helper function to shuffle an array consistently based on a seed
-function shuffleArray(array, seed) {
-    const randomFunc = mulberry32(seed);
-    let currentIndex = array.length, randomIndex;
-    while (currentIndex !== 0) {
-        randomIndex = Math.floor(randomFunc() * currentIndex);
-        currentIndex--;
-        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-    }
-    return array;
-}
 
 // Hàm Helper: Khắc phục lỗi MathLive không tự xuống dòng và dính ký tự bằng cách tách riêng Text (html thường) và Math (MathLive)
 function renderMixedContent(str, isFillInTheBlank = false, questionId = null) {
@@ -122,11 +96,7 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
     container.empty();
     navMap.empty();
 
-    // 1. Lấy ID bài làm hiện tại làm Hạt giống (Seed) để trộn đề
-    // Cách này giúp 10 sinh viên có 10 thứ tự khác nhau, nhưng 1 sinh viên reload lại trang vẫn giữ nguyên thứ tự cũ
-    const currentSubmissionId = parseInt($('#SubmissionId').val()) || paper.paperId;
     let shuffledQuestions = [...paper.questions];
-    shuffleArray(shuffledQuestions, currentSubmissionId);
 
     shuffledQuestions.forEach((q, index) => {
         const qIndex = index + 1;
@@ -137,32 +107,10 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
 
         let answerAreaHtml = '';
         let displayContent = q.contentLatex || '';
-        let optA = 'A', optB = 'B', optC = 'C', optD = 'D';
 
-        // Parse any JSON attached to the question
-        let multipleChoiceData = null;
-        let stepByStepData = null;
         let shortAnswerData = null;
 
-        if (q.questionType === 'MultipleChoice') {
-            try {
-                if (q.answer) {
-                    multipleChoiceData = JSON.parse(q.answer); // ["...", "..."] or {"opts": [...], "correct": "..."} 
-                }
-            } catch (e) {
-                console.error("Lỗi parse MultipleChoice JSON:", e);
-            }
-        }
-        else if (q.questionType === 'StepByStep') {
-            try {
-                if (q.answer) {
-                    stepByStepData = JSON.parse(q.answer); // [{"s": 1, "a": "...", "h": "..."}]
-                }
-            } catch (e) {
-                console.error("Lỗi parse StepByStep JSON:", e);
-            }
-        }
-        // Đếm lại xem rốt cuộc có bao nhiêu chỗ trống dựa vào nội dung hoặc array
+        // The Backend already parsed and shuffled these into q.options and q.steps
         let isFillInTheBlank = false;
 
         // Chuẩn hóa format nội dung hiển thị sang dạng MathLive giữ khoảng trắng chữ
@@ -199,19 +147,11 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
         let finalDisplayContent = renderMixedContent(originalContent, isFillInTheBlank, q.questionId);
 
         // Handle Step-by-Step format
-        if (stepByStepData && Array.isArray(stepByStepData)) {
-            // 2. Không tráo ngẫu nhiên các bước Step-by-Step
-            const shuffledSteps = [...stepByStepData];
-            // shuffleArray(shuffledSteps); // Đã tắt để giữ đúng thứ tự các bước
-
+        if (q.steps && Array.isArray(q.steps) && q.steps.length > 0) {
             let stepHtml = '';
-            shuffledSteps.forEach((stepObj, idx) => {
-                let s = stepObj.s || stepObj.step || stepObj.Step;
-                let hint = stepObj.h || stepObj.hint || stepObj.Hint;
-                let correctAnswer = stepObj.a || stepObj.answer || stepObj.Answer || '';
-
-                // Escape quotes for inserting into HTML attribute
-                let escapedAnswer = correctAnswer.toString().replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            q.steps.forEach((stepObj, idx) => {
+                let s = stepObj.step;
+                let hint = stepObj.hint;
 
                 stepHtml += `
                     <div class="step-card mb-3 p-3 border rounded bg-light" id="step-${q.questionId}-${s}" style="box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);">
@@ -249,55 +189,11 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
         }
         // Handle MultipleChoice format
         else if (q.questionType === 'MultipleChoice') {
-
-            let mcOpts = [];
-
-            if (multipleChoiceData) {
-                let optionsArray = null;
-                if (Array.isArray(multipleChoiceData)) {
-                    optionsArray = multipleChoiceData;
-                } else if (multipleChoiceData.opts && Array.isArray(multipleChoiceData.opts)) {
-                    optionsArray = multipleChoiceData.opts;
-                }
-
-                if (optionsArray && optionsArray.length >= 4) {
-                    mcOpts = [
-                        { id: 'A', text: optionsArray[0] || '' },
-                        { id: 'B', text: optionsArray[1] || '' },
-                        { id: 'C', text: optionsArray[2] || '' },
-                        { id: 'D', text: optionsArray[3] || '' }
-                    ];
-                }
-            }
-
-            if (mcOpts.length === 0) {
-                // Fallback Regex
-                const rex = /(.*?)(?:A\.|A\))(.*?)(?:B\.|B\))(.*?)(?:C\.|C\))(.*?)(?:D\.|D\))(.*)/is;
-                const match = originalContent.match(rex);
-
-                if (match && match.length === 6) {
-                    originalContent = match[1].trim();
-                    // finalDisplayContent được update sau theo originalContent 
-                    finalDisplayContent = renderMixedContent(originalContent);
-                    mcOpts = [
-                        { id: 'A', text: match[2].trim() },
-                        { id: 'B', text: match[3].trim() },
-                        { id: 'C', text: match[4].trim() },
-                        { id: 'D', text: match[5].trim() }
-                    ];
-                }
-            }
-
-            // 3. Shuffle Multiple Choice Options if array is populated
-            if (mcOpts.length > 0) {
-                shuffleArray(mcOpts);
-
-                // Build answerAreaHtml using shuffled options
-                const letters = ['A', 'B', 'C', 'D'];
-                mcOpts.forEach((opt, idx) => {
-                    const displayLetter = letters[idx];
-                    // IMPORTANT: The value attribute is still opt.id (A,B,C,D) to map back to the real correct answer in DB.
-                    // The student sees A, B, C, D visually mapped to the new shuffled text.
+            if (q.options && q.options.length > 0) {
+                // IMPORTANT: q.options is ALREADY parsed, cleaned of answers, and cleanly shuffled by the C# Backend
+                q.options.forEach((opt, idx) => {
+                    const displayLetter = ['A', 'B', 'C', 'D', 'E', 'F'][idx] || '?';
+                    // opt.id is the real letter mapping safely managed by the server
                     answerAreaHtml += `
                         <div class="form-check mb-2 d-flex align-items-center">
                             <input class="form-check-input answer-field me-2" type="radio" name="q-${q.questionId}" id="q${q.questionId}${displayLetter}" value="${opt.id}" data-qid="${q.questionId}" onchange="autoSaveAnswer(${q.questionId}, this.value)">
@@ -309,7 +205,7 @@ function renderExamUI(paper, remainingSeconds, savedAnswers) {
                     `;
                 });
             } else {
-                answerAreaHtml = `Lỗi hiển thị đáp án: không tìm thấy JSON hoặc Text không đúng chuẩn.`;
+                answerAreaHtml = `Lỗi hiển thị đáp án: không tìm thấy nội dung Options từ máy chủ.`;
             }
         } else {
             answerAreaHtml = `

@@ -27,6 +27,10 @@ namespace Backend.Services.Implements
             var paper = await _studentExamRepository.GetPaperWithQuestionsAsync(examId, paperId);
             if (paper == null || paper.Exam == null) return null;
 
+            // Get active submission to use its ID as a random seed
+            var activeSubmission = await _studentExamRepository.GetAnyActiveSubmissionAsync(studentId);
+            int seed = activeSubmission?.SubmissionId ?? paper.PaperId;
+
             return new ExamPaperDto
             {
                 ExamId = paper.Exam.ExamId,
@@ -36,15 +40,115 @@ namespace Backend.Services.Implements
                 Duration = paper.Exam.Duration,
                 PaperId = paper.PaperId,
                 Code = paper.Code,
-                Questions = paper.PaperQuestions.Select(pq => new QuestionDto
+                Questions = paper.PaperQuestions.Select(pq => 
                 {
-                    QuestionId = pq.Question.QuestionId,
-                    ContentLatex = pq.Question.ContentLatex,
-                    QuestionType = pq.Question.QuestionType,
-                    Difficulty = pq.Question.Difficulty,
-                    Answer = SanitizeAnswer(pq.Question.Answer, pq.Question.QuestionType)
+                    var dto = new QuestionDto
+                    {
+                        QuestionId = pq.Question.QuestionId,
+                        ContentLatex = pq.Question.ContentLatex,
+                        QuestionType = pq.Question.QuestionType,
+                        Difficulty = pq.Question.Difficulty,
+                    };
+
+                    ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
+                    return dto;
                 }).ToList()
             };
+        }
+
+        private void ProcessQuestionData(QuestionDto dto, string? rawAnswer, string contentLatex, string questionType, int seed)
+        {
+            if (string.IsNullOrWhiteSpace(rawAnswer)) return;
+
+            try
+            {
+                if (questionType == "MultipleChoice")
+                {
+                    List<string> optionsArray = new List<string>();
+                    var node = JsonNode.Parse(rawAnswer);
+
+                    if (node is JsonArray jsonArray)
+                    {
+                        foreach (var item in jsonArray) optionsArray.Add(item?.ToString() ?? "");
+                    }
+                    else if (node is JsonObject jsonObj && jsonObj.ContainsKey("opts") && jsonObj["opts"] is JsonArray optsArray)
+                    {
+                        foreach (var item in optsArray) optionsArray.Add(item?.ToString() ?? "");
+                    }
+
+                    // Fallback regex if JSON is empty but format is A. B. C. D.
+                    if (optionsArray.Count == 0 && !string.IsNullOrWhiteSpace(contentLatex))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(contentLatex, @"(.*?)(?:A\.|A\))(.*?)(?:B\.|B\))(.*?)(?:C\.|C\))(.*?)(?:D\.|D\))(.*)", System.Text.RegularExpressions.RegexOptions.Singleline);
+                        if (match.Success && match.Groups.Count == 6)
+                        {
+                            dto.ContentLatex = match.Groups[1].Value.Trim();
+                            optionsArray.Add(match.Groups[2].Value.Trim());
+                            optionsArray.Add(match.Groups[3].Value.Trim());
+                            optionsArray.Add(match.Groups[4].Value.Trim());
+                            optionsArray.Add(match.Groups[5].Value.Trim());
+                        }
+                    }
+
+                    if (optionsArray.Count > 0)
+                    {
+                        // Shuffle options using the seed
+                        var random = new Random(seed + dto.QuestionId);
+                        var shuffledIndices = Enumerable.Range(0, optionsArray.Count).OrderBy(x => random.Next()).ToList();
+                        
+                        var letters = new[] { "A", "B", "C", "D", "E", "F" };
+                        dto.Options = new List<QuestionOptionDto>();
+                        
+                        for (int i = 0; i < shuffledIndices.Count && i < letters.Length; i++)
+                        {
+                            int originalIndex = shuffledIndices[i];
+                            dto.Options.Add(new QuestionOptionDto 
+                            { 
+                                Id = letters[originalIndex], // The real ID to map back to correct answer
+                                Text = optionsArray[originalIndex] 
+                            });
+                        }
+                    }
+                }
+                else if (questionType == "StepByStep")
+                {
+                    var node = JsonNode.Parse(rawAnswer);
+                    if (node is JsonArray jsonArray)
+                    {
+                        dto.Steps = new List<QuestionStepDto>();
+                        foreach (var item in jsonArray)
+                        {
+                            if (item is JsonObject stepObj)
+                            {
+                                int s = (int?)stepObj["s"] ?? (int?)stepObj["step"] ?? (int?)stepObj["Step"] ?? 0;
+                                string? h = (string?)stepObj["h"] ?? (string?)stepObj["hint"] ?? (string?)stepObj["Hint"];
+                                
+                                if (s > 0)
+                                {
+                                    dto.Steps.Add(new QuestionStepDto { Step = s, Hint = h });
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (questionType == "FillInBlank")
+                {
+                    var node = JsonNode.Parse(rawAnswer);
+                    if (node is JsonArray jsonArray)
+                    {
+                        var dummyArray = new JsonArray();
+                        foreach (var _ in jsonArray)
+                        {
+                            dummyArray.Add("");
+                        }
+                        dto.Answer = dummyArray.ToJsonString();
+                    }
+                }
+            }
+            catch
+            {
+                // If parsing fails, do nothing. Dto will just have empty options/steps.
+            }
         }
 
         private string SanitizeAnswer(string? answer, string? questionType)
@@ -101,6 +205,20 @@ namespace Backend.Services.Implements
                 throw new UnauthorizedAccessException("Bạn không thuộc lớp được chỉ định để tham gia bài thi này.");
             }
 
+            // Check if student already has ANY active submission
+            var active = await _studentExamRepository.GetAnyActiveSubmissionAsync(studentId);
+            if (active != null)
+            {
+                if (active.Paper != null && active.Paper.ExamId == request.ExamId)
+                {
+                    return active; // Return existing submission to continue for THIS exam
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Bạn đang có bài thi '{active.Paper?.Exam?.Title ?? "khác"}' chưa nộp. Vui lòng nộp bài trước khi bắt đầu bài thi mới.");
+                }
+            }
+
             // If PaperId is not provided, pick a random one for this exam
             int assignedPaperId;
             if (request.PaperId.HasValue && request.PaperId.Value > 0)
@@ -115,13 +233,6 @@ namespace Backend.Services.Implements
                     throw new InvalidOperationException("No papers found for this exam.");
                 }
                 assignedPaperId = randomPaper.PaperId;
-            }
-
-            // Check if already active
-            var active = await _studentExamRepository.GetActiveSubmissionAsync(studentId, assignedPaperId);
-            if (active != null)
-            {
-                return active; // Return existing submission to continue
             }
 
             // Check if student has reached MaxAttempts for this exam

@@ -4,6 +4,7 @@ namespace Frontend.Controllers
 {
     public class CourseController : Controller
     {
+        [HttpGet]
         public IActionResult ExamListInCourse(int id)
         {
             ViewBag.ClassId = id;

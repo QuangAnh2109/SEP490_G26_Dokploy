@@ -78,10 +78,13 @@ namespace Backend.Controllers
                 responseText = a.ResponseText ?? string.Empty
             }).Cast<object>().ToList() ?? new List<object>();
 
+            var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId, submission.PaperId);
+
             return Ok(new 
             { 
                 submissionId = submission.SubmissionId, 
                 paperId = submission.PaperId, 
+                paper = paperDto,
                 status = "Started",
                 remainingSeconds = remainingSeconds,
                 savedAnswers = savedAnswers

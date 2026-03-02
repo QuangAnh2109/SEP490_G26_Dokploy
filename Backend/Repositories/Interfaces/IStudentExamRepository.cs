@@ -7,7 +7,7 @@ namespace Backend.Repositories.Interfaces
     {
         Task<Paper?> GetPaperWithQuestionsAsync(int examId, int paperId);
         Task<Submission> CreateSubmissionAsync(Submission submission);
-        Task<Submission?> GetActiveSubmissionAsync(int studentId, int paperId);
+        Task<Submission?> GetAnyActiveSubmissionAsync(int studentId);
         Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex);
         Task AddOrUpdateBulkStudentAnswersAsync(IEnumerable<StudentAnswer> answers);
         Task CompleteSubmissionAsync(int submissionId);

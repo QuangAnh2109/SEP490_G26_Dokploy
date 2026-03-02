@@ -29,14 +29,14 @@ namespace Backend.Repositories.Implements
             return submission;
         }
 
-        public async Task<Submission?> GetActiveSubmissionAsync(int studentId, int paperId)
+        public async Task<Submission?> GetAnyActiveSubmissionAsync(int studentId)
         {
             // Status 1 = Active / In Progress
             return await _context.Submissions
                 .Include(s => s.StudentAnswers)
                 .Include(s => s.Paper)
                     .ThenInclude(p => p.Exam)
-                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.PaperId == paperId && s.Status == 1);
+                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
         }
 
         public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex)
