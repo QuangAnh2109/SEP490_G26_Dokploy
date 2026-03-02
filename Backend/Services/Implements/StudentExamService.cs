@@ -15,7 +15,7 @@ namespace Backend.Services.Implements
             _studentExamRepository = studentExamRepository;
         }
 
-        public async Task<ExamPaperDto?> GetExamPaperAsync(int studentId, int examId, int paperId)
+        public async Task<ExamPaperDto?> GetExamPaperAsync(int studentId, int examId)
         {
             // Verify that the student is actually assigned to the class of the exam
             var canTake = await _studentExamRepository.CanStudentTakeExamAsync(studentId, examId);
@@ -24,12 +24,18 @@ namespace Backend.Services.Implements
                 throw new UnauthorizedAccessException("Bạn không thuộc lớp được chỉ định để tham gia bài thi này.");
             }
 
+            // Get active submission to find assigned paper
+            var activeSubmission = await _studentExamRepository.GetAnyActiveSubmissionAsync(studentId);
+            if (activeSubmission == null || activeSubmission.Paper == null || activeSubmission.Paper.ExamId != examId) 
+            {
+                throw new InvalidOperationException("Bạn chưa bắt đầu bài thi này hoặc bài thi đã kết thúc.");
+            }
+
+            int paperId = activeSubmission.PaperId;
             var paper = await _studentExamRepository.GetPaperWithQuestionsAsync(examId, paperId);
             if (paper == null || paper.Exam == null) return null;
 
-            // Get active submission to use its ID as a random seed
-            var activeSubmission = await _studentExamRepository.GetAnyActiveSubmissionAsync(studentId);
-            int seed = activeSubmission?.SubmissionId ?? paper.PaperId;
+            int seed = activeSubmission.SubmissionId;
 
             return new ExamPaperDto
             {
@@ -219,21 +225,14 @@ namespace Backend.Services.Implements
                 }
             }
 
-            // If PaperId is not provided, pick a random one for this exam
+            // Pick a random paper for this exam
             int assignedPaperId;
-            if (request.PaperId.HasValue && request.PaperId.Value > 0)
+            var randomPaper = await _studentExamRepository.GetRandomPaperForExamAsync(request.ExamId);
+            if (randomPaper == null)
             {
-                assignedPaperId = request.PaperId.Value;
+                throw new InvalidOperationException("No papers found for this exam.");
             }
-            else
-            {
-                var randomPaper = await _studentExamRepository.GetRandomPaperForExamAsync(request.ExamId);
-                if (randomPaper == null)
-                {
-                    throw new InvalidOperationException("No papers found for this exam.");
-                }
-                assignedPaperId = randomPaper.PaperId;
-            }
+            assignedPaperId = randomPaper.PaperId;
 
             // Check if student has reached MaxAttempts for this exam
             var paper = await _studentExamRepository.GetPaperWithExamAsync(assignedPaperId);

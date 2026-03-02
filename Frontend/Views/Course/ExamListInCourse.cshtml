@@ -13,15 +13,35 @@
 
 <body>
 
-    <main class="container py-4">
+    <div class="d-flex" style="min-height: 100vh;">
+        <!-- Sidebar -->
+        <aside class="bg-light border-end" style="width: 250px;">
+            <div class="p-3 border-bottom">
+                <h5 class="mb-0">Quản lý lớp học</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-list me-2"></i> Danh sách đề
+                </a>
+                <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users me-2"></i> Danh sách học sinh
+                </a>
+                <a href="/Course/Settings/@classId" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cog me-2"></i> Cài đặt
+                </a>
+            </div>
+        </aside>
 
-        <section class="mb-4">
-            <h2>Danh sách đề trong lớp</h2>
-        </section>
+        <!-- Main Content -->
+        <main class="flex-grow-1 p-4">
 
-        <!-- Filters -->
-        <section class="card p-3 mb-4">
-            <div class="row g-2">
+            <section class="mb-4">
+                <h2>Danh sách đề trong lớp</h2>
+            </section>
+
+            <!-- Filters -->
+            <section class="card p-3 mb-4">
+                <div class="row g-2">
 
                 <!-- Chapter -->
                 <div class="col-md-3">
@@ -73,7 +93,8 @@
             </div>
         </section>
 
-    </main>
+        </main>
+    </div>
 
     <script>
         const classId = @classId;
@@ -255,16 +276,14 @@
                 const status = getExamStatus(exam.openAt, exam.closeAt);
 
                 let actions = `
-                    <a class="btn btn-sm btn-outline-secondary"
-                       href="/StudentExam/ExamPreview?examId=${exam.examId}">
+                    <a class="btn btn-sm btn-outline-secondary d-inline" href="/StudentExam/ExamPreview?examId=${exam.examId}">
                         Chi tiết
                     </a>
                 `;
 
                 if (isStudent && status === "open") {
                     actions += `
-                        <a class="btn btn-sm btn-primary"
-                           href="/StudentExam/TakeExam/${exam.examId}">
+                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam?examId=${exam.examId}">
                             Vào làm
                         </a>
                     `;

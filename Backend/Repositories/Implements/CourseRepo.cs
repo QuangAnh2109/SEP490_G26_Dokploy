@@ -28,8 +28,10 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     // Use the Subject navigation for subject name
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
                     InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
                     // Map Semester from DB
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
@@ -47,8 +49,10 @@ namespace Backend.Repositories.Implements
                     ClassId = c.ClassId,
                     ClassName = c.Name,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
                     InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
@@ -67,7 +71,11 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     SubjectId = c.SubjectId,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
+                    Semester = c.Semester ?? string.Empty,
                     Chapters = c.Subject.Chapters
                         .Select(ch => new ChapterDTO
                         {
@@ -128,10 +136,10 @@ namespace Backend.Repositories.Implements
                 .ToListAsync();
         }
 
-        public async Task<string?> GetDuplicateClassErrorAsync(string className, string semester, int subjectId)
+        public async Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId)
         {
             var existingClasses = await _context.Classes
-                .Where(c => c.Name == className)
+                .Where(c => c.TeacherId == teacherId && c.Name == className)
                 .ToListAsync();
 
             foreach (var c in existingClasses)
@@ -154,7 +162,7 @@ namespace Backend.Repositories.Implements
             var random = new Random();
             var code = new string(Enumerable.Repeat(chars, 6)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
-            return $"INV-{code}";
+            return code;
         }
 
         public async Task<CourseDTO> CreateCourseAsync(Class newClass)
@@ -164,7 +172,7 @@ namespace Backend.Repositories.Implements
             while (!isUnique)
             {
                 code = GenerateInvitationCode();
-                isUnique = !await _context.Classes.AnyAsync(c => c.InvitationCode == code);
+                isUnique = !await _context.Classes.AnyAsync(c => c.InvitationCode.ToLower() == code.ToLower());
             }
 
             newClass.InvitationCode = code;
@@ -192,8 +200,9 @@ namespace Backend.Repositories.Implements
 
         public async Task<Class?> GetClassByInviteCodeAsync(string inviteCode)
         {
+            var lowerInviteCode = inviteCode?.ToLower();
             return await _context.Classes
-                .FirstOrDefaultAsync(c => c.InvitationCode == inviteCode && c.Status == 1 && c.InvitationCodeStatus == 1);
+                .FirstOrDefaultAsync(c => c.InvitationCode.ToLower() == lowerInviteCode && c.Status == 1 && c.InvitationCodeStatus == 1);
         }
 
         public async Task<bool> IsUserInClassAsync(int classId, int userId)
@@ -204,20 +213,40 @@ namespace Backend.Repositories.Implements
 
         public async Task JoinClassAsync(int classId, int userId)
         {
-            // Avoid duplicate insertions safely
-            var exists = await _context.ClassMembers.AnyAsync(cm => cm.ClassId == classId && cm.StudentId == userId);
-            if (!exists)
+            var membership = new ClassMember
             {
-                var membership = new ClassMember
+                ClassId = classId,
+                StudentId = userId,
+                MemberStatus = 1 // Default active status
+            };
+            _context.ClassMembers.Add(membership);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
+        {
+            return await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId)
+                .Select(cm => new StudentInClassDTO
                 {
-                    ClassId = classId,
-                    StudentId = userId,
-                    MemberStatus = 1 // Active status based on standard patterns
-                };
-                
-                _context.ClassMembers.Add(membership);
-                await _context.SaveChangesAsync();
-            }
+                    StudentId = cm.StudentId,
+                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    Email = cm.Student != null ? cm.Student.Email : string.Empty,
+                    JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this
+                })
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
+        {
+            var course = await _context.Classes.FirstOrDefaultAsync(c => c.ClassId == classId);
+            if (course == null) return false;
+
+            course.Name = newName;
+            course.InvitationCodeStatus = invitationStatus;
+            
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

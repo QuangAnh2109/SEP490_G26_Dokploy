@@ -136,6 +136,36 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpGet("{id}/students")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetStudentsInClass(int id)
+        {
+            var students = await _service.GetStudentsInClassAsync(id);
+            return Ok(students);
+        }
+
+        [HttpGet("{id}/settings")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetClassSettings(int id)
+        {
+            var course = await _service.GetByIdAsync(id);
+            if (course == null) return NotFound();
+            return Ok(course);
+        }
+
+        [HttpPut("{id}/settings")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ClassName))
+                return BadRequest("Tên lớp không được để trống.");
+
+            var success = await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
+            if (!success) return NotFound("Không tìm thấy lớp học.");
+
+            return Ok();
+        }
+
         [HttpGet("subjects")]
         [Authorize(Roles = "Teacher")]
         public IActionResult GetSubjects()

@@ -124,10 +124,7 @@ function renderMatrix(matrix) {
 }
 
 function goToExam() {
-    const form = $('<form>', { method: 'POST', action: '/StudentExam/TakeExam' });
-    form.append($('<input>', { type: 'hidden', name: 'examId', value: EXAM_ID }));
-    $('body').append(form);
-    form.submit();
+    window.location.href = `/StudentExam/TakeExam?examId=${EXAM_ID}`;
 }
 
 function showError(message) {

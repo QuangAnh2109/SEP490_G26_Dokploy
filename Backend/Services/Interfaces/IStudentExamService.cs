@@ -5,7 +5,7 @@ namespace Backend.Services.Interfaces
 {
     public interface IStudentExamService
     {
-        Task<ExamPaperDto?> GetExamPaperAsync(int studentId, int examId, int paperId);
+        Task<ExamPaperDto?> GetExamPaperAsync(int studentId, int examId);
         Task<Submission> StartExamAsync(int studentId, StartSubmissionRequest request);
         Task SaveAnswerAsync(int studentId, int submissionId, SubmitAnswerRequest request);
         Task SaveBulkAnswersAsync(int studentId, int submissionId, IEnumerable<SubmitAnswerRequest> requests);

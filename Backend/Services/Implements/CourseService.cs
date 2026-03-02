@@ -41,8 +41,10 @@ namespace Backend.Services.Implements
         }
         public async Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto)
         {
+            var normalizedSemester = dto.Semester?.Trim().ToUpper();
+
             // Kiểm tra trùng lặp
-            var duplicateError = await _repo.GetDuplicateClassErrorAsync(dto.ClassName, dto.Semester, dto.SubjectId);
+            var duplicateError = await _repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName, normalizedSemester, dto.SubjectId);
             if (duplicateError != null)
             {
                 throw new System.Exception(duplicateError); // Throw an exception to be caught by the controller
@@ -52,7 +54,7 @@ namespace Backend.Services.Implements
             var newClass = new Class
             {
                 Name = dto.ClassName,
-                Semester = dto.Semester,
+                Semester = normalizedSemester,
                 SubjectId = dto.SubjectId,
                 TeacherId = teacherId,
                 Status = 1, // Mặc định là đang mở/hoạt động
@@ -78,6 +80,16 @@ namespace Backend.Services.Implements
             }
 
             await _repo.JoinClassAsync(course.ClassId, studentId);
+        }
+
+        public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
+        {
+            return await _repo.GetStudentsInClassAsync(classId);
+        }
+
+        public async Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
+        {
+            return await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
         }
     }
 }

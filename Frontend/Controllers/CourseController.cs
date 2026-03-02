@@ -11,6 +11,20 @@ namespace Frontend.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult StudentList(int id)
+        {
+            ViewBag.ClassId = id;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult Settings(int id)
+        {
+            ViewBag.ClassId = id;
+            return View();
+        }
+
         public IActionResult CourseList()
         {
             return View();

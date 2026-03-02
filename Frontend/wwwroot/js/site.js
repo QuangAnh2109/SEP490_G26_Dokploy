@@ -18,6 +18,13 @@ try {
 // Helper functions for auth
 function setToken(token) {
     localStorage.setItem('jwtToken', token);
+    const decoded = parseJwt(token);
+    if (decoded) {
+        const roleClaim = decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+        if (roleClaim) {
+            localStorage.setItem('userRole', roleClaim);
+        }
+    }
 }
 
 function getToken() {

@@ -29,19 +29,25 @@ namespace Backend.Controllers
             return 0; 
         }
 
-        [HttpGet("{examId}/paper/{paperId}")]
-        public async Task<IActionResult> GetExamPaper(int examId, int paperId)
+        [HttpGet("{examId}/paper")]
+        public async Task<IActionResult> GetExamPaper(int examId)
         {
             var studentId = GetStudentId();
             if (studentId == 0) return Unauthorized("Invalid token.");
 
-            var paper = await _studentExamService.GetExamPaperAsync(studentId, examId, paperId);
-            if (paper == null)
+            try
             {
-                return NotFound("Exam paper not found or access denied.");
+                var paper = await _studentExamService.GetExamPaperAsync(studentId, examId);
+                if (paper == null)
+                {
+                    return NotFound("Exam paper not found or access denied.");
+                }
+                return Ok(paper);
             }
-
-            return Ok(paper);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("submission/start")]
@@ -98,7 +104,7 @@ namespace Backend.Controllers
                 responseText = a.ResponseText ?? string.Empty
             }).Cast<object>().ToList() ?? new List<object>();
 
-            var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId, submission.PaperId);
+            var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId);
 
             return Ok(new 
             { 

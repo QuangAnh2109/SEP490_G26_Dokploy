@@ -10,10 +10,12 @@ namespace Backend.DTOs.Course
         public int SubjectId { get; set; }
 
         public string SubjectName { get; set; } = null!;
+        public string? SubjectCode { get; set; }
 
         public string TeacherName { get; set; } = null!;
 
         public string InvitationCode { get; set; } = null!;
+        public int InvitationCodeStatus { get; set; }
 
         public string Semester { get; set; } = null!;
 

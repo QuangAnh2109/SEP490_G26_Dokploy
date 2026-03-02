@@ -17,5 +17,8 @@ namespace Backend.Services.Interfaces
         Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto);
 
         Task JoinCourseAsync(int studentId, string inviteCode);
+
+        Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
+        Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
     }
 }

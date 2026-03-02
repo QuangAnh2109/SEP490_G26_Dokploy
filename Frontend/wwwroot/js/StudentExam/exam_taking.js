@@ -1,7 +1,8 @@
 let examSignalRConnection = null;
+let examId = null;
 
 $(document).ready(function () {
-    const examId = $('#ExamId').val();
+    examId = $('#ExamId').val();
 
     if (!examId) {
         Swal.fire('Lỗi', 'Thiếu định danh đề thi!', 'error');
@@ -45,10 +46,7 @@ $(document).ready(function () {
                     cancelButtonText: 'Quay lại danh sách'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        const form = $('<form>', { method: 'POST', action: '/StudentExam/TakeExam' });
-                        form.append($('<input>', { type: 'hidden', name: 'examId', value: activeExamId }));
-                        $('body').append(form);
-                        form.submit();
+                        window.location.href = `/StudentExam/TakeExam?examId=${activeExamId}`;
                     } else {
                         window.location.href = '/Course/ExamListInCourse';
                     }
