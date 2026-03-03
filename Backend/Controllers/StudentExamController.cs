@@ -72,11 +72,13 @@ namespace Backend.Controllers
                 remainingSeconds = (int)Math.Max(0, actualRemaining);
             }
 
-            var savedAnswers = submission.StudentAnswers?.Select(a => new 
-            {
-                questionIndex = a.QuestionIndex,
-                responseText = a.ResponseText ?? string.Empty
-            }).Cast<object>().ToList() ?? new List<object>();
+            // TODO: DB_UPDATE – StudentAnswer.QuestionIndex và ResponseText đã bị xóa/đổi tên
+            // var savedAnswers = submission.StudentAnswers?.Select(a => new 
+            // {
+            //     questionIndex = a.QuestionIndex,
+            //     responseText = a.ResponseText ?? string.Empty
+            // }).Cast<object>().ToList() ?? new List<object>();
+            var savedAnswers = new List<object>();
 
             var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId, submission.PaperId);
 
