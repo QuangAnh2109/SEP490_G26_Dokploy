@@ -162,6 +162,11 @@ namespace Backend.Repositories.Implements
             var exam = await _context.Exams
                 .Include(e => e.Subject)
                 .Include(e => e.Teacher)
+                .Include(e => e.ExamBlueprint)
+                    .ThenInclude(bp => bp.ExamBlueprintChapters)
+                        .ThenInclude(ebc => ebc.Chapter)
+                .Include(e => e.Papers)
+                    .ThenInclude(p => p.Questions)
                 .FirstOrDefaultAsync(e => e.ExamId == examId);
 
             if (exam == null) return null;
@@ -181,43 +186,29 @@ namespace Backend.Repositories.Implements
                 TeacherName = exam.Teacher?.FullName ?? string.Empty,
             };
 
-            // Dùng raw SQL để lấy ExamBlueprintId vì chưa được map trong EF model
-            var examBlueprintId = await _context.Database
-                .SqlQuery<int?>($"SELECT ExamBlueprintId AS [Value] FROM Exams WHERE ExamId = {examId}")
-                .FirstOrDefaultAsync();
-
-            if (examBlueprintId.HasValue)
+            if (exam.ExamBlueprint != null)
             {
-                var blueprint = await _context.ExamBlueprints
-                    .FirstOrDefaultAsync(bp => bp.ExamBlueprintId == examBlueprintId.Value);
+                result.TotalQuestions = exam.ExamBlueprint.TotalQuestions;
 
-                result.TotalQuestions = blueprint?.TotalQuestions ?? 0;
-
-                var blueprintChapters = await _context.ExamBlueprintChapters
-                    .Include(ebc => ebc.Chapter)
-                    .Where(ebc => ebc.ExamBlueprintId == examBlueprintId.Value)
-                    .ToListAsync();
-
-                result.BlueprintChapters = blueprintChapters.Select(ebc => new BlueprintChapterRaw
-                {
-                    ChapterName = ebc.Chapter?.Name ?? string.Empty,
-                    Difficulty = ebc.Difficulty,
-                    TotalOfQuestions = ebc.TotalOfQuestions
-                }).ToList();
+                result.BlueprintChapters = exam.ExamBlueprint.ExamBlueprintChapters
+                    .Select(ebc => new BlueprintChapterRaw
+                    {
+                        ChapterName = ebc.Chapter?.Name ?? string.Empty,
+                        Difficulty = ebc.Difficulty,
+                        TotalOfQuestions = ebc.TotalOfQuestions
+                    })
+                    .ToList();
             }
             else
             {
-                // TODO: DB_UPDATE – PaperQuestions đã bị xóa, giờ dùng Paper.Questions
-                var anyPaper = await _context.Papers
-                    // .Include(p => p.PaperQuestions)
-                    .Include(p => p.Questions)
-                    .FirstOrDefaultAsync(p => p.ExamId == examId);
-
+                // fallback: nếu không có blueprint thì lấy số câu hỏi từ Paper
+                var anyPaper = exam.Papers.FirstOrDefault();
                 result.TotalQuestions = anyPaper?.Questions?.Count ?? 0;
             }
 
             return result;
         }
+
 
     }
 }

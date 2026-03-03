@@ -15,7 +15,7 @@ function loadExamPreview() {
     }
 
     $.ajax({
-        url: `${API_BASE}/api/student/exams/${EXAM_ID}/preview`,
+        url: `${API_BASE_URL}/api/student/exams/${EXAM_ID}/preview`,
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
