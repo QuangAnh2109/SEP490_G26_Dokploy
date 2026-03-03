@@ -240,7 +240,7 @@ public class AssignExamService : IAssignExamService
             .Select(x => new QuestionListItemDto(
                 x.q.QuestionId,
                 x.q.QuestionType,
-                x.q.ContentLatex,
+                x.q.QuestionContent, // TODO: DB_UPDATE – ContentLatex đổi thành QuestionContent
                 x.s.Code ?? string.Empty,
                 x.ch.ChapterId,
                 x.ch.Name,
@@ -375,14 +375,23 @@ public class AssignExamService : IAssignExamService
                     ? ShuffleQuestionIds(questionIds)
                     : questionIds.ToList();
 
-                var paperQuestions = orderedQuestionIds
-                    .Select((qid, idx) => new PaperQuestion
-                    {
-                        PaperId = paper.PaperId,
-                        QuestionId = qid,
-                        Index = idx + 1
-                    });
-                _db.PaperQuestions.AddRange(paperQuestions);
+                // TODO: DB_UPDATE – PaperQuestions là implicit join table, không còn DbSet trực tiếp
+                // Cần dùng Paper.Questions (many-to-many) để thêm câu hỏi vào paper
+                // var paperQuestions = orderedQuestionIds
+                //     .Select((qid, idx) => new PaperQuestion
+                //     {
+                //         PaperId = paper.PaperId,
+                //         QuestionId = qid,
+                //         Index = idx + 1
+                //     });
+                // _db.PaperQuestions.AddRange(paperQuestions);
+                var questions = await _db.Questions
+                    .Where(q => orderedQuestionIds.Contains(q.QuestionId))
+                    .ToListAsync(cancellationToken);
+                foreach (var q in questions)
+                {
+                    paper.Questions.Add(q);
+                }
                 await _db.SaveChangesAsync(cancellationToken);
 
                 createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code));

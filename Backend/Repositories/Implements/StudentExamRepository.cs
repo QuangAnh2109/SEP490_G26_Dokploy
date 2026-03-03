@@ -13,12 +13,14 @@ namespace Backend.Repositories.Implements
             _context = context;
         }
 
+        // TODO: DB_UPDATE – PaperQuestions navigation đã bị xóa, giờ dùng many-to-many Paper.Questions
         public async Task<Paper?> GetPaperWithQuestionsAsync(int examId, int paperId)
         {
             return await _context.Papers
                 .Include(p => p.Exam)
-                .Include(p => p.PaperQuestions)
-                .ThenInclude(pq => pq.Question)
+                // .Include(p => p.PaperQuestions)
+                // .ThenInclude(pq => pq.Question)
+                .Include(p => p.Questions)
                 .FirstOrDefaultAsync(p => p.ExamId == examId && p.PaperId == paperId);
         }
 
@@ -39,35 +41,38 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
         }
 
+        // TODO: DB_UPDATE – StudentAnswer.QuestionIndex đã bị xóa, giờ dùng QuestionAnswersId
         public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex)
         {
-            return await _context.StudentAnswers
-                .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionIndex == questionIndex);
+            // return await _context.StudentAnswers
+            //     .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionIndex == questionIndex);
+            return null;
         }
 
+        // TODO: DB_UPDATE – StudentAnswer.QuestionIndex và ResponseText đã bị xóa/đổi tên
         public async Task AddOrUpdateBulkStudentAnswersAsync(IEnumerable<StudentAnswer> answers)
         {
             if (!answers.Any()) return;
 
-            var submissionId = answers.First().SubmissionId;
-            var indices = answers.Select(a => a.QuestionIndex).ToList();
-
-            var existingAnswers = await _context.StudentAnswers
-                .Where(sa => sa.SubmissionId == submissionId && indices.Contains(sa.QuestionIndex))
-                .ToDictionaryAsync(sa => sa.QuestionIndex);
-
-            foreach (var answer in answers)
-            {
-                if (existingAnswers.TryGetValue(answer.QuestionIndex, out var existing))
-                {
-                    existing.ResponseText = answer.ResponseText;
-                    _context.StudentAnswers.Update(existing);
-                }
-                else
-                {
-                    _context.StudentAnswers.Add(answer);
-                }
-            }
+            // var submissionId = answers.First().SubmissionId;
+            // var indices = answers.Select(a => a.QuestionIndex).ToList();
+            //
+            // var existingAnswers = await _context.StudentAnswers
+            //     .Where(sa => sa.SubmissionId == submissionId && indices.Contains(sa.QuestionIndex))
+            //     .ToDictionaryAsync(sa => sa.QuestionIndex);
+            //
+            // foreach (var answer in answers)
+            // {
+            //     if (existingAnswers.TryGetValue(answer.QuestionIndex, out var existing))
+            //     {
+            //         existing.ResponseText = answer.ResponseText;
+            //         _context.StudentAnswers.Update(existing);
+            //     }
+            //     else
+            //     {
+            //         _context.StudentAnswers.Add(answer);
+            //     }
+            // }
             await _context.SaveChangesAsync();
         }
 
@@ -202,11 +207,13 @@ namespace Backend.Repositories.Implements
             }
             else
             {
+                // TODO: DB_UPDATE – PaperQuestions đã bị xóa, giờ dùng Paper.Questions
                 var anyPaper = await _context.Papers
-                    .Include(p => p.PaperQuestions)
+                    // .Include(p => p.PaperQuestions)
+                    .Include(p => p.Questions)
                     .FirstOrDefaultAsync(p => p.ExamId == examId);
 
-                result.TotalQuestions = anyPaper?.PaperQuestions?.Count ?? 0;
+                result.TotalQuestions = anyPaper?.Questions?.Count ?? 0;
             }
 
             return result;

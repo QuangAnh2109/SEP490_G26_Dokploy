@@ -40,19 +40,21 @@ namespace Backend.Services.Implements
                 Duration = paper.Exam.Duration,
                 PaperId = paper.PaperId,
                 Code = paper.Code,
-                Questions = paper.PaperQuestions.Select(pq => 
-                {
-                    var dto = new QuestionDto
-                    {
-                        QuestionId = pq.Question.QuestionId,
-                        ContentLatex = pq.Question.ContentLatex,
-                        QuestionType = pq.Question.QuestionType,
-                        Difficulty = pq.Question.Difficulty,
-                    };
-
-                    ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
-                    return dto;
-                }).ToList()
+                // TODO: DB_UPDATE – PaperQuestions đã bị xóa, giờ dùng Paper.Questions; ContentLatex đổi thành QuestionContent
+                // Questions = paper.PaperQuestions.Select(pq => 
+                // {
+                //     var dto = new QuestionDto
+                //     {
+                //         QuestionId = pq.Question.QuestionId,
+                //         ContentLatex = pq.Question.ContentLatex,
+                //         QuestionType = pq.Question.QuestionType,
+                //         Difficulty = pq.Question.Difficulty,
+                //     };
+                //
+                //     ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
+                //     return dto;
+                // }).ToList()
+                Questions = new List<QuestionDto>()
             };
         }
 
@@ -285,8 +287,9 @@ namespace Backend.Services.Implements
             var answer = new StudentAnswer
             {
                 SubmissionId = submissionId,
-                QuestionIndex = request.QuestionIndex,
-                ResponseText = request.ResponseText
+                // TODO: DB_UPDATE – QuestionIndex đã bị xóa, ResponseText đổi thành Response
+                // QuestionIndex = request.QuestionIndex,
+                // ResponseText = request.ResponseText
             };
 
             await _studentExamRepository.AddOrUpdateBulkStudentAnswersAsync(new[] { answer });
@@ -319,8 +322,9 @@ namespace Backend.Services.Implements
             var answers = requests.Select(r => new StudentAnswer
             {
                 SubmissionId = submissionId,
-                QuestionIndex = r.QuestionIndex,
-                ResponseText = r.ResponseText
+                // TODO: DB_UPDATE – QuestionIndex đã bị xóa, ResponseText đổi thành Response
+                // QuestionIndex = r.QuestionIndex,
+                // ResponseText = r.ResponseText
             });
 
             await _studentExamRepository.AddOrUpdateBulkStudentAnswersAsync(answers);
