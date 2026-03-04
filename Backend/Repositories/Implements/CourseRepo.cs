@@ -223,6 +223,18 @@ namespace Backend.Repositories.Implements
             await _context.SaveChangesAsync();
         }
 
+        public async Task LeaveClassAsync(int classId, int userId)
+        {
+            var membership = await _context.ClassMembers
+                .FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == userId);
+
+            if (membership != null)
+            {
+                _context.ClassMembers.Remove(membership);
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
         {
             return await _context.ClassMembers

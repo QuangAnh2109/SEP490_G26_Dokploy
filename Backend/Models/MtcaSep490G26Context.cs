@@ -15,6 +15,8 @@ public partial class MtcaSep490G26Context : DbContext
     {
     }
 
+    public virtual DbSet<BlankInput> BlankInputs { get; set; }
+
     public virtual DbSet<Chapter> Chapters { get; set; }
 
     public virtual DbSet<Class> Classes { get; set; }
@@ -27,11 +29,15 @@ public partial class MtcaSep490G26Context : DbContext
 
     public virtual DbSet<ExamBlueprintChapter> ExamBlueprintChapters { get; set; }
 
+    public virtual DbSet<GroupAnswer> GroupAnswers { get; set; }
+
+    public virtual DbSet<InputType> InputTypes { get; set; }
+
     public virtual DbSet<Paper> Papers { get; set; }
 
-    public virtual DbSet<PaperQuestion> PaperQuestions { get; set; }
-
     public virtual DbSet<Question> Questions { get; set; }
+
+    public virtual DbSet<QuestionAnswer> QuestionAnswers { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
 
@@ -43,13 +49,34 @@ public partial class MtcaSep490G26Context : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) { }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=(local);Database=MTCA_SEP490_G26;User Id=sa;Password=123;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<BlankInput>(entity =>
+        {
+            entity.HasKey(e => new { e.QuestionAnswerId, e.InputTypeId }).HasName("PK__BlankInp__3A18E47A824B6BDA");
+
+            entity.Property(e => e.ConcurrencyStamp)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasOne(d => d.InputType).WithMany(p => p.BlankInputs)
+                .HasForeignKey(d => d.InputTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BlankInputs_InputTypes");
+
+            entity.HasOne(d => d.QuestionAnswer).WithMany(p => p.BlankInputs)
+                .HasForeignKey(d => d.QuestionAnswerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BlankInputs_QuestionAnswers");
+        });
+
         modelBuilder.Entity<Chapter>(entity =>
         {
-            entity.HasKey(e => e.ChapterId).HasName("PK__Chapters__0893A36A512F6B7A");
+            entity.HasKey(e => e.ChapterId).HasName("PK__Chapters__0893A36AEE81EE8B");
 
             entity.Property(e => e.Name).HasMaxLength(200);
 
@@ -61,9 +88,9 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<Class>(entity =>
         {
-            entity.HasKey(e => e.ClassId).HasName("PK__Classes__CB1927C082959F6C");
+            entity.HasKey(e => e.ClassId).HasName("PK__Classes__CB1927C04A621E7C");
 
-            entity.HasIndex(e => e.InvitationCode, "UQ__Classes__286690FFE6834C70").IsUnique();
+            entity.HasIndex(e => e.InvitationCode, "UQ__Classes__286690FF0D037D77").IsUnique();
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
@@ -93,7 +120,7 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<ClassMember>(entity =>
         {
-            entity.HasKey(e => new { e.ClassId, e.StudentId }).HasName("PK__ClassMem__483575792C6F9E0E");
+            entity.HasKey(e => new { e.ClassId, e.StudentId }).HasName("PK__ClassMem__4835757955CD1CFB");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
@@ -113,7 +140,7 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<Exam>(entity =>
         {
-            entity.HasKey(e => e.ExamId).HasName("PK__Exams__297521C73E652E6B");
+            entity.HasKey(e => e.ExamId).HasName("PK__Exams__297521C70CDECF29");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
@@ -146,7 +173,7 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<ExamBlueprint>(entity =>
         {
-            entity.HasKey(e => e.ExamBlueprintId).HasName("PK__ExamBlue__C1EF9CEF5A8550C2");
+            entity.HasKey(e => e.ExamBlueprintId).HasName("PK__ExamBlue__C1EF9CEF974A7B17");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
@@ -167,7 +194,7 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<ExamBlueprintChapter>(entity =>
         {
-            entity.HasKey(e => new { e.ExamBlueprintId, e.ChapterId, e.Difficulty }).HasName("PK__ExamBlue__E9BFA7D05EC959EC");
+            entity.HasKey(e => new { e.ExamBlueprintId, e.ChapterId, e.Difficulty }).HasName("PK__ExamBlue__E9BFA7D0F0EC64DB");
 
             entity.ToTable("ExamBlueprintChapter");
 
@@ -186,36 +213,52 @@ public partial class MtcaSep490G26Context : DbContext
                 .HasConstraintName("FK_EBC_Blueprints");
         });
 
+        modelBuilder.Entity<GroupAnswer>(entity =>
+        {
+            entity.HasKey(e => e.GroupAnswerId).HasName("PK__GroupAns__2DBBC7BF07E0BCF8");
+
+            entity.Property(e => e.Name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<InputType>(entity =>
+        {
+            entity.HasKey(e => e.InputTypeId).HasName("PK__InputTyp__CA63BB5A702ACA0D");
+
+            entity.Property(e => e.GroupType).HasMaxLength(10);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Regex).HasMaxLength(400);
+        });
+
         modelBuilder.Entity<Paper>(entity =>
         {
-            entity.HasKey(e => e.PaperId).HasName("PK__Papers__AB86120BE76EEEF3");
+            entity.HasKey(e => e.PaperId).HasName("PK__Papers__AB86120B71F05C29");
 
             entity.HasOne(d => d.Exam).WithMany(p => p.Papers)
                 .HasForeignKey(d => d.ExamId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Papers_Exams");
-        });
 
-        modelBuilder.Entity<PaperQuestion>(entity =>
-        {
-            entity.HasKey(e => new { e.PaperId, e.QuestionId }).HasName("PK__PaperQue__7B5A14F1493C2E4B");
-
-            entity.ToTable("PaperQuestion");
-
-            entity.HasOne(d => d.Paper).WithMany(p => p.PaperQuestions)
-                .HasForeignKey(d => d.PaperId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PQ_Papers");
-
-            entity.HasOne(d => d.Question).WithMany(p => p.PaperQuestions)
-                .HasForeignKey(d => d.QuestionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PQ_Questions");
+            entity.HasMany(d => d.Questions).WithMany(p => p.Papers)
+                .UsingEntity<Dictionary<string, object>>(
+                    "PaperQuestion",
+                    r => r.HasOne<Question>().WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PQ_Questions"),
+                    l => l.HasOne<Paper>().WithMany()
+                        .HasForeignKey("PaperId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PQ_Papers"),
+                    j =>
+                    {
+                        j.HasKey("PaperId", "QuestionId").HasName("PK__PaperQue__7B5A14F1873A63DF");
+                        j.ToTable("PaperQuestion");
+                    });
         });
 
         modelBuilder.Entity<Question>(entity =>
         {
-            entity.HasKey(e => e.QuestionId).HasName("PK__Question__0DC06FAC986A92FF");
+            entity.HasKey(e => e.QuestionId).HasName("PK__Question__0DC06FACF1A0E339");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
@@ -237,20 +280,43 @@ public partial class MtcaSep490G26Context : DbContext
                 .HasConstraintName("FK_Questions_Users");
         });
 
+        modelBuilder.Entity<QuestionAnswer>(entity =>
+        {
+            entity.HasKey(e => e.QuestionAnswerId).HasName("PK__Question__86BEDFCF73CA15C6");
+
+            entity.Property(e => e.ConcurrencyStamp)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasOne(d => d.GroupAnswer).WithMany(p => p.QuestionAnswers)
+                .HasForeignKey(d => d.GroupAnswerId)
+                .HasConstraintName("FK_QuestionAnswers_GroupAnswers");
+
+            entity.HasOne(d => d.Question).WithMany(p => p.QuestionAnswers)
+                .HasForeignKey(d => d.QuestionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_QuestionAnswers_Questions");
+        });
+
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1A788B1298");
+            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1A13F124CB");
 
             entity.Property(e => e.Name).HasMaxLength(256);
         });
 
         modelBuilder.Entity<StudentAnswer>(entity =>
         {
-            entity.HasKey(e => e.AnsId).HasName("PK__StudentA__135B838DAA80180A");
+            entity.HasKey(e => e.StudentAnswerId).HasName("PK__StudentA__6E3EA405089AC96F");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
                 .IsConcurrencyToken();
+
+            entity.HasOne(d => d.QuestionAnswer).WithMany(p => p.StudentAnswers)
+                .HasForeignKey(d => d.QuestionAnswerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StudentAnswers_QuestionAnswers");
 
             entity.HasOne(d => d.Submission).WithMany(p => p.StudentAnswers)
                 .HasForeignKey(d => d.SubmissionId)
@@ -260,7 +326,7 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<Subject>(entity =>
         {
-            entity.HasKey(e => e.SubjectId).HasName("PK__Subjects__AC1BA3A8AD61A680");
+            entity.HasKey(e => e.SubjectId).HasName("PK__Subjects__AC1BA3A86E08C448");
 
             entity.Property(e => e.Code)
                 .HasMaxLength(50)
@@ -270,14 +336,14 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<Submission>(entity =>
         {
-            entity.HasKey(e => e.SubmissionId).HasName("PK__Submissi__449EE125C6165639");
+            entity.HasKey(e => e.SubmissionId).HasName("PK__Submissi__449EE12553B1053B");
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
                 .IsConcurrencyToken();
             entity.Property(e => e.CreatedAtUtc).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Status).HasDefaultValue(1);
-            entity.Property(e => e.TotalPoints).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.TotalPoints).HasColumnType("decimal(5, 3)");
 
             entity.HasOne(d => d.Paper).WithMany(p => p.Submissions)
                 .HasForeignKey(d => d.PaperId)
@@ -292,9 +358,9 @@ public partial class MtcaSep490G26Context : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C8C2E60E8");
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C1B357F2D");
 
-            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534A7B29AAD").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534BF4ED69B").IsUnique();
 
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()

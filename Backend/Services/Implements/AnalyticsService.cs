@@ -23,10 +23,15 @@ public class AnalyticsService : IAnalyticsService
             .Include(e => e.Papers)
                 .ThenInclude(p => p.Submissions)
                     .ThenInclude(s => s.StudentAnswers)
+                        .ThenInclude(sa => sa.QuestionAnswer)
+                            .ThenInclude(qa => qa.Question)
+                                .ThenInclude(q => q.Chapter)
             .Include(e => e.Papers)
-                .ThenInclude(p => p.PaperQuestions)
-                    .ThenInclude(pq => pq.Question)
-                        .ThenInclude(q => q.Chapter)
+                .ThenInclude(p => p.Questions)
+                    .ThenInclude(q => q.Chapter)
+            .Include(e => e.Papers)
+                .ThenInclude(p => p.Questions)
+                    .ThenInclude(q => q.QuestionAnswers)
             .FirstOrDefaultAsync(e => e.ExamId == examId);
 
         if (exam == null)
@@ -56,10 +61,9 @@ public class AnalyticsService : IAnalyticsService
         // Vậy nên ta tạm thời so sánh (ResponseText == Question.Answer) để xem là làm Đúng.
 
         var questionDict = exam.Papers
-            .SelectMany(p => p.PaperQuestions)
-            .Select(pq => pq.Question)
+            .SelectMany(p => p.Questions)
             .Distinct()
-            .ToDictionary(q => q.QuestionId, q => new { q.Chapter, q.Answer, q.QuestionType });
+            .ToDictionary(q => q.QuestionId, q => new { q.Chapter, q.QuestionAnswers, q.QuestionType });
 
         // Nhóm tất cả các câu trả lời học sinh theo Chapter
         // Cần truy vết từ StudentAnswer -> Submission -> Paper -> PaperQuestion -> Question -> Chapter
@@ -68,16 +72,25 @@ public class AnalyticsService : IAnalyticsService
             .SelectMany(s => s.StudentAnswers)
             .Select(ans =>
             {
-                var paper = ans.Submission.Paper;
-                var paperQ = paper.PaperQuestions.FirstOrDefault(pq => pq.Index == ans.QuestionIndex);
-                if (paperQ == null) return null;
+                // Use QuestionAnswer -> Question -> Chapter to trace back
+                var questionAnswer = ans.QuestionAnswer;
+                if (questionAnswer == null) return null;
 
-                if (!questionDict.TryGetValue(paperQ.QuestionId, out var qInfo)) return null;
+                var question = questionAnswer.Question;
+                if (question == null) return null;
 
+                if (!questionDict.TryGetValue(question.QuestionId, out var qInfo)) return null;
+
+                // Check if the student's response matches the correct answer
                 bool isCorrect = false;
-                if (!string.IsNullOrEmpty(qInfo.Answer) && !string.IsNullOrEmpty(ans.ResponseText))
+                if (!string.IsNullOrEmpty(questionAnswer.CorrectAnswer) && !string.IsNullOrEmpty(ans.Response))
                 {
-                     isCorrect = qInfo.Answer.Trim().Equals(ans.ResponseText.Trim(), System.StringComparison.OrdinalIgnoreCase);
+                     isCorrect = questionAnswer.CorrectAnswer.Trim().Equals(ans.Response.Trim(), System.StringComparison.OrdinalIgnoreCase);
+                }
+                else if (questionAnswer.IsCorrect.HasValue)
+                {
+                    // For multiple choice, check IsCorrect flag
+                    isCorrect = questionAnswer.IsCorrect.Value && !string.IsNullOrEmpty(ans.Response);
                 }
 
                 return new

@@ -100,8 +100,8 @@ namespace Backend.Controllers
 
             var savedAnswers = submission.StudentAnswers?.Select(a => new 
             {
-                questionId = a.QuestionIndex,
-                responseText = a.ResponseText ?? string.Empty
+                questionAnswerId = a.QuestionAnswerId,
+                response = a.Response ?? string.Empty
             }).Cast<object>().ToList() ?? new List<object>();
 
             var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId);

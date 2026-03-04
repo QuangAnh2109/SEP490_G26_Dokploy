@@ -8,7 +8,7 @@ namespace Backend.Repositories.Interfaces
         Task<Paper?> GetPaperWithQuestionsAsync(int examId, int paperId);
         Task<Submission> CreateSubmissionAsync(Submission submission);
         Task<Submission?> GetAnyActiveSubmissionAsync(int studentId);
-        Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex);
+        Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId);
         Task AddOrUpdateBulkStudentAnswersAsync(IEnumerable<StudentAnswer> answers);
         Task CompleteSubmissionAsync(int submissionId);
         Task<int> GetExamSubmissionCountAsync(int studentId, int examId);

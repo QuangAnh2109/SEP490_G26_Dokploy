@@ -17,8 +17,10 @@ namespace Backend.Repositories.Implements
         {
             return await _context.Papers
                 .Include(p => p.Exam)
-                .Include(p => p.PaperQuestions)
-                .ThenInclude(pq => pq.Question)
+                .Include(p => p.Questions)
+                    .ThenInclude(q => q.QuestionAnswers)
+                        .ThenInclude(qa => qa.BlankInputs)
+                            .ThenInclude(bi => bi.InputType)
                 .FirstOrDefaultAsync(p => p.ExamId == examId && p.PaperId == paperId);
         }
 
@@ -39,10 +41,10 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
         }
 
-        public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex)
+        public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId)
         {
             return await _context.StudentAnswers
-                .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionIndex == questionIndex);
+                .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionAnswerId == questionAnswerId);
         }
 
         public async Task AddOrUpdateBulkStudentAnswersAsync(IEnumerable<StudentAnswer> answers)
@@ -50,22 +52,33 @@ namespace Backend.Repositories.Implements
             if (!answers.Any()) return;
 
             var submissionId = answers.First().SubmissionId;
-            var indices = answers.Select(a => a.QuestionIndex).ToList();
+            var answerIds = answers.Select(a => a.QuestionAnswerId).ToList();
 
             var existingAnswers = await _context.StudentAnswers
-                .Where(sa => sa.SubmissionId == submissionId && indices.Contains(sa.QuestionIndex))
-                .ToDictionaryAsync(sa => sa.QuestionIndex);
+                .Where(sa => sa.SubmissionId == submissionId && answerIds.Contains(sa.QuestionAnswerId))
+                .ToDictionaryAsync(sa => sa.QuestionAnswerId);
 
             foreach (var answer in answers)
             {
-                if (existingAnswers.TryGetValue(answer.QuestionIndex, out var existing))
+                if (existingAnswers.TryGetValue(answer.QuestionAnswerId, out var existing))
                 {
-                    existing.ResponseText = answer.ResponseText;
-                    _context.StudentAnswers.Update(existing);
+                    if (string.IsNullOrEmpty(answer.Response)) 
+                    {
+                        // User unchecked the option, delete the record
+                        _context.StudentAnswers.Remove(existing);
+                    }
+                    else 
+                    {
+                        existing.Response = answer.Response;
+                        _context.StudentAnswers.Update(existing);
+                    }
                 }
                 else
                 {
-                    _context.StudentAnswers.Add(answer);
+                    if (!string.IsNullOrEmpty(answer.Response))
+                    {
+                        _context.StudentAnswers.Add(answer);
+                    }
                 }
             }
             await _context.SaveChangesAsync();
@@ -212,10 +225,10 @@ namespace Backend.Repositories.Implements
             else
             {
                 var anyPaper = await _context.Papers
-                    .Include(p => p.PaperQuestions)
+                    .Include(p => p.Questions)
                     .FirstOrDefaultAsync(p => p.ExamId == examId);
 
-                result.TotalQuestions = anyPaper?.PaperQuestions?.Count ?? 0;
+                result.TotalQuestions = anyPaper?.Questions?.Count ?? 0;
             }
 
             return result;

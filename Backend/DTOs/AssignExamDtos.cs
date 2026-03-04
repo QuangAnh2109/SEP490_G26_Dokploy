@@ -33,7 +33,7 @@ public record BlueprintDetailRowDto(
 public record QuestionListItemDto(
     int QuestionId,
     string QuestionType,
-    string ContentLatex,
+    string QuestionContent,
     string SubjectCode,
     int ChapterId,
     string ChapterName,

@@ -5,15 +5,17 @@ namespace Backend.Models;
 
 public partial class StudentAnswer
 {
-    public int AnsId { get; set; }
+    public int StudentAnswerId { get; set; }
 
     public int SubmissionId { get; set; }
 
-    public int QuestionIndex { get; set; }
+    public int QuestionAnswerId { get; set; }
 
-    public string? ResponseText { get; set; }
+    public string? Response { get; set; }
 
     public byte[] ConcurrencyStamp { get; set; } = null!;
+
+    public virtual QuestionAnswer QuestionAnswer { get; set; } = null!;
 
     public virtual Submission Submission { get; set; } = null!;
 }

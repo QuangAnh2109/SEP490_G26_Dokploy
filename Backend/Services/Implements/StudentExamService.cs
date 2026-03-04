@@ -37,17 +37,56 @@ namespace Backend.Services.Implements
 
             int seed = activeSubmission.SubmissionId;
 
-            var questions = paper.PaperQuestions.Select(pq => 
+            var questions = paper.Questions.Select(q => 
             {
+                // Parse QuestionContent JSON: {"stem":"...", "frame":"..."}
+                string stemContent = q.QuestionContent;
+                string? frameContent = null;
+
+                try
+                {
+                    var parsedContent = System.Text.Json.JsonSerializer.Deserialize<QuestionContentFormat>(
+                        q.QuestionContent, 
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (parsedContent != null)
+                    {
+                        if (!string.IsNullOrEmpty(parsedContent.stem))
+                            stemContent = parsedContent.stem;
+                        if (!string.IsNullOrEmpty(parsedContent.frame))
+                            frameContent = parsedContent.frame;
+                    }
+                }
+                catch
+                {
+                    // Not valid JSON — treat as plain text content
+                    stemContent = q.QuestionContent;
+                    frameContent = null;
+                }
+
                 var dto = new QuestionDto
                 {
-                    QuestionId = pq.Question.QuestionId,
-                    ContentLatex = pq.Question.ContentLatex,
-                    QuestionType = pq.Question.QuestionType,
-                    Difficulty = pq.Question.Difficulty,
+                    QuestionId = q.QuestionId,
+                    MainQuestionAnswerId = q.QuestionAnswers.FirstOrDefault()?.QuestionAnswerId ?? 0,
+                    ContentLatex = stemContent,
+                    Frame = frameContent,
+                    // When frame exists, provide ordered QuestionAnswerIds (1:1 with placeholders)
+                    FrameAnswerIds = frameContent != null
+                        ? q.QuestionAnswers.OrderBy(qa => qa.QuestionAnswerId).Select(qa => qa.QuestionAnswerId).ToList()
+                        : null,
+                    FrameAllowedInputs = frameContent != null
+                        ? q.QuestionAnswers.ToDictionary(
+                            qa => qa.QuestionAnswerId,
+                            qa => qa.BlankInputs.Select(bi => bi.InputType.Name).ToList())
+                        : null,
+                    QuestionType = q.QuestionType,
+                    Difficulty = q.Difficulty,
                 };
 
-                ProcessQuestionData(dto, pq.Question.Answer, pq.Question.ContentLatex, pq.Question.QuestionType, seed);
+                // Build answer JSON from QuestionAnswers collection
+                var answerJson = BuildAnswerJson(q.QuestionAnswers, q.QuestionType);
+                ProcessQuestionData(dto, answerJson, stemContent, q.QuestionType, seed);
                 return dto;
             }).ToList();
 
@@ -70,37 +109,73 @@ namespace Backend.Services.Implements
             };
         }
 
-        private void ProcessQuestionData(QuestionDto dto, string? rawAnswer, string contentLatex, string questionType, int seed)
+        private string? BuildAnswerJson(ICollection<QuestionAnswer> questionAnswers, string questionType)
+        {
+            if (questionAnswers == null || !questionAnswers.Any()) return null;
+
+            if (questionType == "MultipleChoice" || questionType == "SingleChoice")
+            {
+                var opts = questionAnswers.Select(qa => new { id = qa.QuestionAnswerId, content = qa.Content }).ToList();
+                return System.Text.Json.JsonSerializer.Serialize(opts);
+            }
+            else if (questionType == "StepByStep")
+            {
+                var steps = questionAnswers.Select((qa, idx) => new { s = idx + 1, h = qa.Content, a = qa.CorrectAnswer }).ToList();
+                return System.Text.Json.JsonSerializer.Serialize(steps);
+            }
+            else if (questionType == "FillInBlank")
+            {
+                var blanks = questionAnswers.Select(qa => qa.CorrectAnswer).ToList();
+                return System.Text.Json.JsonSerializer.Serialize(blanks);
+            }
+
+            return questionAnswers.FirstOrDefault()?.CorrectAnswer;
+        }
+
+        private void ProcessQuestionData(QuestionDto dto, string? rawAnswer, string questionContent, string questionType, int seed)
         {
             if (string.IsNullOrWhiteSpace(rawAnswer)) return;
 
             try
             {
-                if (questionType == "MultipleChoice")
+                if (questionType == "MultipleChoice" || questionType == "SingleChoice")
                 {
-                    List<string> optionsArray = new List<string>();
+                    List<(int id, string content)> optionsArray = new List<(int, string)>();
                     var node = JsonNode.Parse(rawAnswer);
 
                     if (node is JsonArray jsonArray)
                     {
-                        foreach (var item in jsonArray) optionsArray.Add(item?.ToString() ?? "");
+                        foreach (var item in jsonArray)
+                        {
+                            if (item is JsonObject obj && obj.ContainsKey("id") && obj.ContainsKey("content"))
+                            {
+                                optionsArray.Add(((int)(obj["id"]?.GetValue<int>() ?? 0), obj["content"]?.ToString() ?? ""));
+                            }
+                            else
+                            {
+                                optionsArray.Add((0, item?.ToString() ?? ""));
+                            }
+                        }
                     }
                     else if (node is JsonObject jsonObj && jsonObj.ContainsKey("opts") && jsonObj["opts"] is JsonArray optsArray)
                     {
-                        foreach (var item in optsArray) optionsArray.Add(item?.ToString() ?? "");
+                        foreach (var item in optsArray)
+                        {
+                            optionsArray.Add((0, item?.ToString() ?? ""));
+                        }
                     }
 
                     // Fallback regex if JSON is empty but format is A. B. C. D.
-                    if (optionsArray.Count == 0 && !string.IsNullOrWhiteSpace(contentLatex))
+                    if (optionsArray.Count == 0 && !string.IsNullOrWhiteSpace(questionContent))
                     {
-                        var match = System.Text.RegularExpressions.Regex.Match(contentLatex, @"(.*?)(?:A\.|A\))(.*?)(?:B\.|B\))(.*?)(?:C\.|C\))(.*?)(?:D\.|D\))(.*)", System.Text.RegularExpressions.RegexOptions.Singleline);
+                        var match = System.Text.RegularExpressions.Regex.Match(questionContent, @"(.*?)(?:A\.|A\))(.*?)(?:B\.|B\))(.*?)(?:C\.|C\))(.*?)(?:D\.|D\))(.*)", System.Text.RegularExpressions.RegexOptions.Singleline);
                         if (match.Success && match.Groups.Count == 6)
                         {
                             dto.ContentLatex = match.Groups[1].Value.Trim();
-                            optionsArray.Add(match.Groups[2].Value.Trim());
-                            optionsArray.Add(match.Groups[3].Value.Trim());
-                            optionsArray.Add(match.Groups[4].Value.Trim());
-                            optionsArray.Add(match.Groups[5].Value.Trim());
+                            optionsArray.Add((0, match.Groups[2].Value.Trim()));
+                            optionsArray.Add((0, match.Groups[3].Value.Trim()));
+                            optionsArray.Add((0, match.Groups[4].Value.Trim()));
+                            optionsArray.Add((0, match.Groups[5].Value.Trim()));
                         }
                     }
 
@@ -116,10 +191,13 @@ namespace Backend.Services.Implements
                         for (int i = 0; i < shuffledIndices.Count && i < letters.Length; i++)
                         {
                             int originalIndex = shuffledIndices[i];
+                            int qaId = optionsArray[originalIndex].id;
+                            string optIdString = qaId > 0 ? qaId.ToString() : letters[originalIndex];
+                            
                             dto.Options.Add(new QuestionOptionDto 
                             { 
-                                Id = letters[originalIndex], // The real ID to map back to correct answer
-                                Text = optionsArray[originalIndex] 
+                                Id = optIdString, // The real QuestionAnswerId or fallback letter
+                                Text = optionsArray[originalIndex].content 
                             });
                         }
                     }
@@ -292,8 +370,8 @@ namespace Backend.Services.Implements
             var answer = new StudentAnswer
             {
                 SubmissionId = submissionId,
-                QuestionIndex = request.QuestionIndex,
-                ResponseText = request.ResponseText
+                QuestionAnswerId = request.QuestionAnswerId,
+                Response = request.Response
             };
 
             await _studentExamRepository.AddOrUpdateBulkStudentAnswersAsync(new[] { answer });
@@ -326,8 +404,8 @@ namespace Backend.Services.Implements
             var answers = requests.Select(r => new StudentAnswer
             {
                 SubmissionId = submissionId,
-                QuestionIndex = r.QuestionIndex,
-                ResponseText = r.ResponseText
+                QuestionAnswerId = r.QuestionAnswerId,
+                Response = r.Response
             });
 
             await _studentExamRepository.AddOrUpdateBulkStudentAnswersAsync(answers);

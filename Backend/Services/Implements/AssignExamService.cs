@@ -240,7 +240,7 @@ public class AssignExamService : IAssignExamService
             .Select(x => new QuestionListItemDto(
                 x.q.QuestionId,
                 x.q.QuestionType,
-                x.q.ContentLatex,
+                x.q.QuestionContent,
                 x.s.Code ?? string.Empty,
                 x.ch.ChapterId,
                 x.ch.Name,
@@ -375,14 +375,13 @@ public class AssignExamService : IAssignExamService
                     ? ShuffleQuestionIds(questionIds)
                     : questionIds.ToList();
 
-                var paperQuestions = orderedQuestionIds
-                    .Select((qid, idx) => new PaperQuestion
-                    {
-                        PaperId = paper.PaperId,
-                        QuestionId = qid,
-                        Index = idx + 1
-                    });
-                _db.PaperQuestions.AddRange(paperQuestions);
+                // Insert into PaperQuestion join table using raw SQL (no DbSet available)
+                foreach (var (qid, idx) in orderedQuestionIds.Select((q, i) => (q, i)))
+                {
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "INSERT INTO PaperQuestion (PaperId, QuestionId, [Index]) VALUES ({0}, {1}, {2})",
+                        paper.PaperId, qid, idx + 1);
+                }
                 await _db.SaveChangesAsync(cancellationToken);
 
                 createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code));
