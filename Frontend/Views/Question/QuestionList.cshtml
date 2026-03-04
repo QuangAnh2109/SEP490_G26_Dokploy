@@ -1,0 +1,108 @@
+@{
+    ViewData["Title"] = "Danh sách câu hỏi";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="/css/Exam_preview.css">
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <style>
+        .math-preview {
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            min-height: auto;
+            padding: 0;
+            outline: none;
+            display: inline-block;
+            max-width: 400px;
+            overflow: hidden;
+        }
+    </style>
+}
+
+<div class="container-fluid px-3 px-md-4 py-4">
+  <section class="page-header d-flex flex-column flex-lg-row justify-content-between gap-3">
+    <div>
+      <h1 class="page-title">Danh sách câu hỏi</h1>
+      <p class="page-subtitle">Quản lý câu hỏi trong ngân hàng câu hỏi.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-outline-secondary">Nhập</button>
+      <a class="btn btn-primary" href="/Question/Create">Thêm câu hỏi</a>
+    </div>
+  </section>
+
+  <section class="panel-card mb-3">
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-lg-3"><input class="form-control" id="filterKeyword" placeholder="Tìm theo từ khóa"></div>
+      <div class="col-6 col-lg-2">
+        <select class="form-select" id="filterQuestionType">
+          <option value="">Tất cả loại</option>
+          <option value="fill_blank">Điền vào ô trống</option>
+          <option value="mcq">Trắc nghiệm</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-2">
+        <select class="form-select" id="filterDifficulty">
+          <option value="">Tất cả mức độ</option>
+          <option value="1">Nhận biết</option>
+          <option value="2">Thông hiểu</option>
+          <option value="3">Vận dụng</option>
+          <option value="4">Vận dụng cao</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-2"><select class="form-select" id="filterChapter"><option value="">Tất cả chương</option></select></div>
+      <div class="col-6 col-lg-2"><select class="form-select" id="filterSubject"><option value="">Tất cả môn học</option></select></div>
+      <div class="col-6 col-lg-2">
+        <select class="form-select" id="filterStatus">
+          <option value="">Tất cả trạng thái</option>
+          <option value="Draft">Draft</option>
+          <option value="Active">Active</option>
+          <option value="Archived">Archived</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-1 d-grid"><button class="btn btn-outline-secondary" id="applyFilterBtn">Lọc</button></div>
+    </div>
+    <div class="bulk-actions">
+      <button class="btn btn-sm btn-outline-secondary" id="selectAllQuestionsBtn">Chọn tất cả</button>
+      <button class="btn btn-sm btn-outline-secondary" id="clearAllQuestionsBtn">Bỏ chọn tất cả</button>
+      <button class="btn btn-sm btn-outline-secondary">Xuất CSV</button>
+      <button class="btn btn-sm btn-outline-secondary">Lưu trữ</button>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="table-responsive">
+      <table class="table table-soft mb-0">
+        <thead>
+          <tr>
+            <th style="width:40px;"><input class="form-check-input" id="questionMasterCheckbox" type="checkbox" aria-label="Chọn tất cả câu hỏi"></th>
+            <th>ID</th>
+            <th>Nội dung</th>
+            <th>Loại</th>
+            <th>Mức độ</th>
+            <th>Môn học</th>
+            <th>Chương</th>
+            <th>Cập nhật</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="questionTableBody">
+          <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
+    <p class="form-note mb-0" id="paginationSummary"></p>
+    <nav aria-label="Phân trang câu hỏi">
+      <ul class="pagination mb-0" id="paginationContainer"></ul>
+    </nav>
+  </div>
+</div>
+
+@section Scripts {
+    <script src="/js/question_list.js"></script>
+}

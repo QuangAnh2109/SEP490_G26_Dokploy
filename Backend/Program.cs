@@ -31,6 +31,7 @@ namespace Backend
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
             builder.Services.AddScoped<ICourseRepo, CourseRepo>();
             builder.Services.AddScoped<IChapterRepo, ChapterRepo>();
+            builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
 
@@ -42,6 +43,7 @@ namespace Backend
             builder.Services.AddScoped<IAssignExamService, AssignExamService>();
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<IChapterService, ChapterService>();
+            builder.Services.AddScoped<IQuestionService, QuestionService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IStudentExamService, StudentExamService>();

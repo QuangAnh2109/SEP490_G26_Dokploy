@@ -13,5 +13,5 @@ public partial class InputType
 
     public string? GroupType { get; set; }
 
-    public virtual ICollection<QuestionAnswer> QuestionAnswers { get; set; } = new List<QuestionAnswer>();
+    public virtual ICollection<BlankInput> BlankInputs { get; set; } = new List<BlankInput>();
 }
