@@ -4,6 +4,19 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
+    <style>
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
+
+        #question-block-mcq {
+            list-style-type: upper-alpha;
+        }
+    </style>
 }
 
 <main class="page-shell py-4" id="examWorkspace">
@@ -42,30 +55,12 @@
                 </div>
 
                 @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
-                <div id="question-block-mcq" hidden>
-                    <div class="list-group">
-                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                            <input class="form-check-input" type="radio" name="q1" value="A">
-                            <span><strong>A.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">-2</math-field></span>
-                        </label>
-                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                            <input class="form-check-input" type="radio" name="q1" value="B">
-                            <span><strong>B.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">0</math-field></span>
-                        </label>
-                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                            <input class="form-check-input" type="radio" name="q1" value="C">
-                            <span><strong>C.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">1</math-field></span>
-                        </label>
-                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
-                            <input class="form-check-input" type="radio" name="q1" value="D">
-                            <span><strong>D.</strong> Không tồn tại</span>
-                        </label>
-                    </div>
-                </div>
+                <ul id="question-block-mcq" hidden>
+                </ul>
 
                 @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
-                <div class="d-flex align-items-center gap-2" >
-                    <math-field id="question-block-fib"></math-field>
+                <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
+                    <math-field hidden read-only id="question-block-fib-field"></math-field>
                 </div>
 
             </div>
@@ -89,6 +84,15 @@
     </div>
 </main>
 
+<template id="mcq-template">
+    <li>
+        <label>
+            <input type="checkbox" name="answer">
+            <math-span></math-span>
+        </label>
+    </li>
+</template>
+
 @section Scripts {
     <!-- MathLive for math rendering -->
     <script defer src="https://unpkg.com/mathlive"></script>
@@ -96,7 +100,25 @@
         var exam;
         const fillInBlank = "FillInBlank";
         const multipleChoice = "MultipleChoice";
+        var questionNumber = 1;
+
+        var questionHeader;
+        var questionLoading;
+        var questionArea;
+        var questionStem;
+        var questionTitle;
+        var questionMcq;
+        var questionBlockFib;
+
         document.addEventListener('DOMContentLoaded', async () => {
+            questionHeader = document.getElementById('question-header');
+            questionLoading = document.getElementById('question-loading');
+            questionArea = document.getElementById('question-area');
+            questionStem = document.getElementById('question-stem');
+            questionTitle = document.getElementById('question-title');
+            questionMcq = document.getElementById('question-block-mcq');
+            questionBlockFib = document.getElementById('question-block-fib');
+            questionBlockFibField = document.getElementById('question-block-fib-field');
             //Lấy giá trị của tham số "examId"
             const examId = new URLSearchParams(window.location.search).get('examId');
 
@@ -110,92 +132,84 @@
                 .then((response) => {
                     exam = response;
                     console.log(exam);
-                    var question = exam.questions[0]
-                    var questionContent = JSON.parse(question.questionContent)
-                    document.getElementById('question-stem').textContent = questionContent.stem;
-                    document.getElementById("question-title").textContent = "Câu 1";
-                    document.getElementById('question-area').hidden = false;
-                    document.getElementById('question-header').hidden = false;
-                    document.getElementById('question-loading').hidden = true;
-                    if(question.questionType == fillInBlank){
-                        const mf = document.getElementById('question-block-fib');
-                        mf.value = questionContent.frame;
-
-                        // Thiết lập chế độ readOnly. Với MathLive, khi readOnly = true, 
-                        // người dùng CHỈ CÓ THỂ nhập vào các \placeholder{} (ô trống),
-                        // không thể chỉnh sửa hay thao tác bên ngoài.
-                        mf.readOnly = true;
-                        mf.mathVirtualKeyboardPolicy = 'manual';
-
-                        // Xử lý lỗi: Khi ô trống đang rỗng mà bấm Backspace/Delete, MathLive xoá mất luôn cái ô trống
-                        mf.addEventListener('keydown', (ev) => {
-                            if (ev.key === 'Backspace' || ev.key === 'Delete') {
-                                // Nếu người dùng đang ấn backspace, kiểm tra xem họ đang ở trong tính năng prompt nào
-                                const prompts = mf.getPrompts();
-                                for (let p of prompts) {
-                                    // Kiểm tra xem prompt này có rỗng / sắp rỗng không
-                                    const val = mf.getPromptValue(p);
-                                    if (!val || val.trim() === '' || val === '?') {
-                                        // Rỗng rồi thì không cho xoá thêm để bảo vệ placeholder
-                                        ev.preventDefault();
-                                        return;
-                                    }
-                                }
-                            }
-                        });
-
-                        // Xử lý lỗi: MathLive tự động xoá sổ các placeholder rỗng khi click ra ngoài (mất focus)
-                        mf.addEventListener('focusout', () => {
-                            const prompts = mf.getPrompts();
-                            for (let p of prompts) {
-                                const val = mf.getPromptValue(p);
-                                if (!val || val.trim() === '') {
-                                    // Nếu người dùng bỏ trống ô này và click ra chỗ khác, 
-                                    // MathLive sẽ dọn dẹp (xoá) nó. Ta phải nhét tạm 1 ký tự vào để giữ chỗ.
-                                    mf.setPromptValue(p, '?');
-                                }
-                            }
-                        });
-
-                        // Xử lý hiển thị dấu ? khi người dùng focus vào ô đang chứa ?
-                        mf.addEventListener('focusin', () => {
-                            // Cần delay một chút để selection của MathLive cập nhật đúng ô đang focus
-                            setTimeout(() => {
-                                const prompts = mf.getPrompts();
-                                for (let p of prompts) {
-                                    const val = mf.getPromptValue(p);
-                                    if (val === '?') {
-                                        mf.setPromptValue(p, '');
-                                    }
-                                }
-                            }, 50);
-                        });
-
-                            const isNavKey = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(ev.key);
-                            if (isNavKey) {
-                                // Chỉ cho phép Tab để chuyển giữa các placeholder
-                                ev.preventDefault();
-                                if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') {
-                                    mf.executeCommand('moveToNextPlaceholder');
-                                } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') {
-                                    mf.executeCommand('moveToPreviousPlaceholder');
-                                }
-                            }
-                        });
-
-                        // Tự động chuyển focus vào placeholder đầu tiên
-                        requestAnimationFrame(() => {
-                            mf.focus();
-                            mf.executeCommand('moveToNextPlaceholder');
-                        });
-                    }else{
-
-                    }
+                    buildQuestionNav(exam.questions.length);
+                    goToQuestion(1);
                 })
                 .catch((error) => {
                     alert("Lỗi: " + error.message);
                 });
         });
 
+        function renderQuestion(question){
+            questionHeader.hidden = true;
+            questionArea.hidden = true;
+            questionLoading.hidden = false;
+            questionBlockFib.hidden = true;
+            questionMcq.hidden = true;
+            questionBlockFibField.hidden = true;
+            if(question.questionType == fillInBlank){
+                var questionContent = JSON.parse(question.questionContent);
+                questionStem.textContent = questionContent.stem;
+                questionTitle.textContent = "Câu " + questionNumber;
+                document.getElementById('question-block-fib-field').value = questionContent.frame;
+                questionBlockFib.hidden = false;
+                questionBlockFibField.hidden = false;
+            }
+            else if(question.questionType == multipleChoice){
+                questionStem.textContent = question.questionContent;
+                questionStem.render?.();
+                questionTitle.textContent = "Câu " + questionNumber;
+                questionMcq.hidden = false;
+
+                var template = document.getElementById("mcq-template");
+
+                questionMcq.innerHTML = "";
+
+                question.answers.forEach((answer) => {
+
+                    var newOption = template.content.cloneNode(true);
+
+                    var li = newOption.querySelector("li");
+
+                    li.querySelector("input").value = answer.questionAnswerId;
+
+                    li.querySelector("math-span").textContent = answer.content;
+
+                    questionMcq.appendChild(newOption);
+                });
+            }
+            questionLoading.hidden = true;
+            questionHeader.hidden = false;
+            questionArea.hidden = false;
+        }
+
+        function buildQuestionNav(total) {
+            const nav = document.getElementById('questionNav');
+            nav.innerHTML = '';
+            for (let i = 1; i <= total; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary btn-sm m-1';
+                btn.textContent = i;
+                btn.style.minWidth = '40px';
+                btn.addEventListener('click', () => goToQuestion(i));
+                nav.appendChild(btn);
+            }
+        }
+
+        function goToQuestion(num) {
+            questionNumber = num;
+            renderQuestion(exam.questions[questionNumber - 1]);
+
+            // Highlight active button
+            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                if (idx + 1 === questionNumber) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
+        }
     </script>
 }
