@@ -4,7 +4,6 @@
     {
         public string ExamId { get; set; } = null!;
         public string SubmissionId { get; set; } = null!;
-        public string Title { get; set; } = null!;
         public int Duration { get; set; }
         public int Code { get; set; }
         public List<TakeExamQuestionDto> Questions { get; set; } = new();
@@ -15,6 +14,7 @@
         public string QuestionId { get; set; } = null!;
         public string QuestionType { get; set; } = null!;
         public string QuestionContent { get; set; } = null!;
+        public string? Hint { get; set; }
         public int Difficulty { get; set; }
         public List<TakeExamAnswerDto> Answers { get; set; } = new();
     }

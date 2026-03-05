@@ -3,62 +3,130 @@
 }
 
 @section Styles {
-    <!-- MathLive for math rendering -->
-    <script defer src="https://unpkg.com/mathlive"></script>
     <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
 }
 
-<!-- Hidden Inputs to pass Razor Variables to Javascript -->
-<input type="hidden" id="ExamId" value="@ViewBag.ExamId" />
-<input type="hidden" id="SubmissionId" value="" />
-
-<main class="page-shell py-4" id="examWorkspace" style="display: none;">
+<main class="page-shell py-4" id="examWorkspace">
     <div class="container-fluid px-3 px-md-4">
-      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
-        <div>
-          <h1 class="page-title" id="examTitle">Loading...</h1>
-          <p class="page-subtitle" id="examSubtitle">Đang chuẩn bị dữ liệu thi...</p>
-          <div class="badge bg-info mt-2" style="font-size: 1rem;"><i class="bi bi-file-earmark-text"></i> Mã đề thi: <span id="paperCodeDisplay">...</span></div>
-        </div>
-        <div class="soft-card">
-          <div class="summary-label">Thời gian còn lại</div>
-          <div class="countdown" data-countdown="2400" id="countdownTimer">40:00</div>
-        </div>
-      </section>
 
-      <div class="row g-3">
-        <div class="col-12 col-xl-8" id="questionContainer">
-          <!-- Dynamic Question Blocks will be loaded here -->
-        </div>
-
-        <div class="col-12 col-xl-4">
-          <aside class="panel-card mb-3">
-            <h2 class="panel-title">Điều hướng câu hỏi</h2>
-            <div class="question-nav mb-2" id="questionNavMap">
-              <!-- Dynamic Nav Buttons -->
+        @* ── Header ── *@
+        <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <h1 class="page-title">Kiểm tra</h1>
+                <div class="badge bg-info mt-2" style="font-size: 1rem;">
+                    <i class="bi bi-file-earmark-text"></i> Mã đề thi: <span>204</span>
+                </div>
             </div>
-            <p class="form-note mb-0 text-success" id="autoSaveStatus">Hệ thống sẽ tự động lưu bài.</p>
-          </aside>
+            <div class="soft-card">
+                <div class="summary-label">Thời gian còn lại</div>
+                <div class="countdown" id="countdownTimer">40:00</div>
+            </div>
+        </section>
 
-          <div class="toolbar d-flex gap-2 mt-3">
-            <button class="btn btn-warning flex-grow-1" data-action="validate-unanswered" onclick="highlightUnanswered()">Kiểm tra câu chưa trả lời</button>
-            <button class="btn btn-danger flex-grow-1" onclick="submitExam()">Nộp bài</button>
-          </div>
+        <div class="row g-3">
+            <div class="col-12 col-xl-8" id="question-loading">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Question Area (single question) ── *@
+            <div class="col-12 col-xl-8" id="question-area" hidden>
+                <div id="question-header" hidden>
+                    <div id="question-title"></div>
+                    <div class="mb-3">
+                        <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
+                    </div>
+                </div>
+
+                @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
+                <div id="question-block-mcq" hidden>
+                    <div class="list-group">
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="radio" name="q1" value="A">
+                            <span><strong>A.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">-2</math-field></span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="radio" name="q1" value="B">
+                            <span><strong>B.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">0</math-field></span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="radio" name="q1" value="C">
+                            <span><strong>C.</strong> <math-field read-only style="display:inline-block; vertical-align:middle; font-size:1rem; border:none; padding:0; min-height:auto;">1</math-field></span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="radio" name="q1" value="D">
+                            <span><strong>D.</strong> Không tồn tại</span>
+                        </label>
+                    </div>
+                </div>
+
+                @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
+                <div class="d-flex align-items-center gap-2" >
+                    <math-field read-only id="question-block-fib"></math-field>
+                </div>
+
+            </div>
+
+            @* ── Sidebar ── *@
+            <div class="col-12 col-xl-4">
+                <aside class="panel-card mb-3">
+                    <h2 class="panel-title">Điều hướng câu hỏi</h2>
+                    <div class="question-nav mb-2" id="questionNav">
+                        <!-- Navigation buttons will go here -->
+                    </div>
+                    <p class="form-note mb-0 text-success">Hệ thống sẽ tự động lưu bài</p>
+                </aside>
+
+                <div class="toolbar d-flex gap-2 mt-3">
+                    <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                </div>
+            </div>
+
         </div>
-      </div>
     </div>
 </main>
 
-<div class="text-center mt-5" id="loadingSpinner">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Đang tải đề thi...</p>
-</div>
-
 @section Scripts {
-    <!-- SignalR for Live Proctoring -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/StudentExam/exam_taking.js"></script>
+    <!-- MathLive for math rendering -->
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script>
+        var exam;
+        const fillInBlank = "FillInBlank";
+        const multipleChoice = "MultipleChoice";
+        document.addEventListener('DOMContentLoaded', async () => {
+            //Lấy giá trị của tham số "examId"
+            const examId = new URLSearchParams(window.location.search).get('examId');
+
+            //Kiểm tra tính hợp lệ
+            if (!examId || isNaN(examId)) {
+                alert("Không tìm thấy mã bài thi hợp lệ trong URL.");
+                return;
+            }
+
+            apiClient.post(`/api/student/exams/${examId}/take`)
+                .then((response) => {
+                    exam = response;
+                    console.log(exam);
+                    var question = exam.questions[0]
+                    var questionContent = JSON.parse(question.questionContent)
+                    document.getElementById('question-stem').textContent = questionContent.stem;
+                    document.getElementById("question-title").textContent = "Câu 1";
+                    document.getElementById('question-area').hidden = false;
+                    document.getElementById('question-header').hidden = false;
+                    document.getElementById('question-loading').hidden = true;
+                    if(question.questionType == fillInBlank){
+                        document.getElementById('question-block-fib').value = questionContent.frame;
+                    }else{
+
+                    }
+                })
+                .catch((error) => {
+                    alert("Lỗi: " + error.message);
+                });
+        });
+
+    </script>
 }

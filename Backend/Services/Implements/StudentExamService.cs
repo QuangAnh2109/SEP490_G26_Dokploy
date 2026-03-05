@@ -128,7 +128,6 @@ namespace Backend.Services.Implements
             {
                 ExamId = SecureIdHelper.EncryptId(paper.Exam.ExamId),
                 SubmissionId = SecureIdHelper.EncryptId(activeSubmission.SubmissionId),
-                Title = paper.Exam.Title ?? string.Empty,
                 Duration = paper.Exam.Duration,
                 Code = paper.Code,
                 Questions = questions

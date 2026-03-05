@@ -33,7 +33,7 @@ namespace Backend.Controllers
             return 0; 
         }
 
-        [HttpGet("{examId}/take")]
+        [HttpPost("{examId}/take")]
         public async Task<IActionResult> TakeExamInClass(string examId)
         {
             var studentId = GetStudentId();
