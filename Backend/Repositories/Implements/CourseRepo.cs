@@ -28,8 +28,10 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     // Use the Subject navigation for subject name
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
                     InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
                     // Map Semester from DB
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
@@ -47,8 +49,10 @@ namespace Backend.Repositories.Implements
                     ClassId = c.ClassId,
                     ClassName = c.Name,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
                     InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
@@ -67,7 +71,11 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     SubjectId = c.SubjectId,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
+                    SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
                     TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    InvitationCode = c.InvitationCode,
+                    InvitationCodeStatus = c.InvitationCodeStatus,
+                    Semester = c.Semester ?? string.Empty,
                     Chapters = c.Subject.Chapters
                         .Select(ch => new ChapterDTO
                         {
@@ -126,6 +134,131 @@ namespace Backend.Repositories.Implements
                     AllowLateSubmission = e.AllowLateSubmission
                 })
                 .ToListAsync();
+        }
+
+        public async Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId)
+        {
+            var existingClasses = await _context.Classes
+                .Where(c => c.TeacherId == teacherId && c.Name == className)
+                .ToListAsync();
+
+            foreach (var c in existingClasses)
+            {
+                if (c.Semester == semester)
+                {
+                    return "Lớp học này đã tồn tại trong học kỳ được chọn";
+                }
+                if (c.SubjectId == subjectId)
+                {
+                    return "Lớp học này đã học môn này ở học kỳ khác";
+                }
+            }
+            return null;
+        }
+
+        private string GenerateInvitationCode()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            var code = new string(Enumerable.Repeat(chars, 6)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+            return code;
+        }
+
+        public async Task<CourseDTO> CreateCourseAsync(Class newClass)
+        {
+            bool isUnique = false;
+            string code = "";
+            while (!isUnique)
+            {
+                code = GenerateInvitationCode();
+                isUnique = !await _context.Classes.AnyAsync(c => c.InvitationCode.ToLower() == code.ToLower());
+            }
+
+            newClass.InvitationCode = code;
+            _context.Classes.Add(newClass);
+            await _context.SaveChangesAsync();
+
+            // Load Subject and Teacher for the returned DTO
+            await _context.Entry(newClass).Reference(c => c.Subject).LoadAsync();
+            await _context.Entry(newClass).Reference(c => c.Teacher).LoadAsync();
+
+            return new CourseDTO
+            {
+                ClassId = newClass.ClassId,
+                ClassName = newClass.Name,
+                SubjectId = newClass.SubjectId,
+                SubjectName = newClass.Subject?.Name ?? string.Empty,
+                TeacherName = newClass.Teacher?.FullName ?? string.Empty,
+                InvitationCode = newClass.InvitationCode,
+                Semester = newClass.Semester ?? string.Empty,
+                StudentCount = 0,
+                ExamCount = 0,
+                Role = "Teacher"
+            };
+        }
+
+        public async Task<Class?> GetClassByInviteCodeAsync(string inviteCode)
+        {
+            var lowerInviteCode = inviteCode?.ToLower();
+            return await _context.Classes
+                .FirstOrDefaultAsync(c => c.InvitationCode.ToLower() == lowerInviteCode && c.Status == 1 && c.InvitationCodeStatus == 1);
+        }
+
+        public async Task<bool> IsUserInClassAsync(int classId, int userId)
+        {
+            return await _context.ClassMembers
+                .AnyAsync(cm => cm.ClassId == classId && cm.StudentId == userId && cm.MemberStatus == 1);
+        }
+
+        public async Task JoinClassAsync(int classId, int userId)
+        {
+            var membership = new ClassMember
+            {
+                ClassId = classId,
+                StudentId = userId,
+                MemberStatus = 1 // Default active status
+            };
+            _context.ClassMembers.Add(membership);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task LeaveClassAsync(int classId, int userId)
+        {
+            var membership = await _context.ClassMembers
+                .FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == userId);
+
+            if (membership != null)
+            {
+                _context.ClassMembers.Remove(membership);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
+        {
+            return await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId)
+                .Select(cm => new StudentInClassDTO
+                {
+                    StudentId = cm.StudentId,
+                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    Email = cm.Student != null ? cm.Student.Email : string.Empty,
+                    JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this
+                })
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
+        {
+            var course = await _context.Classes.FirstOrDefaultAsync(c => c.ClassId == classId);
+            if (course == null) return false;
+
+            course.Name = newName;
+            course.InvitationCodeStatus = invitationStatus;
+            
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

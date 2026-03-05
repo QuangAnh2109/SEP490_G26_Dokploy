@@ -1,6 +1,8 @@
-﻿using Backend.Models;
+﻿using Backend.DTOs.StudentExam;
+using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Repositories.Implements
 {
@@ -18,9 +20,10 @@ namespace Backend.Repositories.Implements
         {
             return await _context.Papers
                 .Include(p => p.Exam)
-                // .Include(p => p.PaperQuestions)
-                // .ThenInclude(pq => pq.Question)
                 .Include(p => p.Questions)
+                    .ThenInclude(q => q.QuestionAnswers)
+                        .ThenInclude(qa => qa.BlankInputs)
+                            .ThenInclude(bi => bi.InputType)
                 .FirstOrDefaultAsync(p => p.ExamId == examId && p.PaperId == paperId);
         }
 
@@ -41,12 +44,10 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
         }
 
-        // TODO: DB_UPDATE – StudentAnswer.QuestionIndex đã bị xóa, giờ dùng QuestionAnswersId
-        public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex)
+        public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId)
         {
-            // return await _context.StudentAnswers
-            //     .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionIndex == questionIndex);
-            return null;
+            return await _context.StudentAnswers
+                .FirstOrDefaultAsync(sa => sa.SubmissionId == submissionId && sa.QuestionAnswerId == questionAnswerId);
         }
 
         // TODO: DB_UPDATE – StudentAnswer.QuestionIndex và ResponseText đã bị xóa/đổi tên
@@ -54,25 +55,36 @@ namespace Backend.Repositories.Implements
         {
             if (!answers.Any()) return;
 
-            // var submissionId = answers.First().SubmissionId;
-            // var indices = answers.Select(a => a.QuestionIndex).ToList();
-            //
-            // var existingAnswers = await _context.StudentAnswers
-            //     .Where(sa => sa.SubmissionId == submissionId && indices.Contains(sa.QuestionIndex))
-            //     .ToDictionaryAsync(sa => sa.QuestionIndex);
-            //
-            // foreach (var answer in answers)
-            // {
-            //     if (existingAnswers.TryGetValue(answer.QuestionIndex, out var existing))
-            //     {
-            //         existing.ResponseText = answer.ResponseText;
-            //         _context.StudentAnswers.Update(existing);
-            //     }
-            //     else
-            //     {
-            //         _context.StudentAnswers.Add(answer);
-            //     }
-            // }
+            var submissionId = answers.First().SubmissionId;
+            var answerIds = answers.Select(a => a.QuestionAnswerId).ToList();
+
+            var existingAnswers = await _context.StudentAnswers
+                .Where(sa => sa.SubmissionId == submissionId && answerIds.Contains(sa.QuestionAnswerId))
+                .ToDictionaryAsync(sa => sa.QuestionAnswerId);
+
+            foreach (var answer in answers)
+            {
+                if (existingAnswers.TryGetValue(answer.QuestionAnswerId, out var existing))
+                {
+                    if (string.IsNullOrEmpty(answer.Response)) 
+                    {
+                        // User unchecked the option, delete the record
+                        _context.StudentAnswers.Remove(existing);
+                    }
+                    else 
+                    {
+                        existing.Response = answer.Response;
+                        _context.StudentAnswers.Update(existing);
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(answer.Response))
+                    {
+                        _context.StudentAnswers.Add(answer);
+                    }
+                }
+            }
             await _context.SaveChangesAsync();
         }
 
@@ -114,6 +126,15 @@ namespace Backend.Repositories.Implements
             int selectedPaperId = paperIds[randomIndex];
 
             return await _context.Papers.FindAsync(selectedPaperId);
+        }
+
+        public async Task<int?> GetPreviousPaperIdAsync(int studentId, int examId)
+        {
+            return await _context.Submissions
+                .Where(s => s.StudentId == studentId && s.Paper.ExamId == examId)
+                .OrderByDescending(s => s.CreatedAtUtc)
+                .Select(s => (int?)s.PaperId)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<bool> CanStudentTakeExamAsync(int studentId, int examId)
@@ -209,7 +230,6 @@ namespace Backend.Repositories.Implements
             {
                 // TODO: DB_UPDATE – PaperQuestions đã bị xóa, giờ dùng Paper.Questions
                 var anyPaper = await _context.Papers
-                    // .Include(p => p.PaperQuestions)
                     .Include(p => p.Questions)
                     .FirstOrDefaultAsync(p => p.ExamId == examId);
 
@@ -219,5 +239,38 @@ namespace Backend.Repositories.Implements
             return result;
         }
 
+        public async Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId)
+        {
+            return await _context.Exams
+                .Where(exam =>
+                    exam.ExamId == examId &&
+                    _context.ClassMembers.Any(classMember =>
+                        classMember.ClassId == exam.ClassId &&
+                        classMember.StudentId == studentId
+                    ) &&
+                    exam.OpenAt <= DateTime.UtcNow &&
+                    exam.CloseAt > DateTime.UtcNow
+                )
+                .Select(e => new ExamInfoForStudentDto
+                {
+                    ExamId = e.ExamId,
+                    Title = e.Title,
+                    Duration = e.Duration,
+                    MaxAttempts = e.MaxAttempts,
+                    StudentAttempts = _context.Submissions.Count(s => s.StudentId == studentId && s.Paper.ExamId == e.ExamId),
+                    CloseAt = e.CloseAt,
+                    ShuffleQuestion = e.ShuffleQuestion,
+                    PaperIds = e.Papers.Select(p => p.PaperId).ToList()
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<Submission?> GetActiveSubmissionForExamAsync(int studentId, int examId)
+        {
+            return await _context.Submissions
+                .Include(s => s.Paper)
+                    .ThenInclude(p => p.Exam)
+                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1 && s.Paper.ExamId == examId);
+        }
     }
 }

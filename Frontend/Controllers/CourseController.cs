@@ -11,8 +11,42 @@ namespace Frontend.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult StudentList(int id)
+        {
+            ViewBag.ClassId = id;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult Settings(int id)
+        {
+            ViewBag.ClassId = id;
+            return View();
+        }
+
         public IActionResult CourseList()
         {
+            return View();
+        }
+
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        public IActionResult Join(string code)
+        {
+            ViewBag.InviteCode = code;
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExamAnalytics(int examId)
+        {
+            // Do Frontend call trực tiếp từ Browser qua JS fetch
+            // Nên Controller MVC chỉ cần hứng ID để gài vào View
+            ViewBag.ExamId = examId;
             return View();
         }
     }

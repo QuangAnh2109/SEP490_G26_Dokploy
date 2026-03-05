@@ -6,17 +6,45 @@
     <h1 class="display-4">Welcome</h1>
     <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
 
-    <!-- Test form for exam taking with POST -->
-    <div class="card mx-auto mt-4" style="max-width: 400px; padding: 20px;">
-        <h3>Vào thi (Test POST Link)</h3>
-        <p class="text-muted">Nhập mã đề và ID bài thi để test thử URL bị ẩn tham số.</p>
-        <form method="post" action="/StudentExam/TakeExam">
-            <div class="mb-3 text-start">
-                <label class="form-label">Exam ID</label>
-                <input type="number" name="examId" class="form-control" value="1" required />
+    <div class="row mt-5 justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 text-center pb-5">
+                    <h5 class="card-title mb-4">Bạn muốn làm gì tiếp theo?</h5>
+                    
+                    <div id="authRequiredActions" class="d-none">
+                        <p class="text-muted mb-4">Chào mừng bạn quay trở lại. Hãy truy cập vào danh sách các khóa học của bạn.</p>
+                        <a href="/Course/CourseList" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="fas fa-chalkboard-teacher me-2"></i>Xem Danh Sách Khóa Học
+                        </a>
+                    </div>
+                    
+                    <div id="guestActions">
+                        <p class="text-muted mb-4">Vui lòng đăng nhập để tiếp tục sử dụng các chức năng của hệ thống.</p>
+                        <a href="/Auth/Login" class="btn btn-primary btn-lg w-100 mb-3">Đăng Nhập</a>
+                        <a href="/Auth/SelectRole" class="btn btn-outline-secondary w-100">Đăng Ký Tài Khoản Mới</a>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Làm bài (POST)</button>
-        </form>
+        </div>
     </div>
 </div>
 
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Check if user is logged in
+            const token = sessionStorage.getItem("jwtToken") || localStorage.getItem("jwtToken");
+            
+            if (token) {
+                // User is authenticated
+                document.getElementById("guestActions").classList.add("d-none");
+                document.getElementById("authRequiredActions").classList.remove("d-none");
+            } else {
+                // User is guest
+                document.getElementById("guestActions").classList.remove("d-none");
+                document.getElementById("authRequiredActions").classList.add("d-none");
+            }
+        });
+    </script>
+}

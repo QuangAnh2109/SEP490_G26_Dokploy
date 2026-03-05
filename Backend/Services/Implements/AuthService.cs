@@ -231,6 +231,95 @@ namespace Backend.Services.Implements
             };
         }
 
+        public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            var user = await _authRepository.GetUserByEmailAsync(request.Email);
+            if (user == null)
+            {
+                // To prevent email enumeration, we do not throw an error here but silently return.
+                return;
+            }
+
+            var otp = new Random().Next(100000, 999999).ToString();
+            var cacheKey = $"RESET_OTP_{request.Email}";
+            _cache.Set(cacheKey, otp, TimeSpan.FromMinutes(10));
+
+            var htmlMessage = $@"
+                <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h2>Đặt lại mật khẩu</h2>
+                    <p>Chào bạn,</p>
+                    <p>Mã OTP để đặt lại mật khẩu của bạn là:</p>
+                    <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{otp}</h1>
+                    <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút. Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
+                </div>";
+
+            await _emailService.SendEmailAsync(request.Email, "Mã Xác Thực Đặt Lại Mật Khẩu - Math Test Creator", htmlMessage);
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var cacheKey = $"RESET_OTP_{request.Email}";
+
+            if (!_cache.TryGetValue(cacheKey, out string? cachedOtp) || string.IsNullOrEmpty(cachedOtp))
+            {
+                throw new UnauthorizedAccessException("Mã OTP đã hết hạn hoặc không tồn tại.");
+            }
+
+            if (cachedOtp != request.OtpCode)
+            {
+                throw new UnauthorizedAccessException("Mã OTP không chính xác.");
+            }
+
+            _cache.Remove(cacheKey); // OTP is valid, remove it
+
+            var user = await _authRepository.GetUserByEmailAsync(request.Email);
+            if (user == null)
+            {
+                throw new InvalidOperationException(ErrorMessages.UserNotFound);
+            }
+
+            // Update user password and invalidate previous tokens
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.SecurityStamp = DateTime.UtcNow;
+
+            await _authRepository.UpdateUserAsync(user);
+        }
+
+        public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request)
+        {
+            var user = await _authRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new InvalidOperationException(ErrorMessages.UserNotFound);
+            }
+
+            if (string.IsNullOrEmpty(user.PasswordHash))
+            {
+                throw new InvalidOperationException("Tài khoản của bạn được liên kết với Google. Vui lòng thiết lập mật khẩu bằng tính năng Quên mật khẩu hoặc Đăng nhập qua Google.");
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+            {
+                throw new UnauthorizedAccessException("Mật khẩu cũ không chính xác.");
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.SecurityStamp = DateTime.UtcNow;
+
+            await _authRepository.UpdateUserAsync(user);
+        }
+
+        public async Task LogoutAsync(int userId)
+        {
+            var user = await _authRepository.GetUserByIdAsync(userId);
+            if (user != null)
+            {
+                // Changing the SecurityStamp invalidates all existing refresh tokens
+                user.SecurityStamp = DateTime.UtcNow;
+                await _authRepository.UpdateUserAsync(user);
+            }
+        }
+
         private ClaimsPrincipal? CreatePrincipalFromExpiredToken(string? token, bool isRefreshToken = false)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));

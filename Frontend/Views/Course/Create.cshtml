@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Lớp Học Mới</title>
+    <!-- Common Bootstrap -->
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+    <!-- Optional: Use existing CSS from Course.css -->
+    <link rel="stylesheet" href="~/css/Course/Course.css">
+    <style>
+        .create-class-card {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell py-4">
+        <div class="container-fluid px-3 px-md-4">
+            <!-- Header -->
+            <section class="page-header d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1>Tạo Lớp Học Mới</h1>
+                    <p class="page-subtitle">Nhập thông tin lớp học bạn muốn giảng dạy.</p>
+                </div>
+                <div>
+                    <a href="/Course/CourseList" class="btn btn-outline-secondary">Quy lại Danh Sách Lớp</a>
+                </div>
+            </section>
+
+            <!-- Form -->
+            <section class="create-class-card">
+                <form id="createClassForm">
+                    <div class="mb-3">
+                        <label for="classNameInput" class="form-label">Tên Lớp (VD: SE1709) *</label>
+                        <input type="text" class="form-control" id="classNameInput" required placeholder="Nhập tên lớp">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="semesterInput" class="form-label">Học Kỳ (VD: Sum26) *</label>
+                        <!-- Giả sử nhập tay học kỳ theo format để đồng bộ -->
+                        <input type="text" class="form-control" id="semesterInput" required placeholder="Nhập học kỳ">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="subjectSelect" class="form-label">Môn Học *</label>
+                        <select class="form-select" id="subjectSelect" required>
+                            <option value="">-- Đang tải danh sách môn học --</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">Tạo Lớp Học</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success" id="successModalLabel">Tạo Lớp Thành Công!</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <p>Lớp học của bạn đã được tạo thành công với mã mời:</p>
+                    <h2 class="display-6 fw-bold text-primary" id="inviteCodeDisplay">XXXXXX</h2>
+                    
+                    <div class="mt-4">
+                        <input type="text" id="inviteLinkInput" class="form-control text-center mb-2" readonly>
+                        <button type="button" class="btn btn-outline-primary w-100" id="copyLinkBtn">
+                            Copy Link Mời
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <a href="/Course/CourseList" class="btn btn-primary">Đến trang Lớp học của tôi</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = "https://localhost:7167";
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Kiểm tra role Teacher
+            const role = localStorage.getItem("userRole");
+            if (role !== "Teacher") {
+                alert("Bạn không có quyền truy cập trang này.");
+                window.location.href = "/Course/CourseList";
+                return;
+            }
+
+            loadSubjects();
+            initForm();
+        });
+
+        function getToken() {
+            return sessionStorage.getItem("jwtToken") || localStorage.getItem("jwtToken") || "";
+        }
+
+        async function loadSubjects() {
+            const token = getToken();
+            try {
+                const res = await fetch(`${API_BASE}/api/course/subjects`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if (!res.ok) throw new Error("Không thể tải môn học");
+                
+                const subjects = await res.json();
+                const select = document.getElementById("subjectSelect");
+                
+                select.innerHTML = '<option value="">-- Chọn Môn Học --</option>';
+                subjects.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s.subjectId;
+                    opt.textContent = `${s.code} - ${s.name}`;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                console.error(error);
+                alert("Đã có lỗi xảy ra khi tải danh sách môn học.");
+            }
+        }
+
+        function initForm() {
+            const form = document.getElementById("createClassForm");
+            form.addEventListener("submit", async function(e) {
+                e.preventDefault();
+                
+                const btn = document.getElementById("submitBtn");
+                btn.disabled = true;
+                btn.textContent = "Đang xử lý...";
+
+                const payload = {
+                    className: document.getElementById("classNameInput").value.trim(),
+                    semester: document.getElementById("semesterInput").value.trim(),
+                    subjectId: parseInt(document.getElementById("subjectSelect").value)
+                };
+
+                try {
+                    const token = getToken();
+                    const res = await fetch(`${API_BASE}/api/course`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + token
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        showSuccessModal(data.invitationCode);
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        // Handle our custom exception text format
+                        if (errorData.message) {
+                            alert("Lỗi: " + errorData.message);
+                        } else {
+                            alert("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+                        }
+                    } else {
+                        throw new Error("Lỗi máy chủ");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("Có lỗi xảy ra khi gọi API Tạo lớp.");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Tạo Lớp Học";
+                }
+            });
+        }
+
+        function showSuccessModal(inviteCode) {
+            document.getElementById("inviteCodeDisplay").textContent = inviteCode;
+            
+            const joinLink = `${window.location.origin}/Course/Join?code=${inviteCode}`;
+            const linkInput = document.getElementById("inviteLinkInput");
+            linkInput.value = joinLink;
+
+            document.getElementById("copyLinkBtn").addEventListener("click", () => {
+                navigator.clipboard.writeText(joinLink).then(() => {
+                    alert("Đã chép link mời vào bộ nhớ tạm!");
+                });
+            });
+
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

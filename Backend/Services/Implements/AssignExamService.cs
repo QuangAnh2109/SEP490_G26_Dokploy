@@ -240,7 +240,7 @@ public class AssignExamService : IAssignExamService
             .Select(x => new QuestionListItemDto(
                 x.q.QuestionId,
                 x.q.QuestionType,
-                x.q.QuestionContent, // TODO: DB_UPDATE – ContentLatex đổi thành QuestionContent
+                x.q.QuestionContent,
                 x.s.Code ?? string.Empty,
                 x.ch.ChapterId,
                 x.ch.Name,
@@ -375,22 +375,12 @@ public class AssignExamService : IAssignExamService
                     ? ShuffleQuestionIds(questionIds)
                     : questionIds.ToList();
 
-                // TODO: DB_UPDATE – PaperQuestions là implicit join table, không còn DbSet trực tiếp
-                // Cần dùng Paper.Questions (many-to-many) để thêm câu hỏi vào paper
-                // var paperQuestions = orderedQuestionIds
-                //     .Select((qid, idx) => new PaperQuestion
-                //     {
-                //         PaperId = paper.PaperId,
-                //         QuestionId = qid,
-                //         Index = idx + 1
-                //     });
-                // _db.PaperQuestions.AddRange(paperQuestions);
-                var questions = await _db.Questions
-                    .Where(q => orderedQuestionIds.Contains(q.QuestionId))
-                    .ToListAsync(cancellationToken);
-                foreach (var q in questions)
+                // Insert into PaperQuestion join table using raw SQL (no DbSet available)
+                foreach (var (qid, idx) in orderedQuestionIds.Select((q, i) => (q, i)))
                 {
-                    paper.Questions.Add(q);
+                    await _db.Database.ExecuteSqlRawAsync(
+                        "INSERT INTO PaperQuestion (PaperId, QuestionId, [Index]) VALUES ({0}, {1}, {2})",
+                        paper.PaperId, qid, idx + 1);
                 }
                 await _db.SaveChangesAsync(cancellationToken);
 

@@ -1,0 +1,108 @@
+@{
+    ViewData["Title"] = "Tham gia lớp học";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tham Gia Lớp Học</title>
+    <!-- Common Bootstrap -->
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+    <link rel="stylesheet" href="~/css/Course/Course.css">
+    <style>
+        .join-card {
+            max-width: 500px;
+            margin: 4rem auto;
+            padding: 3rem;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="join-card" id="processingStatus">
+            <h3 class="mb-4">Đang xử lý tham gia lớp...</h3>
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-3">Mã mời: <strong id="displayCode">@ViewBag.InviteCode</strong></p>
+        </div>
+
+        <div class="join-card d-none" id="errorStatus">
+            <h3 class="mb-4 text-danger">Tham Gia Không Thành Công</h3>
+            <p id="errorMsg" class="text-muted"></p>
+            <a href="/Course/CourseList" class="btn btn-primary mt-3">Về Danh Sách Lớp</a>
+        </div>
+    </div>
+
+    <script src="~/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = "https://localhost:7167";
+        const inviteCode = "@ViewBag.InviteCode";
+
+        document.addEventListener("DOMContentLoaded", function () {
+            if (!inviteCode) {
+                showError("Vui lòng cung cấp mã mời (code) trong đường link.");
+                return;
+            }
+            
+            checkAuthAndJoin();
+        });
+
+        function getToken() {
+            return sessionStorage.getItem("jwtToken") || localStorage.getItem("jwtToken") || "";
+        }
+
+        async function checkAuthAndJoin() {
+            const token = getToken();
+            if (!token) {
+                // Not logged in -> Redirect to login page and remember return URL
+                const currentUrl = encodeURIComponent(window.location.href);
+                // Assume login page is /Auth/Login or similar
+                // We'll pass the link back
+                alert("Bạn cần đăng nhập để tham gia lớp. Nhấn OK để tới trang đăng nhập.");
+                window.location.href = `/Auth/Login?returnUrl=${currentUrl}`;
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/course/join`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({ invitationCode: inviteCode }) // Match exactly the property expected by existing backend body dto (or update the property name based on previous implementations)
+                });
+
+                if (res.ok) {
+                    alert("Tham gia lớp thành công!");
+                    window.location.href = "/Course/CourseList";
+                } else if (res.status === 400 || res.status === 404) {
+                    const text = await res.text();
+                    showError("Mã mời không hợp lệ, đã hết hạn, hoặc bạn đã ở sẵn trong lớp này. (" + text + ")");
+                } else {
+                    showError("Lỗi hệ thống khi tham gia lớp.");
+                }
+            } catch (error) {
+                showError("Không thể kết nối đến máy chủ.");
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById("processingStatus").classList.add("d-none");
+            document.getElementById("errorStatus").classList.remove("d-none");
+            document.getElementById("errorMsg").textContent = msg;
+        }
+    </script>
+</body>
+</html>

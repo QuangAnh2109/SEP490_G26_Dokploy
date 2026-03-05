@@ -1,0 +1,178 @@
+@{
+    ViewData["Title"] = "Phân tích Kết quả Đề thi";
+    var examId = ViewBag.ExamId ?? 0;
+}
+
+<!-- Sử dụng CDN của Chart.js để vẽ biểu đồ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 text-center mb-4">
+            <h2 id="examTitle">Phân tích Kết quả Bài thi</h2>
+            <p class="text-muted">Tổng số bài nộp: <span id="totalSubmissions" class="fw-bold">0</span></p>
+        </div>
+    </div>
+
+    <!-- Hàng chứa Biểu đồ -->
+    <div class="row mb-5">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Tỉ lệ chính xác theo từng Chương</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chapterChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hàng chứa Lời khuyên Đề xuất (Actionable Insights) -->
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Đề xuất Giảng dạy Tự động từ Hệ thống</h5>
+                </div>
+                <div class="card-body" id="recommendationsBox">
+                    <!-- Dữ liệu JS sẽ đổ thẻ <li> vào đây -->
+                    <ul class="list-group list-group-flush" id="recommendationsList">
+                        <li class="list-group-item text-muted">Đang tải và phân tích dữ liệu...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const examId = @examId;
+    const API_BASE = "https://localhost:7167";
+
+    function getToken() {
+        return localStorage.getItem("token");
+    }
+
+    async function loadAnalyticsData() {
+        const token = getToken();
+        if (!token) {
+            alert("Bạn chưa đăng nhập");
+            window.location.href = "/Auth/Login";
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/api/analytics/exam/${examId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (response.status === 401) {
+                alert("Phiên đăng nhập hết hạn hoặc bạn không có quyền xem trang này.");
+                window.location.href = "/Auth/Login";
+                return;
+            }
+
+            if (!response.ok) {
+                document.getElementById("examTitle").innerText = "Lỗi khi tải dữ liệu Phân tích (404/500)";
+                return;
+            }
+
+            const data = await response.json();
+            renderAnalytics(data);
+        } catch (error) {
+            console.error("Lỗi fetch API:", error);
+            document.getElementById("examTitle").innerText = "Lỗi kết nối máy chủ!";
+        }
+    }
+
+    function renderAnalytics(data) {
+        // Render Title
+        document.getElementById("examTitle").innerText = "Phân tích Bài thi: " + (data.examTitle || "N/A");
+        document.getElementById("totalSubmissions").innerText = data.totalSubmissions;
+
+        if (data.totalSubmissions === 0) {
+            document.getElementById("recommendationsList").innerHTML = `<li class="list-group-item text-warning">Chưa có học sinh nào nộp bài thi này để phân tích.</li>`;
+            return;
+        }
+
+        // Render Biểu đồ Cột (Bar Chart)
+        var labels = [];
+        var accuracyRates = [];
+        var backgroundColors = [];
+
+        if (data.chapterStats && data.chapterStats.length > 0) {
+            data.chapterStats.forEach(function(stat) {
+                labels.push(stat.chapterName);
+                accuracyRates.push(stat.accuracyRate);
+
+                // Màu sắc cột tùy thuộc vào Rule (Dưới 40 Đỏ, Dưới 70 Vàng, Trên 70 Xanh)
+                if (stat.accuracyRate < 40) {
+                    backgroundColors.push('rgba(255, 99, 132, 0.7)'); // Đỏ
+                } else if (stat.accuracyRate < 70) {
+                    backgroundColors.push('rgba(255, 205, 86, 0.7)'); // Vàng
+                } else {
+                    backgroundColors.push('rgba(75, 192, 192, 0.7)'); // Xanh lá
+                }
+            });
+
+            var ctx = document.getElementById('chapterChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tỷ lệ làm đúng (%)',
+                        data: accuracyRates,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Render Lời đề xuất (Actionable Insights)
+        var recList = document.getElementById("recommendationsList");
+        recList.innerHTML = ""; // Xóa text load
+
+        if (data.recommendations && data.recommendations.length > 0) {
+            data.recommendations.forEach(function(rec) {
+                var colorClass = "text-dark";
+                var iconHtml = "";
+
+                if (rec.includes("CẢNH BÁO")) {
+                    colorClass = "text-danger fw-bold";
+                    iconHtml = '<i class="fas fa-exclamation-triangle"></i> ';
+                } else if (rec.includes("LƯU Ý")) {
+                    colorClass = "text-warning text-dark fw-bold";
+                    iconHtml = '<i class="fas fa-exclamation-circle"></i> ';
+                } else if (rec.includes("ĐIỂM SÁNG")) {
+                    colorClass = "text-success fw-bold";
+                    iconHtml = '<i class="fas fa-star"></i> ';
+                }
+
+                recList.innerHTML += `<li class="list-group-item ${colorClass}">${iconHtml} ${rec}</li>`;
+            });
+        } else {
+            recList.innerHTML = `<li class="list-group-item">Gợi ý chung: Chưa có vấn đề đặc biệt nào nổi cộm.</li>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadAnalyticsData);
+</script>
