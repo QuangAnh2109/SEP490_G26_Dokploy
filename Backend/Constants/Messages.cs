@@ -18,6 +18,12 @@ namespace Backend.Constants
         public const string GoogleRegistrationProcessingError = "An error occurred while processing the Google registration";
         public const string SendOtpError = "Lỗi khi gửi OTP";
         public const string AccountCreationError = "Lỗi khi tạo tài khoản";
+
+        // Submission errors
+        public const string SubmissionNotFound = "Không tìm thấy bài làm.";
+        public const string SubmissionAlreadySubmitted = "Bài làm đã được nộp trước đó.";
+        public const string SubmissionLateNotAllowed = "Đã quá thời gian nộp bài.";
+        public const string InvalidQuestionAnswer = "Câu trả lời không hợp lệ.";
     }
 
     public static class SuccessMessages
