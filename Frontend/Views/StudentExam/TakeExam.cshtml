@@ -73,8 +73,8 @@
                 </div>
 
                 @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
-                <div class="d-flex align-items-center gap-2" >
-                    <math-field read-only id="question-block-fib"></math-field>
+                <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
+                    <math-field read-only id="question-block-fib-field"></math-field>
                 </div>
 
             </div>
@@ -119,15 +119,16 @@
                 .then((response) => {
                     exam = response;
                     console.log(exam);
-                    var question = exam.questions[0]
-                    var questionContent = JSON.parse(question.questionContent)
+                    var question = exam.questions[0];
+                    var questionContent = JSON.parse(question.questionContent);
                     document.getElementById('question-stem').textContent = questionContent.stem;
                     document.getElementById("question-title").textContent = "Câu 1";
                     document.getElementById('question-area').hidden = false;
                     document.getElementById('question-header').hidden = false;
                     document.getElementById('question-loading').hidden = true;
                     if(question.questionType == fillInBlank){
-                        document.getElementById('question-block-fib').value = questionContent.frame;
+                        document.getElementById('question-block-fib-field').value = questionContent.frame;
+                        document.getElementById('question-block-fib').hidden = false;
                     }else{
 
                     }
