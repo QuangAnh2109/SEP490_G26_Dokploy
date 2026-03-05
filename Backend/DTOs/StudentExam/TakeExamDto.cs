@@ -14,8 +14,7 @@
     {
         public string QuestionId { get; set; } = null!;
         public string QuestionType { get; set; } = null!;
-        public string Stem { get; set; } = null!;
-        public string? Frame { get; set; }
+        public string QuestionContent { get; set; } = null!;
         public int Difficulty { get; set; }
         public List<TakeExamAnswerDto> Answers { get; set; } = new();
     }

@@ -1,10 +1,12 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+using Backend.Constants;
 using Backend.DTOs.StudentExam;
 using Backend.Helpers;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Backend.Services.Implements
 {
@@ -71,7 +73,7 @@ namespace Backend.Services.Implements
                 {
                     StudentId = studentId,
                     PaperId = selectedPaperId,
-                    Status = 1, // Chưa nộp
+                    Status = SubmissionStatus.InProgress,
                     CreatedAtUtc = DateTime.UtcNow,
                     UpdatedAtUtc = DateTime.UtcNow
                 };
@@ -89,30 +91,6 @@ namespace Backend.Services.Implements
             // 5. Map sang TakeExamQuestionDto
             var questions = paper.Questions.Select(q =>
             {
-                // Parse QuestionContent JSON: {"stem":"...", "frame":"..."}
-                string stemContent;
-                string? frameContent = null;
-
-                try
-                {
-                    string sanitizedContent = q.QuestionContent;
-
-                    var parsed = JsonSerializer.Deserialize<QuestionContentFormat>(sanitizedContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                    stemContent = parsed.stem;
-                    frameContent = parsed?.frame;
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogWarning("JSON Error tại QuestionId {Id}: {Msg}. Dữ liệu thô: {Raw}",
-                        q.QuestionId, ex.Message, q.QuestionContent);
-
-                    stemContent = q.QuestionContent;
-                }
-
                 // Map answers
                 var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
                 {
@@ -133,8 +111,7 @@ namespace Backend.Services.Implements
                 {
                     QuestionId = SecureIdHelper.EncryptId(q.QuestionId),
                     QuestionType = q.QuestionType,
-                    Stem = stemContent,
-                    Frame = frameContent,
+                    QuestionContent = q.QuestionContent,
                     Difficulty = q.Difficulty,
                     Answers = answers
                 };
