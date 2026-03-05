@@ -726,14 +726,24 @@
             const blankGroups = [];
             const groupSection = getGroupSection(item);
             if (groupSection && type === 'FillInBlank') {
+                const groupLatex = getFrameLatex(item);
+                const groupSegments = parseLatexSegments(groupLatex);
                 toArray(groupSection.querySelectorAll('[data-blank-group-item]')).forEach(groupEl => {
                     const name = groupEl.querySelector('[data-blank-group-name]')?.value || 'Nhóm';
                     const segIndices = [];
+                    const blankIndices = [];
                     toArray(groupEl.querySelectorAll('.blank-group-segment.selected')).forEach(c => {
-                        segIndices.push(parseInt(c.getAttribute('data-segment-index'), 10));
+                        const segIdx = parseInt(c.getAttribute('data-segment-index'), 10);
+                        segIndices.push(segIdx);
+                        // Find the segment content and extract placeholder numbers
+                        const seg = groupSegments.find(s => s.index === segIdx);
+                        if (seg) {
+                            getNumberedPlaceholders(seg.content).forEach(n => blankIndices.push(n));
+                        }
                     });
                     if (segIndices.length > 0) {
-                        blankGroups.push({ name: name, segmentIndices: segIndices, blankIndices: [] });
+                        const uniqueBlanks = Array.from(new Set(blankIndices));
+                        blankGroups.push({ name: name, segmentIndices: segIndices, blankIndices: uniqueBlanks });
                     }
                 });
             }

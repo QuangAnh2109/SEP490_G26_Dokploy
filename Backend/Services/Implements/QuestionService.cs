@@ -152,6 +152,9 @@ namespace Backend.Services.Implements
                 }
             }
 
+            // Persist GroupAnswerId assignments
+            await _questionRepository.SaveChangesAsync();
+
             _logger.LogInformation("Created {Count} questions for user {UserId}", createdQuestions.Count, userId);
 
             return new CreateQuestionBatchResponse

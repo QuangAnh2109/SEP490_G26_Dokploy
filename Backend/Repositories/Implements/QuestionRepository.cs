@@ -118,5 +118,10 @@ namespace Backend.Repositories.Implements
             await _dbContext.SaveChangesAsync();
             return groupAnswer;
         }
+
+        public async Task SaveChangesAsync()
+        {
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }

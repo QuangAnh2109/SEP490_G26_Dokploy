@@ -12,5 +12,6 @@ namespace Backend.Repositories.Interfaces
         Task<bool> ChapterExistsAsync(int chapterId);
         Task<bool> InputTypeExistsAsync(int inputTypeId);
         Task<GroupAnswer> CreateGroupAnswerAsync(GroupAnswer groupAnswer);
+        Task SaveChangesAsync();
     }
 }
