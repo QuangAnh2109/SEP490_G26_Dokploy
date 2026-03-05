@@ -697,7 +697,7 @@
                     const remainder = 100 - perBlank * answers.length;
                     answers.forEach((a, i) => { a.point = perBlank + (i === 0 ? remainder : 0); });
                 }
-            } else if (type === 'mcq') {
+            } else if (type === 'MultipleChoice') {
                 const mcqScore = parseInt(item.querySelector('[data-mcq-score]')?.value, 10) || 0;
                 toArray(item.querySelectorAll('[data-answer-list] [data-answer-item]')).forEach(row => {
                     const optMf = row.querySelector('[data-option-content]');
