@@ -3,7 +3,7 @@
 
     const difficultyBadgeClass = { 1: 'badge-easy', 2: 'badge-medium', 3: 'badge-hard', 4: 'badge-hard' };
     const statusBadgeClass = { 'Active': 'status-active', 'Draft': 'status-draft', 'Archived': 'status-archived' };
-    const typeLabels = { 'fill_blank': 'Điền vào ô trống', 'mcq': 'Trắc nghiệm' };
+    const typeLabels = { 'FillInBlank': 'Điền vào ô trống', 'MultipleChoice': 'Trắc nghiệm' };
 
     let currentPage = 1;
     const pageSize = 20;

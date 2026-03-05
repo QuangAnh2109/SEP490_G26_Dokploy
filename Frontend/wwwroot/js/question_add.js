@@ -263,11 +263,11 @@
     // ── Score summary ──
     const updateScoreSummary = (item) => {
         const sel = item.querySelector('[data-question-type-select]');
-        const type = sel ? sel.value : 'fill_blank';
+        const type = sel ? sel.value : 'FillInBlank';
         const scoreSummary = item.querySelector('[data-score-summary]');
         const scoring = !!item.querySelector('[data-scoring-toggle]:checked');
 
-        if (type === 'fill_blank' && scoring && scoreSummary) {
+        if (type === 'FillInBlank' && scoring && scoreSummary) {
             let total = 0;
             toArray(item.querySelectorAll('[data-blank-answer-item] [data-blank-score]')).forEach(inp => {
                 total += parseInt(inp.value, 10) || 0;
@@ -460,11 +460,11 @@
 
     const syncBlankGroupVisibility = (item) => {
         const sel = item.querySelector('[data-question-type-select]');
-        const type = sel ? sel.value : 'fill_blank';
+        const type = sel ? sel.value : 'FillInBlank';
         const row = item.querySelector('.col-12.col-xl-4');
         if (!row) { return; }
         const section = row.querySelector('[data-blank-group-section]');
-        if (section) { section.style.display = (type === 'fill_blank') ? '' : 'none'; }
+        if (section) { section.style.display = (type === 'FillInBlank') ? '' : 'none'; }
     };
 
     // ── Panel switching ──
@@ -475,8 +475,8 @@
             p.classList.toggle('d-none', p.getAttribute('data-question-type-panel') !== type);
         });
         syncBlankGroupVisibility(item);
-        if (type === 'fill_blank') { syncPlaceholderState(item); return; }
-        if (type === 'mcq') { syncMcqRows(item, Number(item.getAttribute('data-question-index')) || 1); }
+        if (type === 'FillInBlank') { syncPlaceholderState(item); return; }
+        if (type === 'MultipleChoice') { syncMcqRows(item, Number(item.getAttribute('data-question-index')) || 1); }
     };
 
     // ── Populate subject/chapter dropdowns ──
@@ -535,7 +535,7 @@
         const blankList = item.querySelector('[data-blank-answer-list]');
         if (blankList) { blankList.innerHTML = ''; blankList.classList.add('d-none'); }
         resetBlankGroups(item);
-        const ts = item.querySelector('[data-question-type-select]'); if (ts) { ts.value = 'fill_blank'; }
+        const ts = item.querySelector('[data-question-type-select]'); if (ts) { ts.value = 'FillInBlank'; }
         populateSubjectDropdowns(item);
         syncQuestionTypePanel(item);
     };
@@ -654,7 +654,7 @@
 
         for (const item of items) {
             const sel = item.querySelector('[data-question-type-select]');
-            const type = sel ? sel.value : 'fill_blank';
+            const type = sel ? sel.value : 'FillInBlank';
 
             // Stem
             const stemRaw = item.querySelector('[data-stem-raw]');
@@ -670,7 +670,7 @@
             const difficulty = parseInt(item.querySelector('[data-difficulty-select]')?.value, 10) || 1;
 
             const answers = [];
-            if (type === 'fill_blank') {
+            if (type === 'FillInBlank') {
                 const scoring = !!item.querySelector('[data-scoring-toggle]:checked');
                 toArray(item.querySelectorAll('[data-blank-answer-item]')).forEach(row => {
                     const blankNum = parseInt(row.getAttribute('data-blank-num'), 10) || 0;
@@ -723,10 +723,9 @@
                 }
             }
 
-            // Blank groups
             const blankGroups = [];
             const groupSection = getGroupSection(item);
-            if (groupSection && type === 'fill_blank') {
+            if (groupSection && type === 'FillInBlank') {
                 toArray(groupSection.querySelectorAll('[data-blank-group-item]')).forEach(groupEl => {
                     const name = groupEl.querySelector('[data-blank-group-name]')?.value || 'Nhóm';
                     const segIndices = [];
@@ -739,10 +738,12 @@
                 });
             }
 
+            const backendType = type;
+
             questions.push({
-                questionType: type,
+                questionType: backendType,
                 stem: stem,
-                frame: type === 'fill_blank' ? frame : null,
+                frame: type === 'FillInBlank' ? frame : null,
                 explanation: explanation,
                 chapterId: chapterId,
                 difficulty: difficulty,
@@ -759,7 +760,7 @@
         const items = toArray(questionList.querySelectorAll('[data-question-item]'));
         items.forEach((item, idx) => {
             const prefix = `Câu hỏi #${idx + 1}`;
-            const type = item.querySelector('[data-question-type-select]')?.value || 'fill_blank';
+            const type = item.querySelector('[data-question-type-select]')?.value || 'FillInBlank';
             const stemRaw = item.querySelector('[data-stem-raw]');
             const stemMf = item.querySelector('[data-question-stem]');
             const stem = (stemRaw && stemRaw.value) ? stemRaw.value : getMathValue(stemMf);
@@ -767,7 +768,7 @@
             const chapterId = parseInt(item.querySelector('[data-chapter-select]')?.value, 10);
             if (!chapterId) { errors.push(`${prefix}: Chưa chọn chương.`); }
 
-            if (type === 'fill_blank') {
+            if (type === 'FillInBlank') {
                 const blankRows = toArray(item.querySelectorAll('[data-blank-answer-item]'));
                 if (blankRows.length === 0) { errors.push(`${prefix}: Phải có ít nhất 1 ô trống.`); }
                 blankRows.forEach((row, j) => {
@@ -780,7 +781,7 @@
                     blankRows.forEach(row => { total += parseInt(row.querySelector('[data-blank-score]')?.value, 10) || 0; });
                     if (total !== 100) { errors.push(`${prefix}: Tổng hệ số điểm phải bằng 100% (hiện tại: ${total}%).`); }
                 }
-            } else if (type === 'mcq') {
+            } else if (type === 'MultipleChoice') {
                 const opts = toArray(item.querySelectorAll('[data-answer-list] [data-answer-item]'));
                 if (opts.length < 2) { errors.push(`${prefix}: Phải có ít nhất 2 lựa chọn.`); }
                 const hasCorrect = opts.some(r => r.querySelector('[data-option-correct]')?.checked);

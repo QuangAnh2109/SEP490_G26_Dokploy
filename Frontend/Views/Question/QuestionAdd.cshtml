@@ -56,8 +56,8 @@
                 <div class="col-12 col-md-6">
                   <label class="form-label">Loại câu hỏi</label>
                   <select class="form-select" data-question-type-select>
-                    <option value="fill_blank" selected>Điền vào ô trống</option>
-                    <option value="mcq">Trắc nghiệm</option>
+                    <option value="FillInBlank" selected>Điền vào ô trống</option>
+                    <option value="MultipleChoice">Trắc nghiệm</option>
                   </select>
                 </div>
               </div>
@@ -76,7 +76,7 @@
               <hr class="section-divider">
 
               <!-- ═══ FILL BLANK ═══ -->
-              <section class="question-type-panel" data-question-type-panel="fill_blank">
+              <section class="question-type-panel" data-question-type-panel="FillInBlank">
                 <h3 class="section-title">Điền vào ô trống</h3>
                 <label class="form-label">Khung trả lời — gõ <code>\placeholder[1]{}</code>, <code>\placeholder[2]{}</code>…
                   để tạo ô trống có đánh số</label>
@@ -117,7 +117,7 @@
               </section>
 
               <!-- ═══ MCQ ═══ -->
-              <section class="question-type-panel d-none" data-question-type-panel="mcq">
+              <section class="question-type-panel d-none" data-question-type-panel="MultipleChoice">
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                   <div>
                     <h3 class="section-title mb-0">Trắc nghiệm</h3>
