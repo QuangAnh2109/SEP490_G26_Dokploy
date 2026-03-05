@@ -4,6 +4,15 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
+    <style>
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
+    </style>
 }
 
 <main class="page-shell py-4" id="examWorkspace">
