@@ -95,7 +95,7 @@ namespace Backend.Services.Implements
                 var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
                 {
                     QuestionAnswerId = SecureIdHelper.EncryptId(qa.QuestionAnswerId),
-                    Content = qa.Content,
+                    Content = q.QuestionType == QuestionType.Mcq ? qa.Content : null,
                     GroupAnswerId = qa.GroupAnswerId.HasValue
                         ? SecureIdHelper.EncryptId(qa.GroupAnswerId.Value)
                         : null,
