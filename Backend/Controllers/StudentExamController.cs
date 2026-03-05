@@ -1,4 +1,5 @@
 using Backend.DTOs.StudentExam;
+using Backend.Helpers;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,9 +15,12 @@ namespace Backend.Controllers
     {
         private readonly IStudentExamService _studentExamService;
 
-        public StudentExamController(IStudentExamService studentExamService)
+        private readonly ILogger<StudentExamController> _logger;
+
+        public StudentExamController(IStudentExamService studentExamService, ILogger<StudentExamController> logger)
         {
             _studentExamService = studentExamService;
+            _logger = logger;
         }
 
         private int GetStudentId()
@@ -30,23 +34,69 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{examId}/paper")]
-        public async Task<IActionResult> GetExamPaper(int examId)
+        public async Task<IActionResult> GetExamPaper(string examId)
         {
             var studentId = GetStudentId();
             if (studentId == 0) return Unauthorized("Invalid token.");
 
+            var decryptedExamId = SecureIdHelper.DecryptId(examId);
+            if (decryptedExamId == null)
+            {
+                return BadRequest("Invalid exam ID.");
+            }
+
+            _logger.LogInformation("Student {StudentId} is requesting exam paper for exam {ExamId}", studentId, decryptedExamId);
             try
             {
-                var paper = await _studentExamService.GetExamPaperAsync(studentId, examId);
-                if (paper == null)
+                var result = await _studentExamService.TakeExamInClass(decryptedExamId.Value, studentId);
+                if (result == null)
                 {
                     return NotFound("Exam paper not found or access denied.");
                 }
-                return Ok(paper);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting exam paper");
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{examId}/take")]
+        public async Task<IActionResult> TakeExamInClass(string examId)
+        {
+            var studentId = GetStudentId();
+            if (studentId == 0) return Unauthorized("Invalid token.");
+
+            //var decryptedExamId = SecureIdHelper.DecryptId(examId);
+            //if (decryptedExamId == null)
+            //{
+            //    return BadRequest("Invalid exam ID.");
+            //}
+
+            var decryptedExamId = int.Parse(examId);
+
+            try
+            {
+                var result = await _studentExamService.TakeExamInClass(decryptedExamId, studentId);
+                if (result == null)
+                {
+                    return NotFound("Bài thi không tồn tại hoặc chưa mở.");
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in TakeExamInClass");
+                return StatusCode(500, new { message = "Đã xảy ra lỗi hệ thống." });
             }
         }
 
@@ -83,17 +133,14 @@ namespace Backend.Controllers
                 var durationSeconds = submission.Paper.Exam.Duration * 60;
                 var elapsedSeconds = (DateTime.UtcNow - submission.CreatedAtUtc).TotalSeconds;
                 
-                // Thời gian làm bài còn lại dựa vào duration
                 var timeBasedOnDuration = durationSeconds - elapsedSeconds;
 
-                // Thời gian làm bài còn lại dựa vào thời điểm đóng kỳ thi (CloseAt)
                 double timeBasedOnCloseAt = double.MaxValue;
                 if (submission.Paper.Exam.CloseAt.HasValue)
                 {
                     timeBasedOnCloseAt = (submission.Paper.Exam.CloseAt.Value - DateTime.UtcNow).TotalSeconds;
                 }
 
-                // Lấy thời gian nhỏ hơn giữa 2 điều kiện
                 var actualRemaining = Math.Min(timeBasedOnDuration, timeBasedOnCloseAt);
                 remainingSeconds = (int)Math.Max(0, actualRemaining);
             }
@@ -104,7 +151,7 @@ namespace Backend.Controllers
                 response = a.Response ?? string.Empty
             }).Cast<object>().ToList() ?? new List<object>();
 
-            var paperDto = await _studentExamService.GetExamPaperAsync(studentId, request.ExamId);
+            var paperDto = await _studentExamService.TakeExamInClass(request.ExamId, studentId);
 
             return Ok(new 
             { 

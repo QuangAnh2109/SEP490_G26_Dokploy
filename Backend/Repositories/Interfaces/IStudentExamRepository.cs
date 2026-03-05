@@ -23,6 +23,9 @@ namespace Backend.Repositories.Interfaces
 
         Task<ExamPreviewData?> GetExamPreviewAsync(int examId);
 
+        Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId);
+        Task<Submission?> GetActiveSubmissionForExamAsync(int studentId, int examId);
+
     }
 
     public class ExamPreviewData

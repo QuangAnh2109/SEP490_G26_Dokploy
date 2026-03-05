@@ -1,6 +1,8 @@
-﻿using Backend.Models;
+﻿using Backend.DTOs.StudentExam;
+using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Repositories.Implements
 {
@@ -234,5 +236,38 @@ namespace Backend.Repositories.Implements
             return result;
         }
 
+        public async Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId)
+        {
+            return await _context.Exams
+                .Where(exam =>
+                    exam.ExamId == examId &&
+                    _context.ClassMembers.Any(classMember =>
+                        classMember.ClassId == exam.ClassId &&
+                        classMember.StudentId == studentId
+                    ) &&
+                    exam.OpenAt <= DateTime.UtcNow &&
+                    exam.CloseAt > DateTime.UtcNow
+                )
+                .Select(e => new ExamInfoForStudentDto
+                {
+                    ExamId = e.ExamId,
+                    Title = e.Title,
+                    Duration = e.Duration,
+                    MaxAttempts = e.MaxAttempts,
+                    StudentAttempts = _context.Submissions.Count(s => s.StudentId == studentId && s.Paper.ExamId == e.ExamId),
+                    CloseAt = e.CloseAt,
+                    ShuffleQuestion = e.ShuffleQuestion,
+                    PaperIds = e.Papers.Select(p => p.PaperId).ToList()
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<Submission?> GetActiveSubmissionForExamAsync(int studentId, int examId)
+        {
+            return await _context.Submissions
+                .Include(s => s.Paper)
+                    .ThenInclude(p => p.Exam)
+                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1 && s.Paper.ExamId == examId);
+        }
     }
 }

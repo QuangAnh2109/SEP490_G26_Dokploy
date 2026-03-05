@@ -33,7 +33,7 @@ namespace Backend.DTOs.StudentExam
 
     public class QuestionContentFormat
     {
-        public string? stem { get; set; }
-        public string? frame { get; set; }
+        public string stem { get; set; } = null!;
+        public string frame { get; set; } = null!;
     }
 }

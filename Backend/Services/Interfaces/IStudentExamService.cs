@@ -14,5 +14,7 @@ namespace Backend.Services.Interfaces
 
         Task<ExamPreviewDto?> GetExamPreviewAsync(int studentId, int examId);
 
+        Task<TakeExamDto?> TakeExamInClass(int examId, int studentId);
+
     }
 }

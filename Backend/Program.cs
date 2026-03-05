@@ -33,6 +33,7 @@ namespace Backend
             builder.Services.AddScoped<IChapterRepo, ChapterRepo>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
+            builder.Services.AddScoped<IExamRepository, ExamRepository>();
 
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();

@@ -139,5 +139,9 @@ const apiClient = {
 
     delete: function (endpoint) {
         return this.request('DELETE', endpoint);
+    },
+
+    patch: function (endpoint, data) {
+        return this.request('PATCH', endpoint, data);
     }
 };
