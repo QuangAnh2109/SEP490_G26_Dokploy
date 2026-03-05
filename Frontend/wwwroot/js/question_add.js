@@ -54,7 +54,7 @@
     // ── Numbered placeholders ──
     const getNumberedPlaceholders = (latex) => {
         const s = typeof latex === 'string' ? latex : '';
-        const matches = s.matchAll(/\\placeholder\s*\{(\d+)\}/g);
+        const matches = s.matchAll(/\\placeholder\s*\[(\d+)\]\s*\{.*?\}/g);
         const nums = new Set();
         for (const m of matches) { nums.add(parseInt(m[1], 10)); }
         return Array.from(nums).sort((a, b) => a - b);
@@ -74,7 +74,7 @@
         const existing = getNumberedPlaceholders(latex);
         let next = 1;
         for (const n of existing) { if (n === next) { next++; } else { break; } }
-        const ph = `\\placeholder{${next}}`;
+        const ph = `\\placeholder[${next}]{}`;
         if (isRaw) {
             const raw = item.querySelector('[data-frame-raw]');
             if (raw) {
@@ -288,12 +288,39 @@
             || item.querySelector('[data-blank-group-section]');
     };
 
+    const splitLatexByTopLevelNewlines = (latex) => {
+        const parts = [];
+        let currentPart = '';
+        let envDepth = 0;
+        let i = 0;
+        while (i < latex.length) {
+            if (latex.substr(i, 6) === '\\begin') {
+                envDepth++;
+                currentPart += '\\begin';
+                i += 6;
+            } else if (latex.substr(i, 4) === '\\end') {
+                envDepth = Math.max(0, envDepth - 1);
+                currentPart += '\\end';
+                i += 4;
+            } else if (envDepth === 0 && latex.substr(i, 2) === '\\\\') {
+                parts.push(currentPart);
+                currentPart = '';
+                i += 2;
+            } else {
+                currentPart += latex[i];
+                i++;
+            }
+        }
+        parts.push(currentPart);
+        return parts;
+    };
+
     const parseLatexSegments = (latex) => {
         if (!latex || !latex.trim()) { return []; }
         const s = latex.trim();
         const dlMatch = s.match(/^\\displaylines\s*\{([\s\S]*)\}$/);
         const inner = dlMatch ? dlMatch[1] : s;
-        const parts = inner.split(/\\\\/);
+        const parts = splitLatexByTopLevelNewlines(inner);
         return parts.map((part, i) => ({ index: i, content: part.trim() })).filter(p => p.content.length > 0);
     };
 
@@ -519,8 +546,10 @@
         item.setAttribute('data-question-bound', '1');
         const ts = item.querySelector('[data-question-type-select]');
         if (ts) { ts.addEventListener('change', () => syncQuestionTypePanel(item)); }
+
         const ib = item.querySelector('[data-insert-placeholder]');
         if (ib) { ib.addEventListener('click', () => { insertNumberedPlaceholder(item); syncPlaceholderState(item); }); }
+
         const fe = item.querySelector('[data-frame-editor]');
         if (fe) { fe.addEventListener('input', () => syncPlaceholderState(item)); }
 
@@ -653,7 +682,7 @@
                     const scoreInput = row.querySelector('[data-blank-score]');
                     const point = scoring ? (parseInt(scoreInput?.value, 10) || 0) : 0;
                     answers.push({
-                        content: `placeholder{${blankNum}}`,
+                        content: `placeholder[${blankNum}]{}`,
                         correctAnswer: correctAnswer,
                         isCorrect: true,
                         inputTypeId: inputTypeId,

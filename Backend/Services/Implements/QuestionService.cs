@@ -140,7 +140,7 @@ namespace Backend.Services.Implements
                             var matchingAnswer = answersList.FirstOrDefault(a =>
                             {
                                 var content = a.Content;
-                                return content != null && content.Contains($"placeholder{{{blankIdx}}}");
+                                return content != null && content.Contains($"placeholder[{blankIdx}]");
                             });
 
                             if (matchingAnswer != null)

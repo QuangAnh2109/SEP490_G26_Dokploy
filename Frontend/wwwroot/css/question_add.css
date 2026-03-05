@@ -365,6 +365,11 @@
     pointer-events: none;
 }
 
+.blank-group-segment math-field::part(virtual-keyboard-toggle),
+.blank-group-segment math-field::part(menu-toggle) {
+    display: none;
+}
+
 .blank-group-add-btn {
     display: flex;
     align-items: center;

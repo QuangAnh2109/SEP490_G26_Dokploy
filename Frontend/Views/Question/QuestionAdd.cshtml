@@ -78,7 +78,7 @@
               <!-- ═══ FILL BLANK ═══ -->
               <section class="question-type-panel" data-question-type-panel="fill_blank">
                 <h3 class="section-title">Điền vào ô trống</h3>
-                <label class="form-label">Khung trả lời — gõ <code>\placeholder{1}</code>, <code>\placeholder{2}</code>…
+                <label class="form-label">Khung trả lời — gõ <code>\placeholder[1]{}</code>, <code>\placeholder[2]{}</code>…
                   để tạo ô trống có đánh số</label>
                 <math-field class="math-input" data-frame-editor></math-field>
                 <textarea class="math-raw-textarea d-none" rows="2" data-frame-raw
@@ -105,7 +105,7 @@
                   <span class="form-note">Khi tắt, tất cả ô trống có điểm bằng nhau.</span>
                 </div>
                 <p class="field-help mt-2 mb-0" data-blank-answer-empty>Chưa có ô trống có đánh số trong khung. Hãy dùng
-                  <code>\placeholder{1}</code> để tạo ô trống.
+                  <code>\placeholder[1]{}</code> để tạo ô trống.
                 </p>
                 <div class="blank-answer-list mt-2 d-none" data-blank-answer-list>
                   <!-- Blank rows rendered dynamically -->
@@ -231,7 +231,7 @@
                   <p class="form-note mb-2">Nhóm các dòng trong khung trả lời lại để chấm điểm hoặc xử lý cùng nhau.
                     Mỗi dòng (phân tách bởi <code>\\</code>) sẽ xuất hiện để chọn vào nhóm.</p>
                   <p class="form-note mb-2 d-none" data-blank-group-no-placeholders>
-                    <em>Chưa có nội dung. Hãy nhập biểu thức với <code>\placeholder{n}</code> trong khung trả lời.</em>
+                    <em>Chưa có nội dung. Hãy nhập biểu thức với <code>\placeholder[n]{}</code> trong khung trả lời.</em>
                   </p>
                   <div class="blank-group-list" data-blank-group-list>
                   </div>
@@ -278,8 +278,8 @@
 
   <script src="/lib/jquery/dist/jquery.min.js"></script>
   <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
-  <script src="/js/site.js"></script>
-  <script src="/js/question_add.js"></script>
+  <script src="/js/site.js" asp-append-version="true"></script>
+  <script src="/js/question_add.js" asp-append-version="true"></script>
 </body>
 
 </html>
