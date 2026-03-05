@@ -22,7 +22,7 @@
     public class TakeExamAnswerDto
     {
         public string QuestionAnswerId { get; set; } = null!;
-        public string? Content { get; set; }
+        public string Content { get; set; } = null!;
         public string? GroupAnswerId { get; set; }
         public List<TakeExamInputTypeDto> InputTypes { get; set; } = new();
     }

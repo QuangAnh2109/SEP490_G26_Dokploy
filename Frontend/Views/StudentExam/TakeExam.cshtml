@@ -132,8 +132,8 @@
                 .then((response) => {
                     exam = response;
                     console.log(exam);
-                    var question = exam.questions[questionNumber - 1];
-                    renderQuestion(question);
+                    buildQuestionNav(exam.questions.length);
+                    goToQuestion(1);
                 })
                 .catch((error) => {
                     alert("Lỗi: " + error.message);
@@ -157,6 +157,7 @@
             }
             else if(question.questionType == multipleChoice){
                 questionStem.textContent = question.questionContent;
+                questionStem.render?.();
                 questionTitle.textContent = "Câu " + questionNumber;
                 questionMcq.hidden = false;
 
@@ -180,6 +181,35 @@
             questionLoading.hidden = true;
             questionHeader.hidden = false;
             questionArea.hidden = false;
+        }
+
+        function buildQuestionNav(total) {
+            const nav = document.getElementById('questionNav');
+            nav.innerHTML = '';
+            for (let i = 1; i <= total; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary btn-sm m-1';
+                btn.textContent = i;
+                btn.style.minWidth = '40px';
+                btn.addEventListener('click', () => goToQuestion(i));
+                nav.appendChild(btn);
+            }
+        }
+
+        function goToQuestion(num) {
+            questionNumber = num;
+            renderQuestion(exam.questions[questionNumber - 1]);
+
+            // Highlight active button
+            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                if (idx + 1 === questionNumber) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
         }
     </script>
 }
