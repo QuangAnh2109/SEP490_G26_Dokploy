@@ -97,7 +97,9 @@
     <!-- MathLive for math rendering -->
     <script defer src="https://unpkg.com/mathlive"></script>
     <script>
+        var regexPlaceholder = /\\placeholder\[([^\]]+)\]\{\}/;
         var exam;
+        var selectionHandler = null;
         const fillInBlank = "FillInBlank";
         const multipleChoice = "MultipleChoice";
         var questionNumber = 1;
@@ -119,7 +121,7 @@
             questionMcq = document.getElementById('question-block-mcq');
             questionBlockFib = document.getElementById('question-block-fib');
             questionBlockFibField = document.getElementById('question-block-fib-field');
-            //Lấy giá trị của tham số "examId"
+            //Lấy giá trị examId
             const examId = new URLSearchParams(window.location.search).get('examId');
 
             //Kiểm tra tính hợp lệ
@@ -141,12 +143,21 @@
         });
 
         function renderQuestion(question){
+            // remove event cũ nếu có
+            if (selectionHandler) {
+                questionBlockFibField.removeEventListener("selection-change", selectionHandler);
+                selectionHandler = null;
+            }
+
+            //Ẩn câu hỏi cũ và hiện loading
             questionHeader.hidden = true;
             questionArea.hidden = true;
             questionLoading.hidden = false;
             questionBlockFib.hidden = true;
             questionMcq.hidden = true;
             questionBlockFibField.hidden = true;
+
+            //Truyền nội dung câu hỏi
             if(question.questionType == fillInBlank){
                 var questionContent = JSON.parse(question.questionContent);
                 questionStem.textContent = questionContent.stem;
@@ -154,6 +165,15 @@
                 document.getElementById('question-block-fib-field').value = questionContent.frame;
                 questionBlockFib.hidden = false;
                 questionBlockFibField.hidden = false;
+                selectionHandler = () => {
+                    let placeholderId = [];
+                    for (const item of question.answers) {
+                        placeholderId.push(item.content.match(regexPlaceholder)?.[1]);
+                    }
+                    selectPlaceholder(questionBlockFibField, placeholderId);
+                };
+
+                questionBlockFibField.addEventListener("selection-change", selectionHandler);
             }
             else if(question.questionType == multipleChoice){
                 questionStem.textContent = question.questionContent;
@@ -178,6 +198,8 @@
                     questionMcq.appendChild(newOption);
                 });
             }
+
+            //Hiện câu hỏi
             questionLoading.hidden = true;
             questionHeader.hidden = false;
             questionArea.hidden = false;
@@ -198,9 +220,8 @@
 
         function goToQuestion(num) {
             questionNumber = num;
-            renderQuestion(exam.questions[questionNumber - 1]);
+            renderQuestion(exam.questions[num-1]);
 
-            // Highlight active button
             document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
                 if (idx + 1 === questionNumber) {
                     btn.classList.remove('btn-outline-primary');
@@ -210,6 +231,18 @@
                     btn.classList.add('btn-outline-primary');
                 }
             });
+        }
+
+        function selectPlaceholder(mathField, placeholderId){
+            const pos = mathField.position;
+
+            for (const id of placeholderId) {
+                const range = mathField.getPromptRange(id);
+
+                if (pos >= range[0] && pos <= range[1]) {
+                    console.log(id);
+                }
+            }
         }
     </script>
 }
