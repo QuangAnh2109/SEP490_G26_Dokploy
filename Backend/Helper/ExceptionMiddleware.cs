@@ -64,14 +64,14 @@ namespace Backend.Helper
 
             context.Response.StatusCode = statusCode;
 
-            // In development, provide more info for generic exceptions
-            if (_env.IsDevelopment() && statusCode == 500 && !(exception is BaseException))
+            // TEMPORARY: always provide info for diagnosis
+            if (statusCode == 500 && !(exception is BaseException))
             {
                 response = new 
                 {
                     success = false,
                     message = exception.Message,
-                    details = (object?)$"{exception.StackTrace}"
+                    details = (object?)$"{exception.InnerException?.Message}\n{exception.StackTrace}"
                 };
             }
 

@@ -78,22 +78,40 @@
             }, 1000);
         } catch (err) {
             console.error('Submit error:', err);
-            showToast('Lỗi: ' + (err.message || 'Không thể lưu.'), 'error');
+            const msg = err.details ? (err.message + '\n' + err.details) : (err.message || 'Không thể lưu.');
+            showToast('Lỗi: ' + msg, 'error');
         }
     };
 
     saveAllBtn?.addEventListener('click', () => submit('Active'));
     saveDraftBtn?.addEventListener('click', () => submit('Draft'));
 
+    // Initial sync to bind events immediately
+    syncBatch();
+
     (async () => {
         try {
-            const metadata = await apiClient.get('/api/questions/metadata');
-            inputTypesData = metadata.inputTypes || [];
-            subjectsData = metadata.subjects || [];
-            // Populate subjects for the first item which is already in DOM
-            const subSel = questionList.querySelector('[data-subject-select]');
-            subjectsData.forEach(s => subSel.add(new Option(s.code || s.name, s.subjectId)));
+            const res = await apiClient.get('/api/questions/metadata');
+            
+            // Defensive extraction: handle root properties and .data wrapper
+            const root = (res && res.data) ? res.data : res;
+            inputTypesData = root.inputTypes || root.InputTypes || [];
+            subjectsData = root.subjects || root.Subjects || [];
+            
+            // Re-sync to pass metadata to already initialized items
             syncBatch();
-        } catch (e) { console.error(e); }
+            
+            if (subjectsData.length === 0 && inputTypesData.length === 0) {
+                showToast('Dữ liệu hệ thống vẫn đang trống (Môn học/Giới hạn).', 'error');
+            }
+        } catch (e) { 
+            console.error('Failed to load metadata:', e);
+            const status = e.xhr ? e.xhr.status : (e.status || 'unknown');
+            let msg = `Lỗi ${status}: Không thể tải dữ liệu hệ thống.`;
+            if (status === 401) msg += ' Vui lòng đăng nhập lại.';
+            else if (status === 403) msg += ' Bạn không có quyền truy cập (Yêu cầu GV).';
+            else msg += ' Vui lòng kiểm tra kết nối mạng hoặc máy chủ.';
+            showToast(msg, 'error');
+        }
     })();
 })();

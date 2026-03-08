@@ -20,7 +20,10 @@ window.QuestionEditor = (() => {
     const setMathValue = (f, v) => {
         if (!f) return;
         if (typeof f.setValue === 'function') { 
-            if (f.getValue('latex') === v) return;
+            // Simple normalization for comparison
+            const current = (f.getValue('latex') || '').replace(/\s+/g, '');
+            const target = (v || '').replace(/\s+/g, '');
+            if (current === target) return;
             f.setValue(v, { silenceNotifications: true }); 
             return; 
         }
@@ -31,7 +34,7 @@ window.QuestionEditor = (() => {
 
     const getNumberedPlaceholders = (latex) => {
         const s = typeof latex === 'string' ? latex : '';
-        const matches = s.matchAll(/\\placeholder\s*\[(\d+)\]\s*\{.*?\}/g);
+        const matches = s.matchAll(/\\placeholder\s*\[(\d+)\]/g);
         const nums = new Set();
         for (const m of matches) { nums.add(parseInt(m[1], 10)); }
         return Array.from(nums).sort((a, b) => a - b);
@@ -48,10 +51,12 @@ window.QuestionEditor = (() => {
         if (!mathField || !rawTextarea) return { setRenderMode: () => { } };
 
         let mirroring = false;
+        let currentRenderOn = !mathField.classList.contains('d-none');
 
         const setRenderMode = (renderOn) => {
-            if (mirroring) return;
+            if (mirroring || renderOn === currentRenderOn) return;
             mirroring = true;
+            currentRenderOn = renderOn;
             try {
                 if (renderOn) {
                     setMathValue(mathField, rawTextarea.value);
@@ -65,8 +70,8 @@ window.QuestionEditor = (() => {
                 }
                 if (onChange) onChange();
             } finally {
-                // Debounce to prevent rapid-fire clicking issues
-                setTimeout(() => { mirroring = false; }, 250);
+                // Short delay to ensure browser/MathLive events settle
+                setTimeout(() => { mirroring = false; }, 100);
             }
         };
 
@@ -75,12 +80,15 @@ window.QuestionEditor = (() => {
             mirroring = true;
             rawTextarea.value = getMathValue(mathField); 
             if (onChange) onChange(); 
-            mirroring = false;
+            // Use a slight delay for mirroring to settle synchronously
+            setTimeout(() => { mirroring = false; }, 10);
         });
 
         rawTextarea.addEventListener('input', () => { 
             if (mirroring) return;
+            mirroring = true;
             if (onChange) onChange(); 
+            setTimeout(() => { mirroring = false; }, 10);
         });
 
         return { setRenderMode };
@@ -90,7 +98,7 @@ window.QuestionEditor = (() => {
         if (!inputTypesData || inputTypesData.length === 0) return '<p class="form-note">Đang tải...</p>';
         const groups = {};
         inputTypesData.forEach(it => {
-            const g = it.groupType || '__none__';
+            const g = it.groupType || it.GroupType || '__none__';
             if (!groups[g]) groups[g] = [];
             groups[g].push(it);
         });
@@ -99,7 +107,9 @@ window.QuestionEditor = (() => {
             const label = groupType === '__none__' ? 'Khác' : groupType;
             html += `<div class="constraint-section"><div class="constraint-section-label">${label}</div><div class="constraint-grid">`;
             items.forEach(it => {
-                html += `<div class="constraint-chip" data-group-type="${groupType}" data-input-type-id="${it.inputTypeId}"><span>${it.name}</span></div>`;
+                const id = it.inputTypeId || it.InputTypeId;
+                const name = it.name || it.Name;
+                html += `<div class="constraint-chip" data-group-type="${groupType}" data-input-type-id="${id}"><span>${name}</span></div>`;
             });
             html += '</div></div>';
         }
@@ -176,11 +186,25 @@ window.QuestionEditor = (() => {
         return r;
     };
 
+    const bindConstraintChips = (row) => {
+        toArray(row.querySelectorAll('.constraint-chip')).forEach(chip => {
+            chip.addEventListener('click', () => {
+                const gt = chip.getAttribute('data-group-type'), active = chip.classList.contains('active');
+                toArray(row.querySelectorAll(`.constraint-chip[data-group-type="${gt}"]`)).forEach(s => s.classList.remove('active'));
+                if (!active) chip.classList.add('active');
+            });
+        });
+    };
+
     // ── Item Logic Coordination ──
     const syncPlaceholderState = (item, inputTypesData) => {
         const latex = getFrameLatex(item);
-        if (item._lastSyncLatex === latex) return;
+        const dataCount = (inputTypesData || []).length;
+        const lastDataCount = item._lastDataCount || 0;
+        
+        if (item._lastSyncLatex === latex && dataCount === lastDataCount) return;
         item._lastSyncLatex = latex;
+        item._lastDataCount = dataCount;
 
         const numbered = getNumberedPlaceholders(latex);
         const counter = item.querySelector('[data-placeholder-count]');
@@ -212,13 +236,20 @@ window.QuestionEditor = (() => {
                 
                 const toggle = row.querySelector('[data-blank-constraint-toggle]'), body = row.querySelector('[data-blank-constraint-body]');
                 toggle.addEventListener('click', (e) => { e.preventDefault(); body.classList.toggle('open'); toggle.classList.toggle('active'); });
-                toArray(row.querySelectorAll('.constraint-chip')).forEach(chip => {
-                    chip.addEventListener('click', () => {
-                        const gt = chip.getAttribute('data-group-type'), active = chip.classList.contains('active');
-                        toArray(row.querySelectorAll(`.constraint-chip[data-group-type="${gt}"]`)).forEach(s => s.classList.remove('active'));
-                        if (!active) chip.classList.add('active');
-                    });
-                });
+                if (inputTypesData && inputTypesData.length > 0) {
+                    row._constraintsBound = true;
+                    bindConstraintChips(row);
+                }
+            } else {
+                // Refresh constraints if they were loading
+                if (!row._constraintsBound && inputTypesData && inputTypesData.length > 0) {
+                    const body = row.querySelector('[data-blank-constraint-body]');
+                    if (body) {
+                        body.innerHTML = buildConstraintChipsHtml(inputTypesData);
+                        row._constraintsBound = true;
+                        bindConstraintChips(row);
+                    }
+                }
             }
             list.appendChild(row);
 
@@ -249,15 +280,17 @@ window.QuestionEditor = (() => {
 
     const updateScoreSummary = (item) => {
         const scoring = !!item.querySelector('[data-scoring-toggle]:checked');
-        const summary = item.querySelector('[data-score-summary]');
-        if (scoring && summary) {
+        const summary = item.querySelector('[data-score-total]');
+        if (!summary) return;
+        const bar = item.querySelector('[data-score-summary]');
+        if (scoring && bar) {
             let total = 0;
             toArray(item.querySelectorAll('[data-blank-answer-item] [data-blank-score]')).forEach(i => total += parseInt(i.value) || 0);
-            summary.querySelector('[data-score-total]').textContent = total;
-            summary.classList.remove('d-none');
-            summary.classList.toggle('is-invalid', total !== 100);
-            summary.classList.toggle('is-valid', total === 100);
-        } else if (summary) summary.classList.add('d-none');
+            summary.textContent = total;
+            bar.classList.remove('d-none');
+            bar.classList.toggle('is-invalid', total !== 100);
+            bar.classList.toggle('is-valid', total === 100);
+        } else if (bar) bar.classList.add('d-none');
     };
 
     const syncBlankGroupSegments = (item) => {
@@ -290,13 +323,57 @@ window.QuestionEditor = (() => {
         });
     };
 
+    const syncSubjectDropdown = (item, subjectsData) => {
+        const subSel = item.querySelector('[data-subject-select]'), chapSel = item.querySelector('[data-chapter-select]');
+        if (!subSel || !chapSel || !subjectsData || subjectsData.length === 0) return;
+        
+        const currentSubId = subSel.value;
+        subSel.innerHTML = '<option value="">Chọn môn học</option>';
+        subjectsData.forEach(s => {
+            const id = s.subjectId || s.SubjectId;
+            const label = s.code || s.Code || s.name || s.Name;
+            subSel.add(new Option(label, id));
+        });
+        if (currentSubId) subSel.value = currentSubId;
+
+        // Re-bind change event if not already done (though initItem does it if it's new)
+        if (!subSel._bound) {
+            subSel._bound = true;
+            subSel.addEventListener('change', () => {
+                const subId = parseInt(subSel.value);
+                chapSel.innerHTML = '<option value="">Chọn chương</option>';
+                const sub = (item._subjectsData || []).find(s => (s.subjectId || s.SubjectId) === subId);
+                const chapters = sub?.chapters || sub?.Chapters;
+                if (chapters) {
+                    chapters.forEach(c => {
+                        const cId = c.chapterId || c.ChapterId;
+                        const cName = c.name || c.Name;
+                        chapSel.add(new Option(cName, cId));
+                    });
+                }
+            });
+        }
+    };
+
     // ── Public API ──
     return {
         getMathValue, setMathValue, getNumberedPlaceholders, getFrameLatex, parseLatexSegments, syncMcqRows,
         
-        initItem: (item, { inputTypesData, subjectsData }) => {
-            if (item.hasAttribute('data-bound')) return;
+        initItem: (item, { inputTypesData, subjectsData } = {}) => {
+            if (item.hasAttribute('data-bound')) {
+                // Already bound events, just sync the data if provided
+                if (inputTypesData || subjectsData) {
+                    item._inputTypesData = inputTypesData || item._inputTypesData;
+                    item._subjectsData = subjectsData || item._subjectsData;
+                    const typeSel = item.querySelector('[data-question-type-select]');
+                    if (typeSel && typeSel.value === 'FillInBlank') syncPlaceholderState(item, item._inputTypesData);
+                    syncSubjectDropdown(item, item._subjectsData);
+                }
+                return;
+            }
             item.setAttribute('data-bound', '1');
+            item._inputTypesData = inputTypesData || [];
+            item._subjectsData = subjectsData || [];
 
             const typeSel = item.querySelector('[data-question-type-select]');
             const uid = Math.random().toString(36).substring(2, 7);
@@ -312,11 +389,12 @@ window.QuestionEditor = (() => {
                 toArray(item.querySelectorAll('[data-question-type-panel]')).forEach(p => p.classList.toggle('d-none', p.getAttribute('data-question-type-panel') !== type));
                 const gSec = item.querySelector('[data-blank-group-section]');
                 if (gSec) gSec.style.display = (type === 'FillInBlank' ? '' : 'none');
-                if (type === 'FillInBlank') syncPlaceholderState(item, inputTypesData);
+                if (type === 'FillInBlank') syncPlaceholderState(item, item._inputTypesData);
                 else syncMcqRows(item.querySelector('[data-answer-list]'));
             };
 
             typeSel.addEventListener('change', syncUI);
+
             const stemToggle = item.querySelector('[data-stem-render-toggle]');
             const { setRenderMode: setStemMode } = setupPairToggle(item.querySelector('[data-question-stem]'), item.querySelector('[data-stem-raw]'));
             if (stemToggle) {
@@ -325,7 +403,7 @@ window.QuestionEditor = (() => {
             }
 
             const frameToggle = item.querySelector('[data-render-toggle]'); 
-            const { setRenderMode: setFrameMode } = setupPairToggle(item.querySelector('[data-frame-editor]'), item.querySelector('[data-frame-raw]'), () => syncPlaceholderState(item, inputTypesData));
+            const { setRenderMode: setFrameMode } = setupPairToggle(item.querySelector('[data-frame-editor]'), item.querySelector('[data-frame-raw]'), () => syncPlaceholderState(item, item._inputTypesData));
             if (frameToggle) {
                 frameToggle.addEventListener('change', (e) => setFrameMode(e.target.checked));
                 setFrameMode(frameToggle.checked);
@@ -343,23 +421,54 @@ window.QuestionEditor = (() => {
                 }, 50);
             });
             
-            item.querySelector('[data-insert-placeholder]').addEventListener('click', () => {
-                const mf = item.querySelector('[data-frame-editor]'), existing = getNumberedPlaceholders(getFrameLatex(item));
-                let next = 1; for(const n of existing) { if(n === next) next++; else break; }
-                const ph = `\\placeholder[${next}]{}`;
-                if (mf.classList.contains('d-none')) {
-                    const raw = item.querySelector('[data-frame-raw]');
-                    const pos = raw.selectionStart || raw.value.length;
-                    raw.value = raw.value.slice(0, pos) + ph + raw.value.slice(pos);
-                } else { if (typeof mf.insert === 'function') mf.insert(ph); else mf.value += ph; }
-                syncPlaceholderState(item, inputTypesData);
-            });
+            const insertBtn = item.querySelector('[data-insert-placeholder]');
+            if (insertBtn) {
+                insertBtn.addEventListener('click', () => {
+                    const mf = item.querySelector('[data-frame-editor]'), existing = getNumberedPlaceholders(getFrameLatex(item));
+                    let next = 1;
+                    const sorted = existing.sort((a,b) => a-b);
+                    for(const n of sorted) { if(n === next) next++; else if (n > next) break; }
+                    
+                    const ph = `\\placeholder[${next}]{}`;
+                    if (mf.classList.contains('d-none')) {
+                        const raw = item.querySelector('[data-frame-raw]');
+                        let pos = raw.selectionStart || raw.value.length;
+                        
+                        // Decisive Raw Mode fix: if cursor is anywhere inside a \placeholder block, jump out
+                        const textBefore = raw.value.slice(0, pos);
+                        const openMatch = textBefore.match(/\\placeholder\s*\[\d+\]\s*\{[^}]*$/);
+                        if (openMatch) {
+                            const nextBrace = raw.value.indexOf('}', pos);
+                            if (nextBrace !== -1) pos = nextBrace + 1;
+                        }
 
-            item.querySelector('[data-scoring-toggle]').addEventListener('change', () => syncPlaceholderState(item, inputTypesData));
+                        const prefix = (pos > 0 && raw.value[pos-1] !== ' ' && raw.value[pos-1] !== '\n') ? ' ' : '';
+                        raw.value = raw.value.slice(0, pos) + prefix + ph + raw.value.slice(pos);
+                        raw.selectionStart = raw.selectionEnd = pos + prefix.length + ph.length;
+                        raw.focus();
+                    } else { 
+                        if (typeof mf.insert === 'function') {
+                            mf.focus();
+                            // Force exit from any existing groups
+                            for(let i=0; i<3; i++) mf.executeCommand('moveAfterParent');
+                            // selectionMode: 'after' is key to prevent focus landing inside the new blank
+                            mf.insert(ph, { focus: true, selectionMode: 'after' }); 
+                        } else {
+                            const current = getMathValue(mf);
+                            setMathValue(mf, current + ph);
+                        }
+                    }
+                    // Sync state after a brief delay to ensure UI stability
+                    setTimeout(() => syncPlaceholderState(item, item._inputTypesData), 50);
+                });
+            }
+
+            item.querySelector('[data-scoring-toggle]')?.addEventListener('change', () => syncPlaceholderState(item, item._inputTypesData));
             item.addEventListener('input', (e) => { if (e.target.matches('[data-blank-score]')) updateScoreSummary(item); });
 
-            item.querySelector('[data-add-blank-group]').addEventListener('click', () => {
+            item.querySelector('[data-add-blank-group]')?.addEventListener('click', () => {
                 const list = item.querySelector('[data-blank-group-list]');
+                if (!list) return;
                 const gEl = document.createElement('div');
                 gEl.className = 'blank-group-item'; gEl.setAttribute('data-blank-group-item', '');
                 gEl.innerHTML = `<div class="blank-group-header"><input type="text" class="blank-group-name" value="Nhóm ${list.children.length + 1}" data-blank-group-name><button type="button" class="blank-group-remove" data-remove-blank-group>&times;</button></div><div class="blank-group-segments" data-blank-group-segments></div>`;
@@ -368,17 +477,14 @@ window.QuestionEditor = (() => {
                 syncBlankGroupSegments(item);
             });
 
-            const subSel = item.querySelector('[data-subject-select]'), chapSel = item.querySelector('[data-chapter-select]');
-            subSel.addEventListener('change', () => {
-                const subId = parseInt(subSel.value); chapSel.innerHTML = '<option value="">Chọn chương</option>';
-                const sub = subjectsData.find(s => s.subjectId === subId);
-                if (sub?.chapters) sub.chapters.forEach(c => chapSel.add(new Option(c.name, c.chapterId)));
-            });
+            syncSubjectDropdown(item, item._subjectsData);
 
             item.querySelector('[data-add-answer]')?.addEventListener('click', () => {
                 const list = item.querySelector('[data-answer-list]');
-                list.appendChild(createMcqOptionRow(item, list));
-                syncMcqRows(list);
+                if (list) {
+                    list.appendChild(createMcqOptionRow(item, list));
+                    syncMcqRows(list);
+                }
             });
 
             let mcqToggleBusy = false;

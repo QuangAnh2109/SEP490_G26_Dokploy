@@ -256,13 +256,8 @@ namespace Backend.Services.Implements
 
         public async Task<QuestionMetadataDto> GetQuestionMetadataAsync()
         {
-            var inputTypesTask = _questionRepository.GetInputTypesAsync();
-            var subjectsTask = _questionRepository.GetSubjectsWithChaptersAsync();
-
-            await Task.WhenAll(inputTypesTask, subjectsTask);
-
-            var inputTypes = await inputTypesTask;
-            var subjects = await subjectsTask;
+            var inputTypes = await _questionRepository.GetInputTypesAsync();
+            var subjects = await _questionRepository.GetSubjectsWithChaptersAsync();
 
             return new QuestionMetadataDto
             {
