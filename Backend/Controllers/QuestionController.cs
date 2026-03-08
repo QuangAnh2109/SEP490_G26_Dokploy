@@ -10,7 +10,7 @@ namespace Backend.Controllers
     [Route("api/questions")]
     [ApiController]
     [Authorize(Roles = "Teacher")]
-    public class QuestionController : ControllerBase
+    public class QuestionController : BaseController
     {
         private readonly IQuestionService _questionService;
 
@@ -32,55 +32,68 @@ namespace Backend.Controllers
             return Ok(result);
         }
 
-        [HttpPost("batch")]
-        public async Task<IActionResult> CreateQuestionBatchAsync([FromBody] CreateQuestionBatchRequest request)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetQuestionByIdAsync(int id)
         {
-            try
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
             {
-                var userId = GetCurrentUserId();
-                if (userId <= 0)
-                {
-                    return Unauthorized(new { message = "Invalid token." });
-                }
-
-                var result = await _questionService.CreateQuestionsAsync(userId, request);
-                return Ok(result);
+                return Unauthorized(new { message = "Invalid token." });
             }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
-        }
 
-        [HttpGet("input-types")]
-        public async Task<IActionResult> GetInputTypesAsync()
-        {
-            var result = await _questionService.GetInputTypesAsync();
+            var result = await _questionService.GetQuestionByIdAsync(id, userId);
             return Ok(result);
         }
 
-        [HttpGet("subjects")]
-        public async Task<IActionResult> GetSubjectsAsync()
+        [HttpPost]
+        public async Task<IActionResult> CreateQuestionsAsync([FromBody] List<QuestionDto> request)
         {
-            var result = await _questionService.GetSubjectsWithChaptersAsync();
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            var result = await _questionService.CreateQuestionsAsync(userId, request);
             return Ok(result);
         }
 
-        private int GetCurrentUserId()
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateQuestionAsync(int id, [FromBody] QuestionDto request)
         {
-            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(userIdString, out var userId) ? userId : 0;
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            var result = await _questionService.UpdateQuestionAsync(id, userId, request);
+            return Ok(result);
         }
 
-        private IActionResult HandleException(Exception ex)
+        [HttpPatch("status")]
+        public async Task<IActionResult> UpdateQuestionStatusAsync([FromBody] QuestionStatusUpdateDto request)
         {
-            return ex switch
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
             {
-                QuestionValidationException vex => BadRequest(new { message = vex.Message, errors = vex.Errors }),
-                KeyNotFoundException kex => NotFound(new { message = kex.Message }),
-                UnauthorizedAccessException => Forbid(),
-                _ => StatusCode(500, new { message = "Đã xảy ra lỗi trong quá trình xử lý câu hỏi.", details = ex.Message })
-            };
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            if (request == null || !(request.QuestionIds?.Any() ?? false) || string.IsNullOrWhiteSpace(request.Status))
+            {
+                return BadRequest(new { message = "Question IDs and Status are required." });
+            }
+
+            var count = await _questionService.UpdateQuestionStatusAsync(request.QuestionIds, userId, request.Status);
+            return Ok(new { message = $"Đã cập nhật trạng thái cho {count} câu hỏi thành công.", count });
+        }
+
+        [HttpGet("metadata")]
+        public async Task<IActionResult> GetMetadataAsync()
+        {
+            var result = await _questionService.GetQuestionMetadataAsync();
+            return Ok(result);
         }
     }
 }

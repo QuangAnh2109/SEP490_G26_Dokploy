@@ -153,7 +153,7 @@ namespace Backend.Services.Implements
                 throw new UnauthorizedAccessException(ErrorMessages.OtpExpiredOrNotExists);
             }
 
-            if (cacheData.Otp != request.OtpCode)
+            if (cacheData!.Otp != request.OtpCode)
             {
                 throw new UnauthorizedAccessException(ErrorMessages.InvalidOtp);
             }

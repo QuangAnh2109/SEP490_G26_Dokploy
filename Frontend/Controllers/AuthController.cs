@@ -4,10 +4,18 @@ namespace Frontend.Controllers
 {
     public class AuthController : Controller
     {
+        private readonly IConfiguration _configuration;
+
+        public AuthController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
+            ViewData["GoogleClientId"] = _configuration["Google:ClientId"];
             return View();
         }
 

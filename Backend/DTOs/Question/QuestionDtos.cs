@@ -1,15 +1,10 @@
 namespace Backend.DTOs.Question
 {
     // ═══════════════════════════════════
-    //  REQUEST DTOs
+    //  QUESTION DTOs
     // ═══════════════════════════════════
 
-    public class CreateQuestionBatchRequest
-    {
-        public List<CreateQuestionItemDto> Questions { get; set; } = new();
-    }
-
-    public class CreateQuestionItemDto
+    public class QuestionDto
     {
         public string QuestionType { get; set; } = null!;
         public string Stem { get; set; } = null!;
@@ -18,12 +13,13 @@ namespace Backend.DTOs.Question
         public int ChapterId { get; set; }
         public int Difficulty { get; set; }
         public string Status { get; set; } = "Draft";
-        public List<AnswerItemDto> Answers { get; set; } = new();
-        public List<GroupAnswerItemDto>? BlankGroups { get; set; }
+        public List<AnswerDto> Answers { get; set; } = new();
+        public List<GroupAnswerDto>? BlankGroups { get; set; }
     }
 
-    public class AnswerItemDto
+    public class AnswerDto
     {
+        public int? AnswerId { get; set; }
         public string Content { get; set; } = null!;
         public string CorrectAnswer { get; set; } = null!;
         public bool? IsCorrect { get; set; }
@@ -32,43 +28,15 @@ namespace Backend.DTOs.Question
         public int Point { get; set; }
     }
 
-    public class GroupAnswerItemDto
+    public class GroupAnswerDto
     {
+        public int? GroupAnswerId { get; set; }
         public string Name { get; set; } = null!;
         public List<int> SegmentIndices { get; set; } = new();
         public List<int> BlankIndices { get; set; } = new();
     }
 
-    // ═══════════════════════════════════
-    //  QUERY DTOs
-    // ═══════════════════════════════════
-
-    public class QuestionListQueryDto
-    {
-        public string? Keyword { get; set; }
-        public string? QuestionType { get; set; }
-        public int? Difficulty { get; set; }
-        public int? ChapterId { get; set; }
-        public int? SubjectId { get; set; }
-        public string? Status { get; set; }
-        public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-    }
-
-    // ═══════════════════════════════════
-    //  RESPONSE DTOs
-    // ═══════════════════════════════════
-
-    public class QuestionListResponseDto
-    {
-        public List<QuestionListItemDto> Items { get; set; } = new();
-        public int TotalCount { get; set; }
-        public int TotalPages { get; set; }
-        public int PageSize { get; set; }
-        public int CurrentPage { get; set; }
-    }
-
-    public class QuestionListItemDto
+    public class QuestionSummaryDto
     {
         public int QuestionId { get; set; }
         public string ContentPreview { get; set; } = null!;
@@ -80,6 +48,43 @@ namespace Backend.DTOs.Question
         public DateTime UpdatedAt { get; set; }
         public string Status { get; set; } = null!;
         public int AnswerCount { get; set; }
+    }
+
+    // ═══════════════════════════════════
+    //  OPERATIONAL DTOs
+    // ═══════════════════════════════════
+
+    public class QuestionStatusUpdateDto
+    {
+        public List<int> QuestionIds { get; set; } = new();
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class QuestionListQueryDto
+    {
+        public string? Keyword { get; set; }
+        public string? QuestionType { get; set; }
+        public int? Difficulty { get; set; }
+        public int? ChapterId { get; set; }
+        public int? SubjectId { get; set; }
+        public string? Status { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public class QuestionListResultDto
+    {
+        public List<QuestionSummaryDto> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int TotalPages { get; set; }
+        public int PageSize { get; set; }
+        public int CurrentPage { get; set; }
+    }
+
+    public class QuestionMetadataDto
+    {
+        public List<InputTypeDto> InputTypes { get; set; } = new();
+        public List<SubjectWithChaptersDto> Subjects { get; set; } = new();
     }
 
     public class InputTypeDto
@@ -101,11 +106,5 @@ namespace Backend.DTOs.Question
     {
         public int ChapterId { get; set; }
         public string Name { get; set; } = null!;
-    }
-
-    public class CreateQuestionBatchResponse
-    {
-        public List<QuestionListItemDto> CreatedQuestions { get; set; } = new();
-        public int Count { get; set; }
     }
 }

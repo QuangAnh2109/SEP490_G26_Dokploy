@@ -15,5 +15,12 @@ namespace Frontend.Controllers
         {
             return View("QuestionAdd");
         }
+
+        [HttpGet("Question/Edit/{id}")]
+        public IActionResult Edit(int id)
+        {
+            ViewBag.QuestionId = id;
+            return View("QuestionEdit"); 
+        }
     }
 }

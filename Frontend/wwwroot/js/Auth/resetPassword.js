@@ -29,8 +29,10 @@ $(document).ready(function () {
 
         apiClient.post("/api/auth/reset-password", requestData)
             .then(function (response) {
-                alert("Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập với mật khẩu mới.");
-                window.location.href = '/Auth/Login';
+                showToast("Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập với mật khẩu mới.");
+                setTimeout(() => {
+                    window.location.href = '/Auth/Login';
+                }, 1500);
             })
             .catch(function (err) {
                 $msg.text(err.responseJSON?.message || "Có lỗi xảy ra khi đặt lại mật khẩu.")

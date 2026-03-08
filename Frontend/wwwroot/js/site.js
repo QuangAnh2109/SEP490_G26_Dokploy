@@ -79,6 +79,18 @@ function getUserRole() {
     return roleClaim;
 }
 
+// Get the user's email from the stored JWT token
+function getUserEmail() {
+    const token = getToken();
+    if (!token) return null;
+
+    const decoded = parseJwt(token);
+    if (!decoded) return null;
+
+    return decoded['email'] 
+        || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+}
+
 function isAuthenticated() {
     return getToken() !== null;
 }
@@ -145,3 +157,63 @@ const apiClient = {
         return this.request('PATCH', endpoint, data);
     }
 };
+
+// ── Notifications Helper ──
+function showToast(message, type = 'success', duration = 3000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+
+    const toastId = 'toast-' + Date.now();
+    const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
+    
+    const html = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', html);
+    const toastEl = document.getElementById(toastId);
+    const bsToast = new bootstrap.Toast(toastEl, { delay: duration });
+    bsToast.show();
+
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
+}
+
+function showConfirm(message, title = 'Xác nhận', onConfirm) {
+    const modalEl = document.getElementById('globalConfirmModal');
+    if (!modalEl) return;
+
+    const titleEl = document.getElementById('globalConfirmTitle');
+    const msgEl = document.getElementById('globalConfirmMessage');
+    const confirmBtn = document.getElementById('globalConfirmBtn');
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Remove existing listeners to avoid multiple triggers
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    newConfirmBtn.addEventListener('click', () => {
+        if (onConfirm) onConfirm();
+        modal.hide();
+    });
+
+    modal.show();
+}

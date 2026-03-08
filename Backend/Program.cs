@@ -134,6 +134,8 @@ namespace Backend
             // =========================
             // PIPELINE
             // =========================
+            app.UseMiddleware<Backend.Helper.ExceptionMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

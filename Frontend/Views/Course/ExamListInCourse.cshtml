@@ -1,124 +1,104 @@
-﻿@{
+@{
+    ViewData["Title"] = "Danh sách đề trong lớp";
     var classId = ViewBag.ClassId ?? 0;
 }
 
-<!doctype html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Danh sách đề trong lớp</title>
+@section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
-</head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+}
 
-<body>
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <aside class="bg-light border-end" style="width: 250px;">
+        <div class="p-3 border-bottom">
+            <h5 class="mb-0">Quản lý lớp học</h5>
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action active">
+                <i class="fas fa-list me-2"></i> Danh sách đề
+            </a>
+            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
+                <i class="fas fa-users me-2"></i> Danh sách học sinh
+            </a>
+            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
+                <i class="fas fa-cog me-2"></i> Cài đặt
+            </a>
+        </div>
+    </aside>
 
-    <div class="d-flex" style="min-height: 100vh;">
-        <!-- Sidebar -->
-        <aside class="bg-light border-end" style="width: 250px;">
-            <div class="p-3 border-bottom">
-                <h5 class="mb-0">Quản lý lớp học</h5>
-            </div>
-            <div class="list-group list-group-flush">
-                <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action active">
-                    <i class="fas fa-list me-2"></i> Danh sách đề
-                </a>
-                <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
-                    <i class="fas fa-users me-2"></i> Danh sách học sinh
-                </a>
-                <a href="/Course/Settings/@classId" class="list-group-item list-group-item-action">
-                    <i class="fas fa-cog me-2"></i> Cài đặt
-                </a>
-            </div>
-        </aside>
+    <!-- Main Content -->
+    <main class="flex-grow-1 p-4">
 
-        <!-- Main Content -->
-        <main class="flex-grow-1 p-4">
-
-            <section class="mb-4">
-                <h2>Danh sách đề trong lớp</h2>
-            </section>
-
-            <!-- Filters -->
-            <section class="card p-3 mb-4">
-                <div class="row g-2">
-
-                <!-- Chapter -->
-                <div class="col-md-3">
-                    <select id="chapterFilter" class="form-select">
-                        <option value="">Tất cả chương</option>
-                    </select>
-                </div>
-
-                <!-- Status -->
-                <div class="col-md-3">
-                    <select id="statusFilter" class="form-select">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="open">Mở</option>
-                        <option value="upcoming">Sắp diễn ra</option>
-                        <option value="closed">Đóng</option>
-                    </select>
-                </div>
-
-                <!-- Search -->
-                <div class="col-md-6">
-                    <input id="searchFilter"
-                           class="form-control"
-                           placeholder="Tìm theo tên đề..." />
-                </div>
-
-
-            </div>
+        <section class="mb-4">
+            <h2>Danh sách đề trong lớp</h2>
         </section>
 
-        <!-- Table -->
-        <section class="card p-3">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Tên đề</th>
-                            <th>Khoảng thời gian</th>
-                            <th>Thời lượng</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="examTableBody">
-                        <tr>
-                            <td colspan="5" class="text-center">Đang tải...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- Filters -->
+        <section class="card p-3 mb-4">
+            <div class="row g-2">
+
+            <!-- Chapter -->
+            <div class="col-md-3">
+                <select id="chapterFilter" class="form-select">
+                    <option value="">Tất cả chương</option>
+                </select>
             </div>
-        </section>
 
-        </main>
-    </div>
+            <!-- Status -->
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="open">Mở</option>
+                    <option value="upcoming">Sắp diễn ra</option>
+                    <option value="closed">Đóng</option>
+                </select>
+            </div>
 
+            <!-- Search -->
+            <div class="col-md-6">
+                <input id="searchFilter"
+                        class="form-control"
+                        placeholder="Tìm theo tên đề..." />
+            </div>
+
+
+        </div>
+    </section>
+
+    <!-- Table -->
+    <section class="card p-3">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tên đề</th>
+                        <th>Khoảng thời gian</th>
+                        <th>Thời lượng</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="examTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center">Đang tải...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    </main>
+</div>
+
+@section Scripts {
     <script>
         const classId = @classId;
         const API_BASE = "https://localhost:7167";
         let allExams = [];
 
-        function getToken() {
-            return localStorage.getItem("token");
-        }
 
-        function getUserRole() {
-            const token = getToken();
-            if (!token) return null;
-
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                return payload.role ||
-                       payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-            } catch {
-                return null;
-            }
-        }
-
-                async function loadExams() {
+        async function loadExams() {
 
             const token = getToken();
 
@@ -126,6 +106,12 @@
                 alert("Bạn chưa đăng nhập");
                 window.location.href = "/Auth/Login";
                 return;
+            }
+
+            const role = getUserRole();
+            if (role === "Student") {
+                const settingsMenu = document.getElementById("settingsMenuItem");
+                if (settingsMenu) settingsMenu.style.display = 'none';
             }
 
             await loadChapters();   // load chapter trước
@@ -136,7 +122,7 @@
 
             if (response.status === 401) {
                 alert("Phiên đăng nhập hết hạn");
-                localStorage.removeItem("token");
+                removeToken();
                 window.location.href = "/Auth/Login";
                 return;
             }
@@ -145,7 +131,7 @@
             renderExams(allExams);
             initFilters();
         }
-                async function loadChapters() {
+        async function loadChapters() {
 
             const token = getToken();
             if (!token) return;
@@ -174,24 +160,7 @@
                 `;
             });
         }
-        function buildChapterFilter(exams) {
-
-            const chapterSelect = document.getElementById("chapterFilter");
-            chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
-
-            const uniqueChapters = [...new Map(
-                exams
-                    .filter(e => e.chapterId != null)
-                    .map(e => [e.chapterId, e.chapterName])
-            )];
-
-            uniqueChapters.forEach(([id, name]) => {
-                chapterSelect.innerHTML += `
-                    <option value="${id}">${name}</option>
-                `;
-            });
-        }
-
+        
         function getExamStatus(openAt, closeAt) {
 
             if (!openAt || !closeAt) return "unknown";
@@ -209,7 +178,7 @@
             return "upcoming";
         }
 
-                function applyFilter() {
+        function applyFilter() {
 
             const chapter = document.getElementById("chapterFilter").value;
             const status = document.getElementById("statusFilter").value;
@@ -251,7 +220,7 @@
             return '<span class="badge bg-secondary">Không xác định</span>';
         }
 
-                function renderExams(exams) {
+        function renderExams(exams) {
 
             const tbody = document.getElementById("examTableBody");
             tbody.innerHTML = "";
@@ -283,7 +252,7 @@
 
                 if (isStudent && status === "open") {
                     actions += `
-                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam?examId=${exam.examId}">
+                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam/${exam.examId}">
                             Vào làm
                         </a>
                     `;
@@ -322,19 +291,19 @@
         }
 
         document.addEventListener("DOMContentLoaded", loadExams);
-                function initFilters() {
+        function initFilters() {
 
             const chapter = document.getElementById("chapterFilter");
             const status = document.getElementById("statusFilter");
             const search = document.getElementById("searchFilter");
 
-            [chapter, status].forEach(el =>
-                el.addEventListener("change", applyFilter)
-            );
+            if (chapter && status && search) {
+                [chapter, status].forEach(el =>
+                    el.addEventListener("change", applyFilter)
+                );
 
-            search.addEventListener("input", applyFilter);
+                search.addEventListener("input", applyFilter);
+            }
         }
     </script>
-
-</body>
-</html>
+}

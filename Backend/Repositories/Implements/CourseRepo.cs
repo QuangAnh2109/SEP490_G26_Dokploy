@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -244,6 +244,7 @@ namespace Backend.Repositories.Implements
                     StudentId = cm.StudentId,
                     FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
+                    StudentCode = cm.Student != null ? cm.Student.StudentId : string.Empty,
                     JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this
                 })
                 .ToListAsync();

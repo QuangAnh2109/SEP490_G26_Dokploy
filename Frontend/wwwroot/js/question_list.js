@@ -6,7 +6,7 @@
     const typeLabels = { 'FillInBlank': 'Điền vào ô trống', 'MultipleChoice': 'Trắc nghiệm' };
 
     let currentPage = 1;
-    const pageSize = 20;
+    const pageSize = 10;
 
     const tbody = document.getElementById('questionTableBody');
     const paginationContainer = document.getElementById('paginationContainer');
@@ -23,7 +23,8 @@
     // ── Load subjects/chapters for filter dropdowns ──
     const loadSubjects = async () => {
         try {
-            const subjects = await apiClient.get('/api/questions/subjects');
+            const metadata = await apiClient.get('/api/questions/metadata');
+            const subjects = metadata.subjects || [];
             if (filterSubject) {
                 subjects.forEach(s => {
                     const opt = document.createElement('option');
@@ -82,10 +83,13 @@
 
     // ── Extract stem for display ──
     const getContentPreview = (q) => {
+        if (!q.contentPreview) return '';
         try {
             const parsed = JSON.parse(q.contentPreview);
-            return parsed.stem || '';
+            // Handle both lowercase 'stem' and PascalCase 'Stem'
+            return parsed.stem || parsed.Stem || '';
         } catch {
+            // Fallback for non-JSON content
             return q.contentPreview || '';
         }
     };
@@ -106,30 +110,31 @@
             const typeLabel = typeLabels[q.questionType] || q.questionType;
             const dateStr = new Date(q.updatedAt).toLocaleDateString('vi-VN');
             const contentLatex = getContentPreview(q);
+            
             return `<tr class="interactive-row">
         <td><input class="form-check-input question-item-checkbox" type="checkbox" aria-label="Chọn câu hỏi Q-${q.questionId}"></td>
         <td>Q-${q.questionId}</td>
-        <td><math-field read-only class="math-preview" data-latex="${encodeURIComponent(contentLatex)}"></math-field></td>
+        <td>
+            <math-field read-only class="math-preview">${contentLatex}</math-field>
+        </td>
         <td>${typeLabel}</td>
         <td><span class="badge ${badgeDiff}">${q.difficultyLabel}</span></td>
         <td>${escapeHtml(q.subjectCode)}</td>
         <td>${escapeHtml(q.chapterName)}</td>
         <td>${dateStr}</td>
         <td><span class="badge ${badgeStatus}">${q.status}</span></td>
-        <td><div class="toolbar"><button class="btn btn-sm btn-outline-secondary">Sửa</button><button class="btn btn-sm btn-outline-secondary">Lưu trữ</button></div></td>
+        <td>
+            <div class="toolbar">
+                <button class="btn btn-sm btn-outline-secondary" data-action-edit data-id="${q.questionId}">Sửa</button>
+                <button class="btn btn-sm btn-outline-danger" data-action-archive data-id="${q.questionId}">Lưu trữ</button>
+            </div>
+        </td>
       </tr>`;
         }).join('');
 
-        // Set LaTeX values programmatically after DOM update to avoid HTML escaping issues
-        tbody.querySelectorAll('math-field[data-latex]').forEach(mf => {
-            const latex = decodeURIComponent(mf.getAttribute('data-latex'));
-            mf.value = latex;
-            mf.removeAttribute('data-latex');
-        });
-
         // Pagination summary
-        const start = (data.currentPage - 1) * data.pageSize + 1;
-        const end = Math.min(data.currentPage * data.pageSize, data.totalCount);
+        const start = (data.currentPage - 1) * pageSize + 1;
+        const end = start + items.length - 1;
         if (paginationSummary) {
             paginationSummary.textContent = `Hiển thị ${start}-${end} trên ${data.totalCount} câu hỏi.`;
         }
@@ -137,32 +142,147 @@
         // Pagination buttons
         renderPagination(data.currentPage, data.totalPages);
         bindCheckboxes();
+        bindRowActions();
     };
+
+    const bulkArchiveBtn = document.getElementById('bulkArchiveBtn');
+    const archiveConfirmModal = document.getElementById('archiveConfirmModal');
+    const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
+    let archiveModal = null;
+    let pendingArchiveIds = [];
+
+    if (archiveConfirmModal) {
+        archiveModal = new bootstrap.Modal(archiveConfirmModal);
+    }
+
+    // ── Row Actions (Edit / Archive) ──
+    const bindRowActions = () => {
+        const editBtns = tbody.querySelectorAll('[data-action-edit]');
+        const archiveBtns = tbody.querySelectorAll('[data-action-archive]');
+        
+        editBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const qId = e.currentTarget.getAttribute('data-id');
+                if(qId) {
+                    window.location.href = `/Question/Edit/${qId}`;
+                }
+            });
+        });
+
+        archiveBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const qId = e.currentTarget.getAttribute('data-id');
+                if(!qId) return;
+                
+                pendingArchiveIds = [parseInt(qId, 10)];
+                if (archiveModal) archiveModal.show();
+            });
+        });
+    };
+
+    if (bulkArchiveBtn) {
+        bulkArchiveBtn.addEventListener('click', () => {
+            const checkedCbs = Array.from(tbody.querySelectorAll('.question-item-checkbox:checked'));
+            const ids = checkedCbs.map(cb => {
+                const row = cb.closest('tr');
+                const archiveBtn = row?.querySelector('[data-action-archive]');
+                return archiveBtn ? parseInt(archiveBtn.getAttribute('data-id'), 10) : null;
+            }).filter(id => id !== null);
+
+            if (ids.length === 0) {
+                showToast('Vui lòng chọn ít nhất một câu hỏi để lưu trữ.', 'info');
+                return;
+            }
+
+            pendingArchiveIds = ids;
+            if (archiveModal) archiveModal.show();
+        });
+    }
+
+    if (confirmArchiveBtn) {
+        confirmArchiveBtn.addEventListener('click', async () => {
+            if (pendingArchiveIds.length === 0) return;
+
+            confirmArchiveBtn.disabled = true;
+            confirmArchiveBtn.textContent = 'Đang xử lý...';
+
+            try {
+                const response = await apiClient.patch('/api/questions/status', {
+                    questionIds: pendingArchiveIds,
+                    status: 'Archived'
+                });
+                
+                if (archiveModal) archiveModal.hide();
+                showToast(response.message || 'Đã lưu trữ thành công!');
+                loadQuestions(currentPage);
+            } catch (err) {
+                console.error('Lỗi khi lưu trữ hàng loạt', err);
+                showToast('Đã xảy ra lỗi khi lưu trữ câu hỏi.', 'error');
+            } finally {
+                confirmArchiveBtn.disabled = false;
+                confirmArchiveBtn.textContent = 'Đồng ý lưu trữ';
+            }
+        });
+    }
 
     // ── Pagination ──
     const renderPagination = (current, total) => {
-        if (!paginationContainer || total <= 1) {
+        if (!paginationContainer || total <= 0) {
             if (paginationContainer) { paginationContainer.innerHTML = ''; }
             return;
         }
 
         let html = '';
-        html += `<li class="page-item ${current <= 1 ? 'disabled' : ''}"><button class="page-link" data-page="${current - 1}">Trước</button></li>`;
-        for (let i = 1; i <= total; i++) {
-            html += `<li class="page-item ${i === current ? 'active' : ''}"><button class="page-link" data-page="${i}">${i}</button></li>`;
+        // Previous button
+        html += `<li class="page-item ${current <= 1 ? 'disabled' : ''}">
+                    <button class="page-link" data-page="${current - 1}" aria-label="Trang trước">
+                        <span aria-hidden="true">&laquo;</span>
+                    </button>
+                 </li>`;
+
+        const delta = 2; // Number of pages to show around current page
+        const range = [];
+        for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+            range.push(i);
         }
-        html += `<li class="page-item ${current >= total ? 'disabled' : ''}"><button class="page-link" data-page="${current + 1}">Sau</button></li>`;
+
+        if (range[0] > 1) {
+            html += `<li class="page-item"><button class="page-link" data-page="1">1</button></li>`;
+            if (range[0] > 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        range.forEach(i => {
+            html += `<li class="page-item ${i === current ? 'active' : ''}"><button class="page-link" data-page="${i}">${i}</button></li>`;
+        });
+
+        if (range[range.length - 1] < total) {
+            if (range[range.length - 1] < total - 1) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            html += `<li class="page-item"><button class="page-link" data-page="${total}">${total}</button></li>`;
+        }
+
+        // Next button
+        html += `<li class="page-item ${current >= total ? 'disabled' : ''}">
+                    <button class="page-link" data-page="${current + 1}" aria-label="Trang sau">
+                        <span aria-hidden="true">&raquo;</span>
+                    </button>
+                 </li>`;
+
         paginationContainer.innerHTML = html;
 
-        paginationContainer.querySelectorAll('[data-page]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const page = parseInt(e.target.getAttribute('data-page'), 10);
-                if (page >= 1 && page <= total) {
-                    currentPage = page;
-                    loadQuestions(page);
-                }
-            });
-        });
+        paginationContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-page]');
+            if (!btn) return;
+            const page = parseInt(btn.getAttribute('data-page'), 10);
+            if (page >= 1 && page <= total && page !== current) {
+                currentPage = page;
+                loadQuestions(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }, { once: true }); // Use once to avoid multiple bindings, or better yet, refactor to single binding
     };
 
     // ── Checkbox logic ──
@@ -215,6 +335,7 @@
             loadQuestions(1);
         });
     }
+
 
     // ── Escape HTML ──
     const escapeHtml = (str) => {

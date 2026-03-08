@@ -42,10 +42,13 @@
                                 Tài khoản
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                                <li><a class="dropdown-item" href="#">Thông tin cá nhân</a></li>
+                                <li><a class="dropdown-item" href="/Auth/ChangePassword">Đổi mật khẩu</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item role-teacher role-dependent">
+                        <li class="nav-item role-teacher role-dependent d-none">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Exam" asp-action="AssignExam">Assign Exam</a>
                         </li>
                     </ul>
@@ -58,12 +61,27 @@
             @RenderBody()
         </main>
     </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999"></div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Frontend - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <!-- Global Confirmation Modal -->
+    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="globalConfirmTitle">Xác nhận</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0 text-muted" id="globalConfirmMessage"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" id="globalConfirmCancelBtn">Hủy</button>
+                    <button type="button" class="btn btn-primary px-4" id="globalConfirmBtn">Đồng ý</button>
+                </div>
+            </div>
         </div>
-    </footer>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -72,6 +90,11 @@
             if (isAuthenticated()) {
                 $('.auth-guest').addClass('d-none');
                 $('.auth-user').removeClass('d-none');
+                
+                const email = getUserEmail();
+                if (email) {
+                    $('#navbarUserDropdown').text(email);
+                }
                 
                 const role = getUserRole();
                 if (role === 'Student' || role === 'Học sinh') {

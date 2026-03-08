@@ -15,7 +15,7 @@ namespace Backend.Repositories.Implements
             _dbContext = dbContext;
         }
 
-        public async Task<(List<QuestionListItemDto> Items, int TotalCount)> GetQuestionsAsync(QuestionListQueryDto query, int userId)
+        public async Task<(List<QuestionSummaryDto> Items, int TotalCount)> GetQuestionsAsync(QuestionListQueryDto query, int userId)
         {
             var q = _dbContext.Questions
                 .Include(x => x.Chapter)
@@ -57,14 +57,14 @@ namespace Backend.Repositories.Implements
 
             var totalCount = await q.CountAsync();
 
-            var pageSize = Math.Clamp(query.PageSize, 1, 50);
+            var pageSize = 10;
             var page = Math.Max(query.Page, 1);
 
             var items = await q
                 .OrderByDescending(x => x.UpdatedAtUtc)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new QuestionListItemDto
+                .Select(x => new QuestionSummaryDto
                 {
                     QuestionId = x.QuestionId,
                     ContentPreview = x.QuestionContent,
@@ -117,6 +117,56 @@ namespace Backend.Repositories.Implements
             _dbContext.GroupAnswers.Add(groupAnswer);
             await _dbContext.SaveChangesAsync();
             return groupAnswer;
+        }
+
+        public async Task<Question?> GetQuestionWithAnswersAsync(int id)
+        {
+            return await _dbContext.Questions
+                .Include(q => q.QuestionAnswers)
+                    .ThenInclude(qa => qa.BlankInputs)
+                .Include(q => q.QuestionAnswers)
+                    .ThenInclude(qa => qa.GroupAnswer)
+                .FirstOrDefaultAsync(q => q.QuestionId == id);
+        }
+
+        public Task DeleteGroupAnswersAsync(IEnumerable<GroupAnswer> groupAnswers)
+        {
+            _dbContext.GroupAnswers.RemoveRange(groupAnswers);
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteQuestionAnswersAsync(IEnumerable<QuestionAnswer> answers)
+        {
+            _dbContext.QuestionAnswers.RemoveRange(answers);
+            return Task.CompletedTask;
+        }
+
+        public async Task<List<Question>> GetQuestionsByIdsAsync(IEnumerable<int> ids)
+        {
+            return await _dbContext.Questions
+                .Where(q => ids.Contains(q.QuestionId))
+                .ToListAsync();
+        }
+
+        public async Task<bool> IsQuestionUsedAsync(int questionId)
+        {
+            var now = DateTime.UtcNow;
+
+            // 1. Any actual student answers? (Highest priority)
+            var hasAnswered = await _dbContext.QuestionAnswers
+                .Where(qa => qa.QuestionId == questionId)
+                .AnyAsync(qa => qa.StudentAnswers.Any());
+
+            if (hasAnswered) return true;
+
+            // 2. Is it in any exam that is already "visible" or "open"?
+            // We check both VisibleFrom and OpenAt. If either is in the past, students are seeing it.
+            return await _dbContext.Questions
+                .Where(q => q.QuestionId == questionId)
+                .AnyAsync(q => q.Papers.Any(p => 
+                    (p.Exam.VisibleFrom != null && p.Exam.VisibleFrom <= now) || 
+                    (p.Exam.OpenAt != null && p.Exam.OpenAt <= now)
+                ));
         }
 
         public async Task SaveChangesAsync()

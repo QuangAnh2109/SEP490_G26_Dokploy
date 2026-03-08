@@ -604,7 +604,7 @@
     resetValidationState();
 
     if (!teacherId) {
-      window.alert('Thiếu teacherId, không thể lưu giao đề.');
+      showToast('Thiếu teacherId, không thể lưu giao đề.', 'error');
       return;
     }
 
@@ -696,7 +696,7 @@
     }
 
     if (errors.length > 0) {
-      window.alert(errors.join('\n'));
+      showToast(errors.join('<br>'), 'error', 5000);
       return;
     }
 
@@ -738,9 +738,9 @@
       const paperSummary = paperCodes.length > 0
         ? `Mã đề: ${paperCodes.join(', ')}.`
         : `PaperId đầu tiên: ${result.paperId}.`;
-      window.alert(`Lưu giao đề thành công. ExamId: ${result.examId}, Tổng câu: ${result.totalQuestions}. ${paperSummary}`);
+      showToast(`Lưu giao đề thành công. ExamId: ${result.examId}, Tổng câu: ${result.totalQuestions}. ${paperSummary}`);
     } catch (error) {
-      window.alert(`Lưu giao đề thất bại: ${error.message || 'Lỗi không xác định.'}`);
+      showToast(`Lưu giao đề thất bại: ${error.message || 'Lỗi không xác định.'}`, 'error');
     } finally {
       setSavingState(false);
     }
