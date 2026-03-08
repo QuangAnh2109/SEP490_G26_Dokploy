@@ -1,6 +1,7 @@
 (() => {
     'use strict';
     const QE = window.QuestionEditor;
+    const MCQ = window.QuestionEditorMCQ;
     const toArray = (v) => Array.from(v || []);
     
     const questionList = document.getElementById('questionBatchList');
@@ -29,20 +30,21 @@
         clone.removeAttribute('data-bound');
         // Reset everything in clone
         toArray(clone.querySelectorAll('textarea, input[type="text"]')).forEach(i => i.value = '');
-        toArray(clone.querySelectorAll('math-field')).forEach(mf => QE.setMathValue(mf, ''));
-        toArray(clone.querySelectorAll('[data-blank-answer-list], [data-blank-group-list]')).forEach(l => l.innerHTML = '');
+        toArray(clone.querySelectorAll('math-field')).forEach(mf => {
+            mf.textContent = ''; // Clear internal text nodes
+            QE.setMathValue(mf, ''); 
+        });
+        toArray(clone.querySelectorAll('[data-blank-answer-list], [data-blank-group-list]')).forEach(l => {
+            while (l.firstChild) l.removeChild(l.firstChild);
+        });
         
-        // Reset MCQ to default state (A, B) or clear extra rows
+        // Reset MCQ to default state (A, B)
         const ansList = clone.querySelector('[data-answer-list]');
         if (ansList) {
-            const rows = toArray(ansList.querySelectorAll('[data-answer-item]'));
-            rows.forEach((r, idx) => {
-                if (idx >= 2) r.remove();
-                else {
-                    QE.setMathValue(r.querySelector('[data-option-content]'), '');
-                    r.querySelector('[data-option-correct]').checked = false;
-                }
-            });
+            while (ansList.firstChild) ansList.removeChild(ansList.firstChild);
+            ansList.appendChild(MCQ.createMcqOptionRow(clone, ansList));
+            ansList.appendChild(MCQ.createMcqOptionRow(clone, ansList));
+            MCQ.syncMcqRows(ansList);
         }
 
         // Reset visibility to Math Mode visibility

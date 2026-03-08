@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Xem trước đề thi";
     var examId = ViewBag.ExamId;
 }
@@ -104,6 +104,26 @@
                                     </tr>
                                 </thead>
                                 <tbody id="matrix-body">
+                                    <template id="matrixRowTemplate">
+                                        <tr class="interactive-row">
+                                            <th data-field-chapter></th>
+                                            <td data-field-recognize></td>
+                                            <td data-field-understand></td>
+                                            <td data-field-apply></td>
+                                            <td data-field-advanced></td>
+                                            <td data-field-total></td>
+                                        </tr>
+                                    </template>
+                                    <template id="matrixTotalRowTemplate">
+                                        <tr class="fw-bold">
+                                            <th>Tổng</th>
+                                            <td data-field-recognize></td>
+                                            <td data-field-understand></td>
+                                            <td data-field-apply></td>
+                                            <td data-field-advanced></td>
+                                            <td data-field-total></td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>

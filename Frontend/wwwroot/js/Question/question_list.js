@@ -26,26 +26,17 @@
             const metadata = await apiClient.get('/api/questions/metadata');
             const subjects = metadata.subjects || [];
             if (filterSubject) {
-                subjects.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.subjectId;
-                    opt.textContent = s.code || s.name;
-                    filterSubject.appendChild(opt);
-                });
+                subjects.forEach(s => filterSubject.add(new Option(s.code || s.name, s.subjectId)));
             }
             if (filterSubject && filterChapter) {
                 filterSubject.addEventListener('change', () => {
                     const subId = parseInt(filterSubject.value, 10);
-                    filterChapter.innerHTML = '<option value="">Tất cả chương</option>';
+                    while (filterChapter.firstChild) filterChapter.removeChild(filterChapter.firstChild);
+                    filterChapter.add(new Option('Tất cả chương', ''));
                     if (!subId) { return; }
                     const sub = subjects.find(s => s.subjectId === subId);
                     if (sub && sub.chapters) {
-                        sub.chapters.forEach(c => {
-                            const opt = document.createElement('option');
-                            opt.value = c.chapterId;
-                            opt.textContent = c.name;
-                            filterChapter.appendChild(opt);
-                        });
+                        sub.chapters.forEach(c => filterChapter.add(new Option(c.name, c.chapterId)));
                     }
                 });
             }
@@ -97,40 +88,47 @@
     // ── Render table ──
     const renderTable = (data) => {
         const items = data.items || [];
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>';
+            const t = document.getElementById('tableEmptyTemplate');
+            tbody.appendChild(t.content.cloneNode(true));
             if (paginationSummary) { paginationSummary.textContent = ''; }
             if (paginationContainer) { paginationContainer.innerHTML = ''; }
             return;
         }
 
-        tbody.innerHTML = items.map(q => {
+        const template = document.getElementById('questionRowTemplate');
+        items.forEach(q => {
+            const row = template.content.cloneNode(true).firstElementChild;
             const badgeDiff = difficultyBadgeClass[q.difficulty] || 'badge-easy';
             const badgeStatus = statusBadgeClass[q.status] || 'status-draft';
             const typeLabel = typeLabels[q.questionType] || q.questionType;
             const dateStr = new Date(q.updatedAt).toLocaleDateString('vi-VN');
             const contentLatex = getContentPreview(q);
+
+            row.querySelector('.question-item-checkbox').setAttribute('aria-label', `Chọn câu hỏi Q-${q.questionId}`);
+            row.querySelector('[data-field-id]').textContent = `Q-${q.questionId}`;
+            const mf = row.querySelector('[data-field-content]');
+            if (mf) { mf.setAttribute('value', contentLatex); mf.textContent = contentLatex; }
+            row.querySelector('[data-field-type]').textContent = typeLabel;
             
-            return `<tr class="interactive-row">
-        <td><input class="form-check-input question-item-checkbox" type="checkbox" aria-label="Chọn câu hỏi Q-${q.questionId}"></td>
-        <td>Q-${q.questionId}</td>
-        <td>
-            <math-field read-only class="math-preview">${contentLatex}</math-field>
-        </td>
-        <td>${typeLabel}</td>
-        <td><span class="badge ${badgeDiff}">${q.difficultyLabel}</span></td>
-        <td>${escapeHtml(q.subjectCode)}</td>
-        <td>${escapeHtml(q.chapterName)}</td>
-        <td>${dateStr}</td>
-        <td><span class="badge ${badgeStatus}">${q.status}</span></td>
-        <td>
-            <div class="toolbar">
-                <button class="btn btn-sm btn-outline-secondary" data-action-edit data-id="${q.questionId}">Sửa</button>
-                <button class="btn btn-sm btn-outline-danger" data-action-archive data-id="${q.questionId}">Lưu trữ</button>
-            </div>
-        </td>
-      </tr>`;
-        }).join('');
+            const diffSpan = row.querySelector('[data-field-difficulty]');
+            diffSpan.className = `badge ${badgeDiff}`; diffSpan.textContent = q.difficultyLabel;
+            
+            row.querySelector('[data-field-subject]').textContent = q.subjectCode || '';
+            row.querySelector('[data-field-chapter]').textContent = q.chapterName || '';
+            row.querySelector('[data-field-updated]').textContent = dateStr;
+            
+            const statusSpan = row.querySelector('[data-field-status]');
+            statusSpan.className = `badge ${badgeStatus}`; statusSpan.textContent = q.status;
+
+            const editBtn = row.querySelector('[data-action-edit]');
+            editBtn.setAttribute('data-id', q.questionId);
+            const archiveBtn = row.querySelector('[data-action-archive]');
+            archiveBtn.setAttribute('data-id', q.questionId);
+
+            tbody.appendChild(row);
+        });
 
         // Pagination summary
         const start = (data.currentPage - 1) * pageSize + 1;
@@ -228,61 +226,79 @@
     // ── Pagination ──
     const renderPagination = (current, total) => {
         if (!paginationContainer || total <= 0) {
-            if (paginationContainer) { paginationContainer.innerHTML = ''; }
+            if (paginationContainer) {
+                while (paginationContainer.firstChild) paginationContainer.removeChild(paginationContainer.firstChild);
+            }
             return;
         }
 
-        let html = '';
-        // Previous button
-        html += `<li class="page-item ${current <= 1 ? 'disabled' : ''}">
-                    <button class="page-link" data-page="${current - 1}" aria-label="Trang trước">
-                        <span aria-hidden="true">&laquo;</span>
-                    </button>
-                 </li>`;
+        while (paginationContainer.firstChild) paginationContainer.removeChild(paginationContainer.firstChild);
+        const btnTemplate = document.getElementById('paginationButtonTemplate');
+        const prevTemplate = document.getElementById('paginationPrevTemplate');
+        const nextTemplate = document.getElementById('paginationNextTemplate');
+        const ellipsisTemplate = document.getElementById('paginationEllipsisTemplate');
 
-        const delta = 2; // Number of pages to show around current page
+        const addPageBtn = (p, label, active = false, disabled = false) => {
+            let li;
+            if (label === '«') li = prevTemplate.content.cloneNode(true).firstElementChild;
+            else if (label === '»') li = nextTemplate.content.cloneNode(true).firstElementChild;
+            else {
+                li = btnTemplate.content.cloneNode(true).firstElementChild;
+                li.querySelector('.page-link').textContent = label;
+            }
+            
+            if (active) li.classList.add('active');
+            if (disabled) li.classList.add('disabled');
+            li.querySelector('.page-link').setAttribute('data-page', p);
+            paginationContainer.appendChild(li);
+        };
+
+        const addEllipsis = () => {
+            const li = ellipsisTemplate.content.cloneNode(true).firstElementChild;
+            paginationContainer.appendChild(li);
+        };
+
+        // Previous button
+        addPageBtn(current - 1, '«', false, current <= 1);
+
+        const delta = 2;
         const range = [];
         for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
             range.push(i);
         }
 
         if (range[0] > 1) {
-            html += `<li class="page-item"><button class="page-link" data-page="1">1</button></li>`;
-            if (range[0] > 2) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
+            addPageBtn(1, '1');
+            if (range[0] > 2) addEllipsis();
         }
 
         range.forEach(i => {
-            html += `<li class="page-item ${i === current ? 'active' : ''}"><button class="page-link" data-page="${i}">${i}</button></li>`;
+            addPageBtn(i, String(i), i === current);
         });
 
         if (range[range.length - 1] < total) {
-            if (range[range.length - 1] < total - 1) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-            html += `<li class="page-item"><button class="page-link" data-page="${total}">${total}</button></li>`;
+            if (range[range.length - 1] < total - 1) addEllipsis();
+            addPageBtn(total, String(total));
         }
 
         // Next button
-        html += `<li class="page-item ${current >= total ? 'disabled' : ''}">
-                    <button class="page-link" data-page="${current + 1}" aria-label="Trang sau">
-                        <span aria-hidden="true">&raquo;</span>
-                    </button>
-                 </li>`;
+        addPageBtn(current + 1, '»', false, current >= total);
 
-        paginationContainer.innerHTML = html;
-
-        paginationContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-page]');
-            if (!btn) return;
-            const page = parseInt(btn.getAttribute('data-page'), 10);
-            if (page >= 1 && page <= total && page !== current) {
-                currentPage = page;
-                loadQuestions(page);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }, { once: true }); // Use once to avoid multiple bindings, or better yet, refactor to single binding
+        // Single event listener for pagination container (event delegation)
+        if (!paginationContainer._bound) {
+            paginationContainer._bound = true;
+            paginationContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-page]');
+                const li = btn?.closest('.page-item');
+                if (!btn || li?.classList.contains('disabled') || li?.classList.contains('active')) return;
+                const page = parseInt(btn.getAttribute('data-page'), 10);
+                if (page >= 1 && page <= total) {
+                    currentPage = page;
+                    loadQuestions(page);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
     };
 
     // ── Checkbox logic ──
@@ -318,14 +334,18 @@
 
     // ── Load data ──
     const loadQuestions = async (page) => {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>';
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        const tLoad = document.getElementById('tableLoadingTemplate');
+        tbody.appendChild(tLoad.content.cloneNode(true));
         try {
             const qs = buildQuery(page);
             const data = await apiClient.get(`/api/questions?${qs}`);
             renderTable(data);
         } catch (err) {
             console.error('Failed to load questions', err);
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>';
+            while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+            const tErr = document.getElementById('tableErrorTemplate');
+            tbody.appendChild(tErr.content.cloneNode(true));
         }
     };
 
@@ -337,11 +357,12 @@
     }
 
 
-    // ── Escape HTML ──
+    // ── Escape HTML (DOM Pure) ──
     const escapeHtml = (str) => {
         if (!str) { return ''; }
+        const textNode = document.createTextNode(str);
         const div = document.createElement('div');
-        div.textContent = str;
+        div.appendChild(textNode);
         return div.innerHTML;
     };
 

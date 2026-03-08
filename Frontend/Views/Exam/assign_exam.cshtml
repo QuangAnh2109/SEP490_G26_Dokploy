@@ -132,7 +132,19 @@
                   <th>Học kỳ</th>
                 </tr>
               </thead>
-              <tbody id="classTableBody"></tbody>
+              <tbody id="classTableBody">
+                <template id="classRowTemplate">
+                  <tr>
+                    <td><input class="form-check-input class-item" type="radio" name="selectedClass"></td>
+                    <td data-field-code></td>
+                    <td data-field-subject></td>
+                    <td data-field-semester></td>
+                  </tr>
+                </template>
+                <template id="classStatusTemplate">
+                  <tr><td colspan="4" class="text-center" data-message></td></tr>
+                </template>
+              </tbody>
             </table>
           </div>
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
@@ -205,7 +217,19 @@
                       <th>Ngày cập nhật</th>
                     </tr>
                   </thead>
-                  <tbody id="blueprintTableBody"></tbody>
+                  <tbody id="blueprintTableBody">
+                    <template id="blueprintRowTemplate">
+                      <tr class="interactive-row">
+                        <td><input class="form-check-input blueprint-item" type="radio" name="selectedBlueprint"></td>
+                        <td data-field-name></td>
+                        <td data-field-subject></td>
+                        <td data-field-updated></td>
+                      </tr>
+                    </template>
+                    <template id="blueprintStatusTemplate">
+                      <tr><td colspan="4" class="text-center" data-message></td></tr>
+                    </template>
+                  </tbody>
                 </table>
               </div>
               <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
@@ -268,7 +292,18 @@
                       <th>Số câu</th>
                     </tr>
                   </thead>
-                  <tbody id="blueprintMatrixBody"></tbody>
+                  <tbody id="blueprintMatrixBody">
+                    <template id="blueprintMatrixRowTemplate">
+                      <tr>
+                        <td data-field-chapter></td>
+                        <td data-field-difficulty></td>
+                        <td data-field-questions></td>
+                      </tr>
+                    </template>
+                    <template id="matrixStatusTemplate">
+                      <tr><td colspan="3" class="text-center text-muted" data-message></td></tr>
+                    </template>
+                  </tbody>
                 </table>
               </div>
             </div>
@@ -323,7 +358,29 @@
                   <th>Nội dung</th>
                 </tr>
               </thead>
-              <tbody id="manualQuestionTableBody"></tbody>
+              <tbody id="manualQuestionTableBody">
+                <template id="manualQuestionRowTemplate">
+                  <tr>
+                    <td><input class="form-check-input manual-question-item" type="checkbox"></td>
+                    <td data-field-subject></td>
+                    <td data-field-chapter></td>
+                    <td data-field-level></td>
+                    <td data-field-content></td>
+                  </tr>
+                </template>
+                <template id="manualQuestionStatusTemplate">
+                  <tr><td colspan="5" class="text-center text-muted" data-message></td></tr>
+                </template>
+                <template id="manualContentTemplate">
+                  <span class="manual-question-content"></span>
+                </template>
+                <template id="manualTextTemplate">
+                  <span class="manual-question-text"></span>
+                </template>
+                <template id="manualMathTemplate">
+                  <math-field class="manual-question-math" read-only></math-field>
+                </template>
+              </tbody>
             </table>
           </div>
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
@@ -359,6 +416,8 @@
   <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
   <script src="/js/site.js"></script>
   <script type="module" src="https://unpkg.com/mathlive"></script>
+  <script src="/js/Shared/validation_shared.js"></script>
+  <script src="/js/Validations/assign_exam_val.js"></script>
   <script src="/js/assign_exam.js"></script>
 </body>
 </html>

@@ -148,8 +148,35 @@
             <th>Thao tác</th>
           </tr>
         </thead>
-        <tbody id="questionTableBody">
-          <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+          <template id="questionRowTemplate">
+            <tr class="interactive-row">
+              <td><input class="form-check-input question-item-checkbox" type="checkbox"></td>
+              <td data-field-id></td>
+              <td><math-field read-only class="math-preview" data-field-content></math-field></td>
+              <td data-field-type></td>
+              <td><span class="badge" data-field-difficulty></span></td>
+              <td data-field-subject></td>
+              <td data-field-chapter></td>
+              <td data-field-updated></td>
+              <td><span class="badge" data-field-status></span></td>
+              <td>
+                <div class="toolbar">
+                  <button class="btn btn-sm btn-outline-secondary" data-action-edit>Sửa</button>
+                  <button class="btn btn-sm btn-outline-danger" data-action-archive>Lưu trữ</button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <template id="tableLoadingTemplate">
+            <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+          </template>
+          <template id="tableEmptyTemplate">
+            <tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
+          </template>
+          <template id="tableErrorTemplate">
+            <tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
+          </template>
+          <tr id="initialLoadingRow"><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
         </tbody>
       </table>
     </div>
@@ -160,6 +187,18 @@
       <p class="form-note mb-0" id="paginationSummary"></p>
     </div>
     <nav aria-label="Phân trang câu hỏi">
+      <template id="paginationButtonTemplate">
+        <li class="page-item"><button class="page-link" data-page></button></li>
+      </template>
+      <template id="paginationPrevTemplate">
+        <li class="page-item"><button class="page-link" data-page aria-label="Trang trước"><span aria-hidden="true">&laquo;</span></button></li>
+      </template>
+      <template id="paginationNextTemplate">
+        <li class="page-item"><button class="page-link" data-page aria-label="Trang sau"><span aria-hidden="true">&raquo;</span></button></li>
+      </template>
+      <template id="paginationEllipsisTemplate">
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+      </template>
       <ul class="pagination mb-0" id="paginationContainer"></ul>
     </nav>
   </div>
@@ -200,5 +239,5 @@
 </div>
 
 @section Scripts {
-    <script src="/js/question_list.js"></script>
+    <script src="/js/Question/question_list.js"></script>
 }

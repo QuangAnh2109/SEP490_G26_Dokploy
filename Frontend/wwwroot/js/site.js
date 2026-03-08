@@ -1,7 +1,5 @@
-// Global Configuration
 const API_BASE_URL = "https://localhost:7167";
 
-// Setup global Ajax defaults (chỉ chạy khi có jQuery; trang Assign Exam không load jQuery nên bỏ qua)
 try {
     if (typeof window.$ !== 'undefined' && window.$.ajaxSetup) {
         window.$.ajaxSetup({
@@ -13,9 +11,8 @@ try {
             }
         });
     }
-} catch (_) { /* bỏ qua nếu không có jQuery */ }
+} catch (_) { }
 
-// Helper functions for auth
 function setToken(token) {
     localStorage.setItem('jwtToken', token);
     const decoded = parseJwt(token);
@@ -35,7 +32,6 @@ function removeToken() {
     localStorage.removeItem('jwtToken');
 }
 
-// Helper to decode JWT payload safely
 function parseJwt(token) {
     try {
         const base64Url = token.split('.')[1];
@@ -46,11 +42,10 @@ function parseJwt(token) {
 
         return JSON.parse(jsonPayload);
     } catch (e) {
-        return null; // Invalid token
+        return null; 
     }
 }
 
-// Get the user's ID from the stored JWT token (for teacherId, etc.)
 function getUserIdFromToken() {
     const token = getToken();
     if (!token) return null;
@@ -64,22 +59,17 @@ function getUserIdFromToken() {
         || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/nameidentifier'];
     if (!userId) return null;
 
-    const num = parseInt(userId, 10);
-    return Number.isInteger(num) && num > 0 ? num : null;
+    return parseInt(userId, 10) || null;
 }
 
-// Get the user's role from the stored JWT token
 function getUserRole() {
     const token = getToken();
     if (!token) return null;
 
     const decoded = parseJwt(token);
-    // JWT sometimes maps Role to a complex schema URL, but standard .NET puts it in role or ClaimTypes.Role
-    const roleClaim = decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
-    return roleClaim;
+    return decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null;
 }
 
-// Get the user's email from the stored JWT token
 function getUserEmail() {
     const token = getToken();
     if (!token) return null;
@@ -95,21 +85,12 @@ function isAuthenticated() {
     return getToken() !== null;
 }
 
-// Handle global logout
 function logout() {
     removeToken();
     window.location.href = '/Auth/Login';
 }
 
-// Global API Client for the team
 const apiClient = {
-    /**
-     * Thực hiện một AJAX request chung
-     * @param {string} method - 'GET', 'POST', 'PUT', 'DELETE'
-     * @param {string} endpoint - Route API (ví dụ: '/api/auth/login')
-     * @param {object} data - Dữ liệu body (cho POST/PUT)
-     * @returns {Promise} Trả về Promise để dùng với .then() .catch() hoặc async/await
-     */
     request: function (method, endpoint, data = null) {
         return new Promise((resolve, reject) => {
             const ajaxOptions = {
@@ -137,54 +118,29 @@ const apiClient = {
         });
     },
 
-    get: function (endpoint) {
-        return this.request('GET', endpoint);
-    },
-
-    post: function (endpoint, data) {
-        return this.request('POST', endpoint, data);
-    },
-
-    put: function (endpoint, data) {
-        return this.request('PUT', endpoint, data);
-    },
-
-    delete: function (endpoint) {
-        return this.request('DELETE', endpoint);
-    },
-
-    patch: function (endpoint, data) {
-        return this.request('PATCH', endpoint, data);
-    }
+    get: function (endpoint) { return this.request('GET', endpoint); },
+    post: function (endpoint, data) { return this.request('POST', endpoint, data); },
+    put: function (endpoint, data) { return this.request('PUT', endpoint, data); },
+    delete: function (endpoint) { return this.request('DELETE', endpoint); },
+    patch: function (endpoint, data) { return this.request('PATCH', endpoint, data); }
 };
 
-// ── Notifications Helper ──
 function showToast(message, type = 'success', duration = 3000) {
-    let container = document.getElementById('toastContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        container.style.zIndex = '9999';
-        document.body.appendChild(container);
-    }
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
 
-    const toastId = 'toast-' + Date.now();
+    const t = document.getElementById('toastTemplate');
+    if (!t) return;
+
+    const toastEl = t.content.cloneNode(true).firstElementChild;
     const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
+    toastEl.classList.add(bgClass);
     
-    const html = `
-        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-        </div>
-    `;
+    const body = toastEl.querySelector('[data-message]');
+    if (body) body.textContent = message;
+
+    container.appendChild(toastEl);
     
-    container.insertAdjacentHTML('beforeend', html);
-    const toastEl = document.getElementById(toastId);
     const bsToast = new bootstrap.Toast(toastEl, { delay: duration });
     bsToast.show();
 
@@ -206,7 +162,6 @@ function showConfirm(message, title = 'Xác nhận', onConfirm) {
 
     const modal = new bootstrap.Modal(modalEl);
     
-    // Remove existing listeners to avoid multiple triggers
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 

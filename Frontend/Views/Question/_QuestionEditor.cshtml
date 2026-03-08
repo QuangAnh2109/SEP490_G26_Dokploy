@@ -60,11 +60,48 @@
             </p>
             <div class="placeholder-manager mt-2 d-none" data-placeholder-manager>
                 <div class="placeholder-nav mb-3 d-flex flex-wrap gap-2" data-placeholder-nav>
+                    <template data-blank-nav-button-template>
+                        <button type="button" class="btn btn-sm btn-outline-primary px-3"></button>
+                    </template>
                     <!-- Nav buttons [1] [2] ... -->
                 </div>
                 <div class="placeholder-active-editor" data-placeholder-active-editor>
-                    <!-- One row at a time -->
-                    <div class="blank-answer-list" data-blank-answer-list></div>
+                    <!-- Templates moved outside of blank-answer-list container to prevent deletion by innerHTML = '' -->
+                    <template data-blank-answer-template>
+                        <div class="blank-answer-row">
+                            <div class="blank-answer-main">
+                                <div class="blank-answer-header">
+                                    <span class="badge rounded-pill bg-primary" data-blank-label>Ô trống</span>
+                                </div>
+                                <div class="d-flex gap-2 align-items-center mb-2">
+                                    <math-field class="math-input flex-grow-1" data-blank-answer placeholder="Đáp án đúng..."></math-field>
+                                </div>
+                                <div class="blank-constraint-body" data-blank-constraint-body>
+                                    <p class="form-note" data-blank-constraint-loading>Đang tải...</p>
+                                    <template data-constraint-section-template>
+                                        <div class="constraint-section">
+                                            <div class="constraint-section-label" data-constraint-group-label></div>
+                                            <div class="constraint-grid" data-constraint-grid></div>
+                                        </div>
+                                    </template>
+                                    <template data-constraint-chip-template>
+                                        <div class="constraint-chip">
+                                            <span data-constraint-name></span>
+                                        </div>
+                                    </template>
+                                    <div class="constraint-container" data-constraint-container></div>
+                                </div>
+                                <div class="blank-score-field mt-2" data-blank-score-field>
+                                    <label class="form-label small mb-1">Hệ số điểm (%)</label>
+                                    <input class="form-control form-control-sm" type="number" value="0" min="0" max="100" data-blank-score>
+                                </div>
+                                <button type="button" class="blank-constraint-toggle mt-1" data-blank-constraint-toggle>Giới hạn nhập liệu</button>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="blank-answer-list" data-blank-answer-list>
+                        <!-- One row at a time -->
+                    </div>
                 </div>
             </div>
             <!-- Score summary -->
@@ -99,32 +136,23 @@
                 </div>
                 <span class="form-note">Tắt để chỉnh sửa tất cả đáp án dạng văn bản thuần (LaTeX)</span>
             </div>
+            <!-- Template moved outside and converted to real <template> -->
+            <template data-answer-template>
+                <div class="answer-row">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="input-group-text" data-answer-index></span>
+                        <math-field class="math-input flex-grow-1" data-option-content></math-field>
+                        <textarea class="math-raw-textarea flex-grow-1 d-none" rows="1" data-option-raw></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" data-option-correct>
+                        <label class="form-check-label" data-option-correct-label>Đúng</label>
+                    </div>
+                    <button class="btn btn-outline-danger" type="button" data-remove-answer>Xóa</button>
+                </div>
+            </template>
             <div data-answer-list>
-                <div class="answer-row" data-answer-item>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="input-group-text" data-answer-index>A</span>
-                        <math-field class="math-input flex-grow-1" data-option-content></math-field>
-                        <textarea class="math-raw-textarea flex-grow-1 d-none" rows="1" data-option-raw></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" data-option-correct>
-                        <label class="form-check-label" data-option-correct-label>Đúng</label>
-                    </div>
-                    <button class="btn btn-outline-danger" type="button" data-remove-answer>Xóa</button>
-                </div>
-                <!-- Template for cloning -->
-                <div class="answer-row d-none" data-answer-template>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="input-group-text" data-answer-index>Z</span>
-                        <math-field class="math-input flex-grow-1" data-option-content></math-field>
-                        <textarea class="math-raw-textarea flex-grow-1 d-none" rows="1" data-option-raw></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" data-option-correct>
-                        <label class="form-check-label" data-option-correct-label>Đúng</label>
-                    </div>
-                    <button class="btn btn-outline-danger" type="button" data-remove-answer>Xóa</button>
-                </div>
+                <!-- Answers will be inserted here -->
             </div>
             <p class="field-help mt-2 mb-0">Đánh dấu một hoặc nhiều đáp án đúng.</p>
             <!-- MCQ score -->
@@ -172,6 +200,24 @@
                     <em>Chưa có nội dung. Hãy nhập biểu thức với <code>\placeholder[n]{}</code> trong khung trả lời.</em>
                 </p>
                 <div class="blank-group-list" data-blank-group-list>
+                    <!-- Template for cloning -->
+                    <div class="blank-group-item d-none" data-blank-group-template>
+                        <div class="blank-group-header">
+                            <input type="text" class="blank-group-name" value="Nhóm" data-blank-group-name>
+                            <button type="button" class="blank-group-remove" data-remove-blank-group>&times;</button>
+                        </div>
+                        <div class="blank-group-segments" data-blank-group-segments>
+                            <!-- Template for segment card moved outside content container -->
+                            <template data-blank-group-segment-template>
+                                <div class="blank-group-segment">
+                                    <div class="blank-group-segment-head"><span data-segment-label></span></div>
+                                    <math-field read-only class="math-display" data-segment-content></math-field>
+                                </div>
+                            </template>
+                            <p class="form-note mb-0 d-none" data-blank-group-empty-note><em>Khung trả lời trống</em></p>
+                            <div class="segments-container" data-segments-container></div>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="blank-group-add-btn mt-2" data-add-blank-group>
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"

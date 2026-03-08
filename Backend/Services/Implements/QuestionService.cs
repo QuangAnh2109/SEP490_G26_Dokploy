@@ -166,7 +166,8 @@ namespace Backend.Services.Implements
             {
                 var ans = adto.AnswerId.HasValue ? q.QuestionAnswers.FirstOrDefault(a => a.QuestionAnswerId == adto.AnswerId) : null;
                 if (ans == null && q.QuestionType == QuestionType.FillBlank && adto.BlankIndex.HasValue)
-                    ans = q.QuestionAnswers.FirstOrDefault(a => a.Content != null && a.Content.Contains($"placeholder[{adto.BlankIndex}]"));
+                    ans = q.QuestionAnswers.FirstOrDefault(a => a.Content != null && 
+                          System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{adto.BlankIndex}\](\{{|$)"));
 
                 if (ans == null) q.QuestionAnswers.Add(ans = new QuestionAnswer());
 
@@ -248,8 +249,9 @@ namespace Backend.Services.Implements
 
                 foreach (var idx in gDto.BlankIndices)
                 {
-                    var ans = answers.FirstOrDefault(a => a.Content?.Contains($"placeholder[{idx}]") == true);
-            if (ans != null) ans.GroupAnswer = group;
+                    var ans = answers.FirstOrDefault(a => a.Content != null && 
+                              System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{idx}\](\{{|$)"));
+                    if (ans != null) ans.GroupAnswer = group;
                 }
             }
         }
