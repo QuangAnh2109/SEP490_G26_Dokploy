@@ -4,9 +4,11 @@ namespace Backend.Services.Interfaces
 {
     public interface IQuestionService
     {
-        Task<QuestionListResponseDto> GetQuestionsAsync(QuestionListQueryDto query, int userId);
-        Task<CreateQuestionBatchResponse> CreateQuestionsAsync(int userId, CreateQuestionBatchRequest request);
-        Task<List<InputTypeDto>> GetInputTypesAsync();
-        Task<List<SubjectWithChaptersDto>> GetSubjectsWithChaptersAsync();
+        Task<QuestionListResultDto> GetQuestionsAsync(QuestionListQueryDto query, int userId);
+        Task<QuestionDto> GetQuestionByIdAsync(int questionId, int userId);
+        Task<List<QuestionSummaryDto>> CreateQuestionsAsync(int userId, List<QuestionDto> request);
+        Task<QuestionSummaryDto> UpdateQuestionAsync(int questionId, int userId, QuestionDto request);
+        Task<int> UpdateQuestionStatusAsync(List<int> questionIds, int userId, string status);
+        Task<QuestionMetadataDto> GetQuestionMetadataAsync();
     }
 }

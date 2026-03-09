@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
@@ -41,8 +41,8 @@ namespace Backend.Services.Implements
         }
         public async Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto)
         {
-            var normalizedSemester = dto.Semester?.Trim().ToUpper();
-
+            var normalizedSemester = dto.Semester?.Trim().ToUpper() ?? "";
+            
             // Kiểm tra trùng lặp
             var duplicateError = await _repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName, normalizedSemester, dto.SubjectId);
             if (duplicateError != null)

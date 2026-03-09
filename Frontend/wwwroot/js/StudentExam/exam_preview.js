@@ -1,4 +1,3 @@
-﻿
 $(function () {
     loadExamPreview();
 });
@@ -61,7 +60,7 @@ function renderPreview(data) {
     const canTake = (!openAt || now >= openAt) && (!closeAt || now <= closeAt);
 
     if (canTake) {
-        $('#btn-take-exam').prop('disabled', false).on('click', function () { goToExam(); });
+        $('#btn-take-exam').prop('disabled', false).off('click').on('click', function () { goToExam(); });
     } else {
         const tooltip = openAt && now < openAt
             ? `Đề thi chưa mở. Mở lúc ${formatDateTime(data.openAt)}`
@@ -85,6 +84,9 @@ function renderStatusBadge(status) {
 }
 
 function renderMatrix(matrix) {
+    const $tbody = $('#matrix-body');
+    $tbody.empty();
+
     if (!matrix || matrix.length === 0) {
         $('#matrix-wrapper').addClass('d-none');
         $('#no-matrix').removeClass('d-none');
@@ -100,27 +102,26 @@ function renderMatrix(matrix) {
         return acc;
     }, { recognize: 0, understand: 0, apply: 0, advancedApply: 0, total: 0 });
 
-    const rows = matrix.map(row => `
-        <tr class="interactive-row">
-            <th>${escapeHtml(row.chapterName)}</th>
-            <td>${row.recognize}</td>
-            <td>${row.understand}</td>
-            <td>${row.apply}</td>
-            <td>${row.advancedApply}</td>
-            <td>${row.total}</td>
-        </tr>`).join('');
+    const rowT = document.getElementById('matrixRowTemplate');
+    matrix.forEach(row => {
+        const tr = rowT.content.cloneNode(true).firstElementChild;
+        tr.querySelector('[data-field-chapter]').textContent = row.chapterName || '';
+        tr.querySelector('[data-field-recognize]').textContent = row.recognize || 0;
+        tr.querySelector('[data-field-understand]').textContent = row.understand || 0;
+        tr.querySelector('[data-field-apply]').textContent = row.apply || 0;
+        tr.querySelector('[data-field-advanced]').textContent = row.advancedApply || 0;
+        tr.querySelector('[data-field-total]').textContent = row.total || 0;
+        $tbody.append(tr);
+    });
 
-    const totalRow = `
-        <tr class="fw-bold">
-            <th>Tổng</th>
-            <td>${totals.recognize}</td>
-            <td>${totals.understand}</td>
-            <td>${totals.apply}</td>
-            <td>${totals.advancedApply}</td>
-            <td>${totals.total}</td>
-        </tr>`;
-
-    $('#matrix-body').html(rows + totalRow);
+    const totalT = document.getElementById('matrixTotalRowTemplate');
+    const totalRow = totalT.content.cloneNode(true).firstElementChild;
+    totalRow.querySelector('[data-field-recognize]').textContent = totals.recognize;
+    totalRow.querySelector('[data-field-understand]').textContent = totals.understand;
+    totalRow.querySelector('[data-field-apply]').textContent = totals.apply;
+    totalRow.querySelector('[data-field-advanced]').textContent = totals.advancedApply;
+    totalRow.querySelector('[data-field-total]').textContent = totals.total;
+    $tbody.append(totalRow);
 }
 
 function goToExam() {
@@ -139,8 +140,4 @@ function formatDateTime(isoString) {
     if (isNaN(d.getTime())) return '—';
     const pad = n => String(n).padStart(2, '0');
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function escapeHtml(str) {
-    return $('<div>').text(str || '').html();
 }

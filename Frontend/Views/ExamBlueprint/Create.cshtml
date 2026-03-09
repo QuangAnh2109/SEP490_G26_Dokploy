@@ -22,7 +22,14 @@
                 </div>
             </section>
 
-            <div id="createError" class="alert alert-danger d-none mt-3"></div>
+            <div id="createError" class="alert alert-danger d-none mt-3">
+                <template id="errorListTemplate">
+                    <ul class="mb-0 ps-3" data-error-list></ul>
+                </template>
+                <template id="errorItemTemplate">
+                    <li data-error-message></li>
+                </template>
+            </div>
             <div id="createWarnings" class="alert alert-warning d-none mt-3"></div>
 
             <section class="panel-card mb-3">
@@ -89,5 +96,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/Shared/validation_shared.js" asp-append-version="true"></script>
+    <script src="~/js/Validations/blueprint_val.js" asp-append-version="true"></script>
     <script src="~/js/ExamBlueprint/create.js" asp-append-version="true"></script>
 }

@@ -1,13 +1,10 @@
 namespace Backend.Exceptions
 {
-    public sealed class QuestionValidationException : Exception
+    public class QuestionValidationException : DetailedValidationException
     {
-        public IReadOnlyList<string> Errors { get; }
-
         public QuestionValidationException(IEnumerable<string> errors)
-            : base("Question validation failed.")
+            : base("Question validation failed.", errors.Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList())
         {
-            Errors = errors.Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList();
         }
     }
 }

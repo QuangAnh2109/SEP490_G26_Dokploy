@@ -57,7 +57,7 @@ $(document).ready(function () {
                 $subject.find('option:not(:first)').remove();
                 (subjects || []).forEach(function (item) {
                     const text = item.code ? `${item.code} - ${item.name}` : item.name;
-                    $subject.append($('<option></option>').val(item.subjectId).text(text));
+                    $subject.append(new Option(text, item.subjectId));
                 });
             })
             .catch(function (error) {
@@ -85,9 +85,10 @@ $(document).ready(function () {
         if (!template) return;
 
         const cloned = template.content.cloneNode(true);
-        $('#matrixRowList').append(cloned);
+        const $rowList = $('#matrixRowList');
+        $rowList.append(cloned);
 
-        const $row = $('#matrixRowList [data-matrix-item]').last();
+        const $row = $rowList.find('[data-matrix-item]').last();
         if (initial) {
             $row.find('.matrix-difficulty').val(String(initial.Difficulty ?? 1));
             $row.find('.matrix-count').val(initial.TotalQuestions ?? 0);
@@ -106,16 +107,19 @@ $(document).ready(function () {
     }
 
     function refreshChapterSelect($select, selectedValue) {
-        $select.empty();
-        $select.append('<option value="">Chọn chương</option>');
+        const select = $select[0];
+        if (!select) return;
+        
+        select.innerHTML = '';
+        select.add(new Option('Chọn chương', ''));
 
         state.chapterOptions.forEach(function (chapter) {
             const text = buildChapterOptionLabel(chapter);
-            const $option = $('<option></option>').val(chapter.chapterId).text(text);
+            const option = new Option(text, chapter.chapterId);
             if (selectedValue && Number(chapter.chapterId) === Number(selectedValue)) {
-                $option.prop('selected', true);
+                option.selected = true;
             }
-            $select.append($option);
+            select.add(option);
         });
     }
 
@@ -141,23 +145,11 @@ $(document).ready(function () {
 
     function collectRows() {
         const rows = [];
-        const errors = [];
 
-        $('#matrixRowList [data-matrix-item]').each(function (index) {
+        $('#matrixRowList [data-matrix-item]').each(function () {
             const chapterId = parseInt($(this).find('.matrix-chapter').val(), 10);
             const difficulty = parseInt($(this).find('.matrix-difficulty').val(), 10);
             const totalQuestions = parseInt($(this).find('.matrix-count').val(), 10);
-            const rowNo = index + 1;
-
-            if (!Number.isInteger(chapterId) || chapterId <= 0) {
-                errors.push(`Dòng ${rowNo}: vui lòng chọn chương.`);
-            }
-            if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 4) {
-                errors.push(`Dòng ${rowNo}: mức độ không hợp lệ.`);
-            }
-            if (!Number.isInteger(totalQuestions) || totalQuestions < 0) {
-                errors.push(`Dòng ${rowNo}: số câu phải là số nguyên >= 0.`);
-            }
 
             rows.push({
                 ChapterId: Number.isInteger(chapterId) ? chapterId : 0,
@@ -166,60 +158,15 @@ $(document).ready(function () {
             });
         });
 
-        return { rows, errors };
+        return rows;
     }
 
-    function validateClient(payload, targetStatus) {
-        const errors = [];
-
-        if (!payload.Name || !payload.Name.trim()) {
-            errors.push('Tên ma trận đề là bắt buộc.');
-        }
-        if (!payload.SubjectId || payload.SubjectId <= 0) {
-            errors.push('Vui lòng chọn môn học.');
-        }
-        if (!Number.isInteger(payload.TargetTotalQuestions) || payload.TargetTotalQuestions < 0) {
-            errors.push('Tổng số câu mục tiêu phải là số nguyên >= 0.');
-        }
-
-        const duplicate = new Set();
-        payload.Rows.forEach(function (row, idx) {
-            const key = `${row.ChapterId}-${row.Difficulty}`;
-            if (duplicate.has(key)) {
-                errors.push(`Dòng ${idx + 1}: trùng chương và mức độ.`);
-            } else {
-                duplicate.add(key);
-            }
+    function buildChapterAvailability() {
+        const map = {};
+        state.chapterOptions.forEach(function (chapter) {
+            map[chapter.chapterId] = toAvailabilityMap(chapter.availabilityByDifficulty);
         });
-
-        if (targetStatus === 1) {
-            const rowSum = payload.Rows.reduce((sum, row) => sum + row.TotalQuestions, 0);
-            if (payload.Rows.length === 0) {
-                errors.push('Xuất bản yêu cầu ít nhất một dòng ma trận.');
-            }
-            if (payload.TargetTotalQuestions <= 0) {
-                errors.push('Xuất bản yêu cầu tổng số câu mục tiêu > 0.');
-            }
-            if (payload.TargetTotalQuestions !== rowSum) {
-                errors.push('Tổng số câu mục tiêu phải bằng tổng số câu từ các dòng ma trận.');
-            }
-            if (payload.Rows.some(r => r.TotalQuestions <= 0)) {
-                errors.push('Xuất bản yêu cầu mỗi dòng có số câu > 0.');
-            }
-
-            const chapterAvailability = {};
-            state.chapterOptions.forEach(function (chapter) {
-                chapterAvailability[chapter.chapterId] = toAvailabilityMap(chapter.availabilityByDifficulty);
-            });
-            payload.Rows.forEach(function (row, idx) {
-                const available = chapterAvailability[row.ChapterId]?.[row.Difficulty] ?? 0;
-                if (row.TotalQuestions > available) {
-                    errors.push(`Dòng ${idx + 1}: vượt số câu hiện có trong ngân hàng (${available}).`);
-                }
-            });
-        }
-
-        return errors;
+        return map;
     }
 
     function submitCreate(targetStatus) {
@@ -227,7 +174,7 @@ $(document).ready(function () {
 
         const subjectId = parseInt($('#blueprintSubject').val(), 10);
         const targetTotalQuestions = parseInt($('#blueprintTargetQuestionCount').val(), 10);
-        const collected = collectRows();
+        const rows = collectRows();
 
         const payload = {
             Name: ($('#blueprintName').val() || '').toString(),
@@ -235,10 +182,13 @@ $(document).ready(function () {
             SubjectId: Number.isInteger(subjectId) ? subjectId : 0,
             TargetTotalQuestions: Number.isInteger(targetTotalQuestions) ? targetTotalQuestions : -1,
             TargetStatus: targetStatus,
-            Rows: collected.rows
+            Rows: rows
         };
 
-        const errors = [...collected.errors, ...validateClient(payload, targetStatus)];
+        const validator = window.BlueprintValidator;
+        const rowErrors = validator.validateRows(rows);
+        const payloadErrors = validator.validate(payload, buildChapterAvailability());
+        const errors = [...rowErrors, ...payloadErrors];
         if (errors.length > 0) {
             showError(errors);
             return;
@@ -281,10 +231,27 @@ $(document).ready(function () {
     }
 
     function showError(messages) {
+        const errorContainer = document.getElementById('createError');
+        if (!errorContainer) return;
+
+        errorContainer.innerHTML = '';
+        const listTemplate = document.getElementById('errorListTemplate');
+        const itemTemplate = document.getElementById('errorItemTemplate');
+        if (!listTemplate || !itemTemplate) return;
+
+        const list = listTemplate.content.cloneNode(true).firstElementChild;
+        const listBody = list.hasAttribute('data-error-list') ? list : list.querySelector('[data-error-list]');
+        
+        messages.forEach(m => {
+            const item = itemTemplate.content.cloneNode(true).firstElementChild;
+            const msgNode = item.hasAttribute('data-error-message') ? item : item.querySelector('[data-error-message]');
+            if (msgNode) msgNode.textContent = m;
+            listBody.appendChild(item);
+        });
+
+        errorContainer.appendChild(list);
+        errorContainer.classList.remove('d-none');
         $('#createWarnings').addClass('d-none').empty();
-        $('#createError')
-            .html(`<ul class="mb-0 ps-3">${messages.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`)
-            .removeClass('d-none');
     }
 
     function hideMessages() {
@@ -301,9 +268,5 @@ $(document).ready(function () {
             map[item.difficulty] = item.availableQuestions;
         });
         return map;
-    }
-
-    function escapeHtml(value) {
-        return $('<div/>').text(value ?? '').html();
     }
 });

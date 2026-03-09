@@ -10,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseController
     {
         private readonly IAuthService _authService;
 
@@ -23,11 +23,11 @@ namespace Backend.Controllers
         [Authorize]
         public IActionResult GetMe()
         {
-            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId) || userId <= 0)
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
                 return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu thông tin người dùng." });
 
-            return Ok(new { userId, email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value, role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value });
+            return Ok(new { userId, email = GetCurrentUserEmail(), role = GetCurrentUserRole() });
         }
 
         [HttpPost("login")]

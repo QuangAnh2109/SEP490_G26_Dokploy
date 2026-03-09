@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Backend.DTOs;
 using Backend.DTOs.Course;
 using Backend.Models;
@@ -137,7 +137,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/students")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
             var students = await _service.GetStudentsInClassAsync(id);

@@ -143,8 +143,10 @@ function resendOtp() {
     // Let's redirect them back to the register form to fill it again safely instead of storing plain text password in localStorage.
 
     $('#loadingOverlay').hide();
-    alert("Vì lý do bảo mật, vui lòng điền lại mật khẩu của bạn để chúng tôi gửi mã mới.");
-    window.location.href = '/Auth/Register';
+    showToast("Vì lý do bảo mật, vui lòng điền lại mật khẩu của bạn để chúng tôi gửi mã mới.", "info");
+    setTimeout(() => {
+        window.location.href = '/Auth/Register';
+    }, 1500);
 }
 
 function showError(message) {

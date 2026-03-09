@@ -22,6 +22,13 @@
 
             <div id="pageNotice" class="alert alert-success d-none mt-3" role="alert"></div>
             <div id="pageError" class="alert alert-danger d-none mt-3" role="alert"></div>
+            <div id="flashWarningContainer" class="alert alert-warning d-none mt-3" role="alert">
+                <strong>Cảnh báo khi lưu nháp:</strong>
+                <ul class="mb-0 ps-3 mt-1" id="flashWarningList"></ul>
+            </div>
+            <template id="flashWarningItemTemplate">
+                <li></li>
+            </template>
 
             <section class="panel-card mb-3">
                 <form id="blueprintFilterForm" class="row g-2 align-items-end">
@@ -57,6 +64,31 @@
                                     </tr>
                                 </thead>
                                 <tbody id="blueprintTableBody">
+                                    <template id="blueprintRowTemplate">
+                                        <tr>
+                                            <td data-field-name></td>
+                                            <td data-field-questions></td>
+                                            <td data-field-subject></td>
+                                            <td><span class="badge" data-field-status></span></td>
+                                            <td data-field-updated></td>
+                                            <td>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-action="view-blueprint">Xem</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Sửa</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Lưu trữ</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template id="blueprintLoadingTemplate">
+                                        <tr><td colspan="6" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+                                    </template>
+                                    <template id="blueprintEmptyTemplate">
+                                        <tr><td colspan="6" class="text-center text-muted py-4">Chưa có ma trận đề nào.</td></tr>
+                                    </template>
+                                    <template id="blueprintErrorTemplate">
+                                        <tr><td colspan="6" class="text-center text-danger py-4">Không thể tải danh sách ma trận đề.</td></tr>
+                                    </template>
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-4">Đang tải dữ liệu...</td>
                                     </tr>
@@ -105,6 +137,16 @@
                                     </tr>
                                 </thead>
                                 <tbody id="blueprintMatrixBody">
+                                    <template id="blueprintMatrixRowTemplate">
+                                        <tr>
+                                            <td data-field-chapter></td>
+                                            <td data-field-difficulty></td>
+                                            <td data-field-questions></td>
+                                        </tr>
+                                    </template>
+                                    <template id="matrixEmptyTemplate">
+                                        <tr><td colspan="3" class="text-center text-muted py-3" data-message>Chọn một ma trận đề để xem chi tiết.</td></tr>
+                                    </template>
                                     <tr>
                                         <td colspan="3" class="text-center text-muted py-3">Chọn một ma trận đề để xem chi tiết.</td>
                                     </tr>
@@ -116,6 +158,24 @@
             </div>
 
             <nav class="mt-3" aria-label="Phân trang ma trận">
+                <template id="paginationPrevTemplate">
+                    <li class="page-item"><a class="page-link" href="#" data-page>Trước</a></li>
+                </template>
+                <template id="paginationPrevDisabledTemplate">
+                    <li class="page-item disabled"><span class="page-link">Trước</span></li>
+                </template>
+                <template id="paginationPageTemplate">
+                    <li class="page-item"><a class="page-link" href="#" data-page></a></li>
+                </template>
+                <template id="paginationPageActiveTemplate">
+                    <li class="page-item active"><span class="page-link"></span></li>
+                </template>
+                <template id="paginationNextTemplate">
+                    <li class="page-item"><a class="page-link" href="#" data-page>Sau</a></li>
+                </template>
+                <template id="paginationNextDisabledTemplate">
+                    <li class="page-item disabled"><span class="page-link">Sau</span></li>
+                </template>
                 <ul class="pagination mb-0" id="blueprintPagination"></ul>
             </nav>
         </div>

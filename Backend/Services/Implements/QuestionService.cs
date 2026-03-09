@@ -29,12 +29,12 @@ namespace Backend.Services.Implements
             _logger = logger;
         }
 
-        public async Task<QuestionListResponseDto> GetQuestionsAsync(QuestionListQueryDto query, int userId)
+        public async Task<QuestionListResultDto> GetQuestionsAsync(QuestionListQueryDto query, int userId)
         {
             var (items, totalCount) = await _questionRepository.GetQuestionsAsync(query, userId);
             var pageSize = Math.Clamp(query.PageSize, 1, 50);
 
-            return new QuestionListResponseDto
+            return new QuestionListResultDto
             {
                 Items = items,
                 TotalCount = totalCount,
@@ -44,278 +44,279 @@ namespace Backend.Services.Implements
             };
         }
 
-        public async Task<CreateQuestionBatchResponse> CreateQuestionsAsync(int userId, CreateQuestionBatchRequest request)
+        public async Task<List<QuestionSummaryDto>> CreateQuestionsAsync(int userId, List<QuestionDto> request)
         {
-            if (request.Questions == null || request.Questions.Count == 0)
-            {
-                throw new QuestionValidationException(new[] { "Phải có ít nhất 1 câu hỏi." });
-            }
+            if (!(request?.Any() ?? false)) throw new QuestionValidationException(new[] { "Phải có ít nhất 1 câu hỏi." });
 
-            var allErrors = new List<string>();
-            var questionsToCreate = new List<Question>();
+            var errors = new List<string>();
+            for (int i = 0; i < request.Count; i++)
+                errors.AddRange(await ValidateQuestionItemAsync(request[i], $"Câu hỏi #{i + 1}"));
 
-            for (var i = 0; i < request.Questions.Count; i++)
-            {
-                var item = request.Questions[i];
-                var prefix = $"Câu hỏi #{i + 1}";
-                var errors = await ValidateQuestionItemAsync(item, prefix);
+            if (errors.Any()) throw new QuestionValidationException(errors);
 
-                if (errors.Count > 0)
-                {
-                    allErrors.AddRange(errors);
-                    continue;
-                }
+            var created = await _questionRepository.CreateQuestionsAsync(request.Select(q => MapToQuestionEntity(q, userId)).ToList());
+            for (int i = 0; i < request.Count; i++)
+                await HandleBlankGroupsAsync(created[i], request[i]);
 
-                var contentJson = JsonSerializer.Serialize(new
-                {
-                    stem = item.Stem,
-                    frame = item.Frame
-                }, UnicodeJsonOptions);
-
-                var question = new Question
-                {
-                    CreatedByUserId = userId,
-                    QuestionType = item.QuestionType,
-                    QuestionContent = contentJson,
-                    ChapterId = item.ChapterId,
-                    Difficulty = item.Difficulty,
-                    Status = item.Status,
-                    UpdatedAtUtc = DateTime.UtcNow
-                };
-
-                // Create answers
-                foreach (var answerDto in item.Answers)
-                {
-                    var answer = new QuestionAnswer
-                    {
-                        Content = answerDto.Content,
-                        CorrectAnswer = answerDto.CorrectAnswer,
-                        IsCorrect = answerDto.IsCorrect,
-                        Point = answerDto.Point
-                    };
-
-                    // InputType is stored via the BlankInput join table, not directly on QuestionAnswer
-                    if (answerDto.InputTypeId.HasValue && answerDto.InputTypeId.Value > 0)
-                    {
-                        answer.BlankInputs.Add(new BlankInput
-                        {
-                            InputTypeId = answerDto.InputTypeId.Value
-                        });
-                    }
-
-                    question.QuestionAnswers.Add(answer);
-                }
-
-                questionsToCreate.Add(question);
-            }
-
-            if (allErrors.Count > 0)
-            {
-                throw new QuestionValidationException(allErrors);
-            }
-
-            var createdQuestions = await _questionRepository.CreateQuestionsAsync(questionsToCreate);
-
-            // Handle blank groups after questions are created (need answer IDs)
-            for (var i = 0; i < request.Questions.Count; i++)
-            {
-                var item = request.Questions[i];
-                if (item.BlankGroups != null && item.BlankGroups.Count > 0 && item.QuestionType == QuestionType.FillBlank)
-                {
-                    var question = createdQuestions[i];
-                    var answersList = question.QuestionAnswers.ToList();
-
-                    foreach (var groupDto in item.BlankGroups)
-                    {
-                        var groupAnswer = new GroupAnswer
-                        {
-                            Name = groupDto.Name
-                        };
-
-                        var createdGroup = await _questionRepository.CreateGroupAnswerAsync(groupAnswer);
-
-                        // Assign group to matching answers
-                        foreach (var blankIdx in groupDto.BlankIndices)
-                        {
-                            var matchingAnswer = answersList.FirstOrDefault(a =>
-                            {
-                                var content = a.Content;
-                                return content != null && content.Contains($"placeholder[{blankIdx}]");
-                            });
-
-                            if (matchingAnswer != null)
-                            {
-                                matchingAnswer.GroupAnswerId = createdGroup.GroupAnswerId;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Persist GroupAnswerId assignments
             await _questionRepository.SaveChangesAsync();
+            return created.Select(MapToQuestionSummaryDto).ToList();
+        }
 
-            _logger.LogInformation("Created {Count} questions for user {UserId}", createdQuestions.Count, userId);
+        public async Task<QuestionSummaryDto> UpdateQuestionAsync(int questionId, int userId, QuestionDto request)
+        {
+            var existing = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
+            if (existing == null || existing.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền sửa.");
+            if (existing.Status == QuestionStatus.Archive) throw new QuestionValidationException(new[] { "Không thể sửa câu hỏi đã lưu trữ (Archive)." });
 
-            return new CreateQuestionBatchResponse
+            var errors = await ValidateQuestionItemAsync(request, "Câu hỏi");
+            if (errors.Any()) throw new QuestionValidationException(errors);
+
+            var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
+            Question result;
+
+            if (existing.Status == QuestionStatus.Inprogess || isUsed)
             {
-                CreatedQuestions = createdQuestions.Select(q => new QuestionListItemDto
+                existing.Status = QuestionStatus.Archive;
+                if (request.Status == QuestionStatus.Inprogess) request.Status = QuestionStatus.Active;
+                result = MapToQuestionEntity(request, userId);
+                await _questionRepository.CreateQuestionsAsync(new List<Question> { result });
+                _logger.LogInformation("Cloned question {OldId} into {NewId} (Used={IsUsed}).", questionId, result.QuestionId, isUsed);
+            }
+            else
+            {
+                var incomingIds = request.Answers.Select(a => a.AnswerId).Where(id => id.HasValue).ToHashSet();
+                var toRemove = existing.QuestionAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
+                if (toRemove.Any()) await _questionRepository.DeleteQuestionAnswersAsync(toRemove);
+                result = MapToQuestionEntity(request, userId, existing);
+            }
+
+            await HandleBlankGroupsAsync(result, request);
+            await _questionRepository.SaveChangesAsync();
+            return MapToQuestionSummaryDto(result);
+        }
+
+        public async Task<QuestionDto> GetQuestionByIdAsync(int questionId, int userId)
+        {
+            var q = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
+            if (q == null || q.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xem.");
+
+            var (stem, frame) = ParseContent(q.QuestionContent);
+            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem, Frame = frame };
+
+            dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
+                AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
+                IsCorrect = a.IsCorrect ?? false, Point = a.Point ?? 0, 
+                InputTypeId = a.BlankInputs.FirstOrDefault()?.InputTypeId,
+                BlankIndex = GetBlankIndex(a.Content)
+            }).ToList();
+
+            if (q.QuestionType == QuestionType.FillBlank)
+            {
+                dto.BlankGroups = q.QuestionAnswers
+                    .Where(a => a.GroupAnswer != null)
+                    .GroupBy(a => a.GroupAnswerId!.Value)
+                    .Select(g => new GroupAnswerDto {
+                        GroupAnswerId = g.Key, Name = g.First().GroupAnswer!.Name,
+                        BlankIndices = g.Select(a => GetBlankIndex(a.Content) ?? 0).Where(idx => idx > 0).ToList()
+                    }).ToList();
+            }
+            return dto;
+        }
+
+        public async Task<int> UpdateQuestionStatusAsync(List<int> questionIds, int userId, string status)
+        {
+            if (!QuestionStatus.IsValid(status))
+            {
+                throw new QuestionValidationException(new[] { "Trạng thái không hợp lệ." });
+            }
+
+            var questions = await _questionRepository.GetQuestionsByIdsAsync(questionIds);
+            var updatedCount = 0;
+
+            foreach (var q in questions)
+            {
+                if (q.CreatedByUserId == userId)
                 {
-                    QuestionId = q.QuestionId,
-                    ContentPreview = q.QuestionContent,
-                    QuestionType = q.QuestionType,
-                    Difficulty = q.Difficulty,
-                    DifficultyLabel = DifficultyLevel.GetLabel(q.Difficulty),
-                    SubjectCode = "",
-                    ChapterName = "",
-                    UpdatedAt = q.UpdatedAtUtc,
-                    Status = q.Status,
-                    AnswerCount = q.QuestionAnswers.Count
-                }).ToList(),
-                Count = createdQuestions.Count
+                    q.Status = status;
+                    q.UpdatedAtUtc = DateTime.UtcNow;
+                    updatedCount++;
+                }
+            }
+
+            if (updatedCount > 0)
+            {
+                await _questionRepository.SaveChangesAsync();
+                _logger.LogInformation("Updated status of {Count} questions to {Status} (requested {RequestedCount}).", updatedCount, status, questionIds.Count);
+            }
+
+            return updatedCount;
+        }
+
+        private Question MapToQuestionEntity(QuestionDto item, int userId, Question? existing = null)
+        {
+            var q = existing ?? new Question { CreatedByUserId = userId };
+            q.QuestionType = item.QuestionType;
+            q.ChapterId = item.ChapterId;
+            q.Difficulty = item.Difficulty;
+            q.Status = item.Status;
+            q.UpdatedAtUtc = DateTime.UtcNow;
+            q.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
+
+            foreach (var adto in item.Answers)
+            {
+                var ans = adto.AnswerId.HasValue ? q.QuestionAnswers.FirstOrDefault(a => a.QuestionAnswerId == adto.AnswerId) : null;
+                if (ans == null && q.QuestionType == QuestionType.FillBlank && adto.BlankIndex.HasValue)
+                    ans = q.QuestionAnswers.FirstOrDefault(a => a.Content != null && 
+                          System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{adto.BlankIndex}\](\{{|$)"));
+
+                if (ans == null) q.QuestionAnswers.Add(ans = new QuestionAnswer());
+
+                ans.Content = adto.Content;
+                ans.CorrectAnswer = adto.CorrectAnswer;
+                ans.IsCorrect = adto.IsCorrect;
+                ans.Point = adto.Point;
+
+                if (adto.InputTypeId > 0)
+                {
+                    var inp = ans.BlankInputs.FirstOrDefault();
+                    if (inp == null) ans.BlankInputs.Add(inp = new BlankInput());
+                    inp.InputTypeId = adto.InputTypeId.Value;
+                }
+                else ans.BlankInputs.Clear();
+            }
+            return q;
+        }
+
+        private static int? GetBlankIndex(string? content) => 
+            content != null && System.Text.RegularExpressions.Regex.Match(content, @"placeholder\[(\d+)\]") is { Success: true } m 
+            ? int.Parse(m.Groups[1].Value) : null;
+
+        private static (string? Stem, string? Frame) ParseContent(string? json)
+        {
+            if (string.IsNullOrEmpty(json)) return (null, null);
+            try
+            {
+                var d = JsonSerializer.Deserialize<Dictionary<string, string>>(json, UnicodeJsonOptions);
+                return (d?.GetValueOrDefault("stem") ?? d?.GetValueOrDefault("Stem"), 
+                        d?.GetValueOrDefault("frame") ?? d?.GetValueOrDefault("Frame"));
+            }
+            catch
+            {
+                return (json, null); // Fallback for raw text
+            }
+        }
+
+        private static QuestionSummaryDto MapToQuestionSummaryDto(Question question)
+        {
+            return new QuestionSummaryDto
+            {
+                QuestionId = question.QuestionId,
+                ContentPreview = question.QuestionContent,
+                QuestionType = question.QuestionType,
+                Difficulty = question.Difficulty,
+                DifficultyLabel = DifficultyLevel.GetLabel(question.Difficulty),
+                SubjectCode = "",
+                ChapterName = "",
+                UpdatedAt = question.UpdatedAtUtc,
+                Status = question.Status,
+                AnswerCount = question.QuestionAnswers?.Count ?? 0
             };
         }
 
-        public async Task<List<InputTypeDto>> GetInputTypesAsync()
+        private async Task HandleBlankGroupsAsync(Question q, QuestionDto item)
+        {
+            var answers = q.QuestionAnswers.ToList();
+            var existingGroups = answers.Where(a => a.GroupAnswer != null).Select(a => a.GroupAnswer!).Distinct().ToList();
+            
+            if (item.BlankGroups?.Any() != true || item.QuestionType != QuestionType.FillBlank)
+            {
+                if (existingGroups.Any()) await _questionRepository.DeleteGroupAnswersAsync(existingGroups);
+                answers.ForEach(a => { a.GroupAnswerId = null; a.GroupAnswer = null; });
+                return;
+            }
+
+            var incomingIds = item.BlankGroups.Select(g => g.GroupAnswerId).Where(id => id.HasValue).ToHashSet();
+            var toRemove = existingGroups.Where(g => !incomingIds.Contains(g.GroupAnswerId)).ToList();
+            if (toRemove.Any()) await _questionRepository.DeleteGroupAnswersAsync(toRemove);
+
+            answers.ForEach(a => { a.GroupAnswerId = null; a.GroupAnswer = null; });
+
+            foreach (var gDto in item.BlankGroups)
+            {
+                var group = gDto.GroupAnswerId.HasValue ? existingGroups.FirstOrDefault(g => g.GroupAnswerId == gDto.GroupAnswerId) : null;
+                if (group == null) group = new GroupAnswer { Name = gDto.Name };
+                else group.Name = gDto.Name;
+
+                foreach (var idx in gDto.BlankIndices)
+                {
+                    var ans = answers.FirstOrDefault(a => a.Content != null && 
+                              System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{idx}\](\{{|$)"));
+                    if (ans != null) ans.GroupAnswer = group;
+                }
+            }
+        }
+
+        public async Task<QuestionMetadataDto> GetQuestionMetadataAsync()
         {
             var inputTypes = await _questionRepository.GetInputTypesAsync();
-            return inputTypes.Select(it => new InputTypeDto
-            {
-                InputTypeId = it.InputTypeId,
-                Name = it.Name,
-                GroupType = it.GroupType
-            }).ToList();
-        }
-
-        public async Task<List<SubjectWithChaptersDto>> GetSubjectsWithChaptersAsync()
-        {
             var subjects = await _questionRepository.GetSubjectsWithChaptersAsync();
-            return subjects.Select(s => new SubjectWithChaptersDto
+
+            return new QuestionMetadataDto
             {
-                SubjectId = s.SubjectId,
-                Name = s.Name,
-                Code = s.Code,
-                Chapters = s.Chapters.Select(c => new ChapterDto
+                InputTypes = inputTypes.Select(it => new InputTypeDto
                 {
-                    ChapterId = c.ChapterId,
-                    Name = c.Name
+                    InputTypeId = it.InputTypeId,
+                    Name = it.Name,
+                    GroupType = it.GroupType
+                }).ToList(),
+                Subjects = subjects.Select(s => new SubjectWithChaptersDto
+                {
+                    SubjectId = s.SubjectId,
+                    Name = s.Name,
+                    Code = s.Code,
+                    Chapters = s.Chapters.Select(c => new ChapterDto
+                    {
+                        ChapterId = c.ChapterId,
+                        Name = c.Name
+                    }).ToList()
                 }).ToList()
-            }).ToList();
+            };
         }
 
-        private async Task<List<string>> ValidateQuestionItemAsync(CreateQuestionItemDto item, string prefix)
+        private async Task<List<string>> ValidateQuestionItemAsync(QuestionDto item, string prefix)
         {
-            var errors = new List<string>();
+            var errs = new List<string>();
+            if (!QuestionType.IsValid(item.QuestionType)) return new() { $"{prefix}: Loại câu hỏi không hợp lệ." };
+            if (string.IsNullOrWhiteSpace(item.Stem)) errs.Add($"{prefix}: Đề bài không được để trống.");
+            if (!DifficultyLevel.IsValid(item.Difficulty)) errs.Add($"{prefix}: Mức độ phải từ 1 đến 4.");
+            if (!QuestionStatus.IsValid(item.Status)) errs.Add($"{prefix}: Trạng thái không hợp lệ.");
+            if (!await _questionRepository.ChapterExistsAsync(item.ChapterId)) errs.Add($"{prefix}: Chương không tồn tại.");
+            if (!(item.Answers?.Any() ?? false)) return new() { $"{prefix}: Phải có ít nhất 1 đáp án." };
 
-            // QuestionType validation
-            if (!QuestionType.IsValid(item.QuestionType))
-            {
-                errors.Add($"{prefix}: Loại câu hỏi phải là '{QuestionType.FillBlank}' hoặc '{QuestionType.Mcq}'.");
-                return errors;
-            }
-
-            // Stem validation
-            if (string.IsNullOrWhiteSpace(item.Stem))
-            {
-                errors.Add($"{prefix}: Đề bài không được để trống.");
-            }
-
-            // Difficulty validation
-            if (!DifficultyLevel.IsValid(item.Difficulty))
-            {
-                errors.Add($"{prefix}: Mức độ phải từ 1 đến 4.");
-            }
-
-            // Status validation
-            if (!QuestionStatus.IsValid(item.Status))
-            {
-                errors.Add($"{prefix}: Trạng thái không hợp lệ.");
-            }
-
-            // ChapterId validation
-            if (!await _questionRepository.ChapterExistsAsync(item.ChapterId))
-            {
-                errors.Add($"{prefix}: Chương không tồn tại.");
-            }
-
-            // Answers validation
-            if (item.Answers == null || item.Answers.Count == 0)
-            {
-                errors.Add($"{prefix}: Phải có ít nhất 1 đáp án.");
-                return errors;
-            }
-
-            // Per-type validation
             if (item.QuestionType == QuestionType.FillBlank)
             {
-                ValidateFillBlankAnswers(item, prefix, errors);
-            }
-            else if (item.QuestionType == QuestionType.Mcq)
-            {
-                ValidateMcqAnswers(item, prefix, errors);
-            }
-
-            // Point validation — total must equal 100
-            var totalPoints = item.Answers.Sum(a => a.Point);
-            if (totalPoints != RequiredTotalPoint)
-            {
-                errors.Add($"{prefix}: Tổng hệ số điểm phải bằng {RequiredTotalPoint}% (hiện tại: {totalPoints}%).");
-            }
-
-            return errors;
-        }
-
-        private void ValidateFillBlankAnswers(CreateQuestionItemDto item, string prefix, List<string> errors)
-        {
-            // Frame validation for fill_blank
-            if (string.IsNullOrWhiteSpace(item.Frame))
-            {
-                errors.Add($"{prefix}: Khung trả lời không được để trống cho dạng điền vào chỗ trống.");
-            }
-
-            // Each answer must have InputTypeId
-            for (var j = 0; j < item.Answers.Count; j++)
-            {
-                var answer = item.Answers[j];
-                var answerPrefix = $"{prefix}, ô trống #{j + 1}";
-
-                if (!answer.InputTypeId.HasValue || answer.InputTypeId.Value <= 0)
+                if (string.IsNullOrWhiteSpace(item.Frame)) errs.Add($"{prefix}: Khung trả lời không được để trống.");
+                for (int i = 0; i < item.Answers.Count; i++)
                 {
-                    errors.Add($"{answerPrefix}: Phải chọn ít nhất 1 loại giới hạn nhập liệu (InputType).");
+                    var a = item.Answers[i];
+                    if (a.InputTypeId <= 0) errs.Add($"{prefix}, ô trống #{i + 1}: Thiếu loại giới hạn nhập liệu.");
+                    ValidatePointRange(a.Point, $"{prefix}, ô trống #{i + 1}", errs);
                 }
-
-                ValidatePointRange(answer.Point, answerPrefix, errors);
+            }
+            else
+            {
+                if (item.Answers.Count < 2) errs.Add($"{prefix}: Câu trắc nghiệm phải có ít nhất 2 lựa chọn.");
+                if (!item.Answers.Any(a => a.IsCorrect == true)) errs.Add($"{prefix}: Phải có ít nhất 1 đáp án đúng.");
+                item.Answers.ForEach(a => ValidatePointRange(a.Point, prefix, errs));
             }
 
-            // GroupType exclusivity: answers with same GroupType can only have one InputType from that group
-            // This is validated per-answer, but we also check that no two answers share same GroupType InputType conflict
+            if (item.Answers.Sum(a => a.Point) != RequiredTotalPoint) errs.Add($"{prefix}: Tổng điểm phải bằng {RequiredTotalPoint}%.");
+            return errs;
         }
 
-        private void ValidateMcqAnswers(CreateQuestionItemDto item, string prefix, List<string> errors)
+        private static void ValidatePointRange(int pt, string pfx, List<string> errs)
         {
-            if (item.Answers.Count < 2)
-            {
-                errors.Add($"{prefix}: Câu trắc nghiệm phải có ít nhất 2 lựa chọn.");
-            }
-
-            var hasCorrect = item.Answers.Any(a => a.IsCorrect == true);
-            if (!hasCorrect)
-            {
-                errors.Add($"{prefix}: Câu trắc nghiệm phải có ít nhất 1 đáp án đúng.");
-            }
-
-            foreach (var answer in item.Answers)
-            {
-                ValidatePointRange(answer.Point, prefix, errors);
-            }
-        }
-
-        private static void ValidatePointRange(int point, string prefix, List<string> errors)
-        {
-            if (point < MinPoint || point > MaxPoint)
-            {
-                errors.Add($"{prefix}: Hệ số điểm phải từ {MinPoint} đến {MaxPoint}.");
-            }
+            if (pt < MinPoint || pt > MaxPoint) errs.Add($"{pfx}: Điểm phải từ {MinPoint} đến {MaxPoint}.");
         }
     }
 }
