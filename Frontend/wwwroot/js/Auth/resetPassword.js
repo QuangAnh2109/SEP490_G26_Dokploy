@@ -29,13 +29,14 @@ $(document).ready(function () {
 
         apiClient.post("/api/auth/reset-password", requestData)
             .then(function (response) {
-                showToast("Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập với mật khẩu mới.");
+                $msg.text("Mật khẩu đã được đặt lại thành công. Đang chuyển đến trang đăng nhập...")
+                    .removeClass('text-danger').addClass('text-success');
                 setTimeout(() => {
                     window.location.href = '/Auth/Login';
                 }, 1500);
             })
             .catch(function (err) {
-                $msg.text(err.responseJSON?.message || "Có lỗi xảy ra khi đặt lại mật khẩu.")
+                $msg.text(err.message || err.responseJSON?.message || "Có lỗi xảy ra khi đặt lại mật khẩu.")
                     .removeClass('text-success').addClass('text-danger');
                 $btn.prop('disabled', false).text('Xác nhận Đặt lại');
             });

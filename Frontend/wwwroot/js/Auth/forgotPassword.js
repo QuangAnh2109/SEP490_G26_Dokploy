@@ -20,7 +20,7 @@ $(document).ready(function () {
                 window.location.href = `/Auth/ResetPassword?email=${encodeURIComponent(email)}`;
             })
             .catch(function (err) {
-                $msg.text(err.responseJSON?.message || "Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại.")
+                $msg.text(err.message || err.responseJSON?.message || "Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại.")
                     .removeClass('text-success').addClass('text-danger');
                 $btn.prop('disabled', false).text('Gửi Mã OTP');
             });
