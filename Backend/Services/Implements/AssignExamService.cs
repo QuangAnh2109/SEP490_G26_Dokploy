@@ -1,5 +1,5 @@
 using Backend.DTOs;
-using Backend.Enums;
+using Backend.Constants;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -352,7 +352,7 @@ public class AssignExamService : IAssignExamService
                 CloseAt = request.CloseAt,
                 ShuffleQuestion = request.ShuffleQuestion,
                 AllowLateSubmission = request.AllowLateSubmission,
-                Status = (int)ExamStatus.Ready,
+                Status = ExamStatus.Ready,
                 UpdatedAtUtc = DateTime.UtcNow
             };
             _db.Exams.Add(exam);
