@@ -42,8 +42,8 @@
             <input type="number" class="form-control" id="examMaxAttemptsInput" value="1">
           </div>
           <div class="col-6 col-md-2">
-            <label class="form-label">Số mã đề</label>
-            <input type="number" class="form-control" id="examPaperCountInput" value="1" min="1">
+            <label class="form-label">Số mã đề *</label>
+            <input type="number" class="form-control" id="examPaperCountInput" value="1" min="1" max="50" step="1" required placeholder="1-50">
           </div>
         </div>
 
@@ -132,20 +132,19 @@
                   <th>Học kỳ</th>
                 </tr>
               </thead>
-              <tbody id="classTableBody">
-                <template id="classRowTemplate">
-                  <tr>
-                    <td><input class="form-check-input class-item" type="radio" name="selectedClass"></td>
-                    <td data-field-code></td>
-                    <td data-field-subject></td>
-                    <td data-field-semester></td>
-                  </tr>
-                </template>
-                <template id="classStatusTemplate">
-                  <tr><td colspan="4" class="text-center" data-message></td></tr>
-                </template>
-              </tbody>
+              <tbody id="classTableBody"></tbody>
             </table>
+            <template id="classRowTemplate">
+              <tr>
+                <td><input class="form-check-input class-item" type="radio" name="selectedClass"></td>
+                <td data-field-code></td>
+                <td data-field-subject></td>
+                <td data-field-semester></td>
+              </tr>
+            </template>
+            <template id="classStatusTemplate">
+              <tr><td colspan="4" class="text-center" data-message></td></tr>
+            </template>
           </div>
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
             <p class="form-note mb-0" id="classPaginationSummary">Đang tải dữ liệu lớp...</p>
@@ -217,20 +216,19 @@
                       <th>Ngày cập nhật</th>
                     </tr>
                   </thead>
-                  <tbody id="blueprintTableBody">
-                    <template id="blueprintRowTemplate">
-                      <tr class="interactive-row">
-                        <td><input class="form-check-input blueprint-item" type="radio" name="selectedBlueprint"></td>
-                        <td data-field-name></td>
-                        <td data-field-subject></td>
-                        <td data-field-updated></td>
-                      </tr>
-                    </template>
-                    <template id="blueprintStatusTemplate">
-                      <tr><td colspan="4" class="text-center" data-message></td></tr>
-                    </template>
-                  </tbody>
+                  <tbody id="blueprintTableBody"></tbody>
                 </table>
+                <template id="blueprintRowTemplate">
+                  <tr class="interactive-row">
+                    <td><input class="form-check-input blueprint-item" type="radio" name="selectedBlueprint"></td>
+                    <td data-field-name></td>
+                    <td data-field-subject></td>
+                    <td data-field-updated></td>
+                  </tr>
+                </template>
+                <template id="blueprintStatusTemplate">
+                  <tr><td colspan="4" class="text-center" data-message></td></tr>
+                </template>
               </div>
               <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
                 <p class="form-note mb-0" id="blueprintFilterSummary">Đang tải danh sách ma trận đề...</p>
@@ -292,19 +290,18 @@
                       <th>Số câu</th>
                     </tr>
                   </thead>
-                  <tbody id="blueprintMatrixBody">
-                    <template id="blueprintMatrixRowTemplate">
-                      <tr>
-                        <td data-field-chapter></td>
-                        <td data-field-difficulty></td>
-                        <td data-field-questions></td>
-                      </tr>
-                    </template>
-                    <template id="matrixStatusTemplate">
-                      <tr><td colspan="3" class="text-center text-muted" data-message></td></tr>
-                    </template>
-                  </tbody>
+                  <tbody id="blueprintMatrixBody"></tbody>
                 </table>
+                <template id="blueprintMatrixRowTemplate">
+                  <tr>
+                    <td data-field-chapter></td>
+                    <td data-field-difficulty></td>
+                    <td data-field-questions></td>
+                  </tr>
+                </template>
+                <template id="matrixStatusTemplate">
+                  <tr><td colspan="3" class="text-center text-muted" data-message></td></tr>
+                </template>
               </div>
             </div>
           </div>
@@ -313,7 +310,7 @@
 
         <hr class="section-divider" id="examGenerationModeDivider">
 
-        <div id="manualModeSection" hidden>
+        <div id="manualModeSection" class="d-none">
           <h2 class="section-title">Thêm câu hỏi thủ công</h2>
           <div class="soft-card">
           <div class="row g-2 mb-2">
@@ -336,10 +333,10 @@
               <label class="form-label">Mức độ</label>
               <select class="form-select" id="manualQuestionLevelFilter">
                 <option value="">Tất cả mức độ</option>
-                <option value="Nhận biết">Nhận biết</option>
-                <option value="Thông hiểu">Thông hiểu</option>
-                <option value="Vận dụng">Vận dụng</option>
-                <option value="Vận dụng cao">Vận dụng cao</option>
+                <option value="1">Nhận biết</option>
+                <option value="2">Thông hiểu</option>
+                <option value="3">Vận dụng</option>
+                <option value="4">Vận dụng cao</option>
               </select>
             </div>
           </div>
@@ -358,30 +355,29 @@
                   <th>Nội dung</th>
                 </tr>
               </thead>
-              <tbody id="manualQuestionTableBody">
-                <template id="manualQuestionRowTemplate">
-                  <tr>
-                    <td><input class="form-check-input manual-question-item" type="checkbox"></td>
-                    <td data-field-subject></td>
-                    <td data-field-chapter></td>
-                    <td data-field-level></td>
-                    <td data-field-content></td>
-                  </tr>
-                </template>
-                <template id="manualQuestionStatusTemplate">
-                  <tr><td colspan="5" class="text-center text-muted" data-message></td></tr>
-                </template>
-                <template id="manualContentTemplate">
-                  <span class="manual-question-content"></span>
-                </template>
-                <template id="manualTextTemplate">
-                  <span class="manual-question-text"></span>
-                </template>
-                <template id="manualMathTemplate">
-                  <math-field class="manual-question-math" read-only></math-field>
-                </template>
-              </tbody>
+              <tbody id="manualQuestionTableBody"></tbody>
             </table>
+            <template id="manualQuestionRowTemplate">
+              <tr>
+                <td><input class="form-check-input manual-question-item" type="checkbox"></td>
+                <td data-field-subject></td>
+                <td data-field-chapter></td>
+                <td data-field-level></td>
+                <td data-field-content></td>
+              </tr>
+            </template>
+            <template id="manualQuestionStatusTemplate">
+              <tr><td colspan="5" class="text-center text-muted" data-message></td></tr>
+            </template>
+            <template id="manualContentTemplate">
+              <span class="manual-question-content"></span>
+            </template>
+            <template id="manualTextTemplate">
+              <span class="manual-question-text"></span>
+            </template>
+            <template id="manualMathTemplate">
+              <math-field class="manual-question-math" read-only></math-field>
+            </template>
           </div>
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
             <p class="form-note mb-0" id="manualQuestionPaginationSummary">Hiển thị 0-0 trên 0 câu hỏi.</p>
@@ -413,6 +409,16 @@
       </section>
     </div>
   </main>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
+    <template id="toastTemplate">
+      <div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body" data-message></div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </template>
+  </div>
   <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
   <script src="/js/site.js"></script>
   <script type="module" src="https://unpkg.com/mathlive"></script>

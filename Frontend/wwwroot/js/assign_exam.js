@@ -246,6 +246,7 @@
 })();
 
 (async () => {
+  const toArray = (v) => Array.from(v || []);
   const publicToggle = document.getElementById('publicExamToggle');
   const classSelectionBlock = document.getElementById('classSelectionBlock');
   const classSection = document.getElementById('classSelectionSection');
@@ -314,12 +315,13 @@
   if (!publicToggle || !classTable || !classSection) return;
 
   const classPageSize = 5;
-  const blueprintPageSize = 10;
+  const blueprintPageSize = 5;
   const manualQuestionPageSize = 10;
-  let classCurrentPage = 1, blueprintCurrentPage = 1, classTotalPages = 1;
+  let classCurrentPage = 1, blueprintCurrentPage = 1, classTotalPages = 1, blueprintTotalPages = 1;
   let selectedBlueprintId = null, manualQuestionCurrentPage = 1, manualQuestionTotalPages = 1;
   let selectedClassId = null;
   const classSubjectById = new Map();
+  const subjectIdByCode = new Map();
   const manualSelectedQuestionIds = new Set();
 
   const normalizeText = (value = '') => value.toLowerCase().trim();
@@ -328,6 +330,21 @@
   let teacherIdNumber = Number(teacherIdRaw);
   if (!Number.isInteger(teacherIdNumber) || teacherIdNumber <= 0) {
     teacherIdNumber = (typeof getUserIdFromToken === 'function' ? getUserIdFromToken() : null) ?? null;
+  }
+  if (!Number.isInteger(teacherIdNumber) || teacherIdNumber <= 0) {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    if (token) {
+      for (const base of ['https://localhost:7167', window.location.origin, 'http://localhost:5217']) {
+        try {
+          const res = await fetch(`${(base || '').replace(/\/+$/, '')}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const data = await res.json();
+            const id = data?.userId != null ? Number(data.userId) : null;
+            if (Number.isInteger(id) && id > 0) { teacherIdNumber = id; break; }
+          }
+        } catch (_) { /* try next */ }
+      }
+    }
   }
   const teacherId = Number.isInteger(teacherIdNumber) && teacherIdNumber > 0 ? teacherIdNumber : null;
 
@@ -396,8 +413,40 @@
   };
 
   const getCurrentSubjectId = () => {
-    const value = (Boolean(publicToggle?.checked) ? publicSubjectFilter?.value : manualQuestionSubjectFilter?.value) || null;
-    return value ? (parseInt(value, 10) || value) : null;
+    const code = (Boolean(publicToggle?.checked) ? publicSubjectFilter?.value : manualQuestionSubjectFilter?.value) || '';
+    if (!code) return null;
+    const id = subjectIdByCode.get(code);
+    return id != null ? Number(id) : (Number(code) || null);
+  };
+
+  const DIFFICULTY_LEVEL = { 1: 'Nhận biết', 2: 'Thông hiểu', 3: 'Vận dụng', 4: 'Vận dụng cao' };
+  const difficultyLabelByValue = DIFFICULTY_LEVEL;
+  const difficultyValueByLabel = { 'nhận biết': 1, 'thông hiểu': 2, 'vận dụng': 3, 'vận dụng cao': 4 };
+  const toDateDisplay = (val) => {
+    if (!val) return '-';
+    const d = new Date(val);
+    return Number.isNaN(d.getTime()) ? '-' : new Intl.DateTimeFormat('vi-VN').format(d);
+  };
+  const getCheckedClassId = () => {
+    const sel = toArray(classTableBody?.querySelectorAll('.class-item') || []).find((i) => i.checked);
+    if (!sel) return null;
+    const v = Number(sel.value);
+    return Number.isInteger(v) && v > 0 ? v : null;
+  };
+  const syncManualSelectionWithCurrentFilters = async () => {
+    const sub = (Boolean(publicToggle?.checked) ? publicSubjectFilter?.value : manualQuestionSubjectFilter?.value) || '';
+    if (!sub) return;
+    try {
+      const rows = await apiGetJson('/questions', { teacherId, subjectCode: sub });
+      const validIds = new Set(rows.map((r) => String(r.questionId)));
+      Array.from(manualSelectedQuestionIds).forEach((id) => { if (!validIds.has(id)) manualSelectedQuestionIds.delete(id); });
+    } catch (_) { /* ignore */ }
+  };
+  const applyExamGenerationMode = () => {
+    const isManual = Boolean(examGenerationManual?.checked);
+    if (blueprintModeSection) blueprintModeSection.classList.toggle('d-none', isManual);
+    if (manualModeSection) manualModeSection.classList.toggle('d-none', !isManual);
+    if (examGenerationModeDivider) examGenerationModeDivider.classList.toggle('d-none', false);
   };
 
   const saveAssignExam = async () => {
@@ -406,7 +455,8 @@
     const title = examTitleInput?.value.trim() || '';
     const duration = Number(examDurationInput?.value || 0);
     const maxAttempts = Number(examMaxAttemptsInput?.value || 0);
-    const paperCount = Number(examPaperCountInput?.value || 1);
+    const paperCountRaw = examPaperCountInput?.value?.trim();
+    const paperCount = Math.floor(Number(paperCountRaw || 1)) || 1;
     const isPublic = Boolean(publicToggle?.checked);
     const checkedClassId = getCheckedClassId();
     const resolvedClassId = !isPublic ? (checkedClassId || (Number.isInteger(selectedClassId) ? selectedClassId : null)) : null;
@@ -420,7 +470,7 @@
       title,
       duration,
       maxAttempts,
-      paperCount,
+      paperCount: paperCountRaw,
       openAtDate,
       closeAtDate,
       isPublic,
@@ -456,8 +506,10 @@
       if (saveConfigTopButton) saveConfigTopButton.disabled = true;
       if (saveConfigBottomButton) saveConfigBottomButton.disabled = true;
       const res = await apiPostJson('', payload);
-      showToast(`Lưu thành công. ExamId: ${res.examId}`);
-    } catch (e) { showToast(`Lưu thất bại: ${e.message}`, 'error'); }
+      showToast(`Lưu thành công. ExamId: ${res.examId}`, 'success');
+    } catch (e) {
+      showToast(`Lưu thất bại: ${e.message}`, 'error', 5000);
+    }
     finally {
       if (saveConfigTopButton) saveConfigTopButton.disabled = false;
       if (saveConfigBottomButton) saveConfigBottomButton.disabled = false;
@@ -480,9 +532,13 @@
   };
 
   const applySubjectFilters = (subs) => {
+    subjectIdByCode.clear();
+    subs.forEach((s) => { if (s?.code) subjectIdByCode.set(s.code, s.subjectId); });
     const opts = subs.map((s) => ({ value: s.code || '', label: s.code || s.name })).filter((o) => o.value);
     setSelectOptions(classSubjectFilter, opts, 'Tất cả môn');
     setSelectOptions(manualQuestionSubjectFilter, opts, 'Tất cả môn');
+    setSelectOptions(publicSubjectFilter, opts, 'Chọn môn học');
+    setSelectOptions(blueprintSubjectFilter, opts, 'Tất cả môn');
   };
 
   const applySemesterFilters = (sems) => setSelectOptions(classSemesterFilter, sems.map((x) => ({ value: x, label: x })), 'Tất cả học kỳ');
@@ -514,6 +570,7 @@
 
       classTableBody.innerHTML = '';
       const t = document.getElementById('classRowTemplate');
+      if (!t) { showStatusRow(classTableBody, 'classStatusTemplate', 'Lỗi: thiếu template classRowTemplate.', 4); return; }
       items.forEach((item) => {
         const row = t.content.cloneNode(true).firstElementChild;
         row.setAttribute('data-class-code', item.classCode);
@@ -566,9 +623,10 @@
         return (!sub || (i.subjectCode || '').toLowerCase() === sub) && (!kw || (i.name || '').toLowerCase().includes(kw));
       });
       const total = filtered.length;
-      const pages = Math.ceil(total / blueprintPageSize);
+      blueprintTotalPages = Math.max(1, Math.ceil(total / blueprintPageSize));
       const start = (blueprintCurrentPage - 1) * blueprintPageSize;
       const visible = filtered.slice(start, start + blueprintPageSize);
+      if (!selectedBlueprintId && visible.length > 0) selectedBlueprintId = visible[0].examBlueprintId;
 
       blueprintTableBody.innerHTML = '';
       const t = document.getElementById('blueprintRowTemplate');
@@ -595,6 +653,7 @@
         updateBlueprintDetail();
       }));
       updateBlueprintDetail();
+      updateBlueprintPagination();
     } catch (e) { showStatusRow(blueprintTableBody, 'blueprintStatusTemplate', 'Lỗi tải danh sách ma trận.', 4); }
   };
 
@@ -643,10 +702,12 @@
     if (!manualQuestionTableBody) return;
     if (reset) manualQuestionCurrentPage = 1;
     try {
+      const levelVal = manualQuestionLevelFilter?.value;
+      const difficultyVal = levelVal ? (Number(levelVal) || difficultyValueByLabel[normalizeText(levelVal)]) : undefined;
       const rows = await apiGetJson('/questions', {
         teacherId, subjectCode: (Boolean(publicToggle?.checked) ? publicSubjectFilter?.value : manualQuestionSubjectFilter?.value) || undefined,
         chapterId: Number(manualQuestionChapterFilter?.value) || undefined,
-        difficulty: difficultyValueByLabel[normalizeText(manualQuestionLevelFilter?.value)] || undefined
+        difficulty: (difficultyVal >= 1 && difficultyVal <= 4) ? difficultyVal : undefined
       });
       const total = rows.length;
       manualQuestionTotalPages = Math.ceil(total / manualQuestionPageSize);
@@ -665,7 +726,7 @@
         row.querySelector('[data-field-subject]').textContent = i.subjectCode;
         row.querySelector('[data-field-chapter]').textContent = i.chapterName;
         row.querySelector('[data-field-level]').textContent = difficultyLabelByValue[i.difficulty] || i.difficulty;
-        row.querySelector('[data-field-content]').appendChild(renderManualQuestionContent(i.contentLatex || ''));
+        row.querySelector('[data-field-content]').appendChild(renderManualQuestionContent(i.contentLatex || i.questionContent || ''));
         manualQuestionTableBody.appendChild(row);
       });
       updateManualPagination(total, visible.length);
@@ -680,14 +741,122 @@
     setSelectOptions(manualQuestionChapterFilter, chapters.map(c => ({value:String(c.v), label:c.l})), 'Tất cả chương');
   };
 
-  const updateClassPagination = () => { /* Logic tương tự các trang khác, dùng textContent */ };
-  const updateManualPagination = (total, count) => { /* Logic tương tự các trang khác, dùng textContent */ };
+  const rebuildPaginationButtons = (prevBtn, nextBtn, currentPage, totalPages, dataPageAttr, dataItemAttr, onPageChange) => {
+    const ul = prevBtn?.closest('ul');
+    const nav = prevBtn?.closest('nav');
+    if (!ul) return;
+    if (nav) nav.classList.toggle('d-none', totalPages <= 1);
+    if (totalPages <= 1) return;
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    const prevLi = prevBtn?.closest('li');
+    const nextLi = nextBtn?.closest('li');
+    Array.from(ul.querySelectorAll('li')).filter(li => li !== prevLi && li !== nextLi).forEach(li => li.remove());
+    for (let p = 1; p <= totalPages; p++) {
+      const li = document.createElement('li');
+      li.className = 'page-item' + (p === currentPage ? ' active' : '');
+      li.setAttribute(dataItemAttr, p);
+      const btn = document.createElement('button');
+      btn.className = 'page-link';
+      btn.type = 'button';
+      btn.setAttribute(dataPageAttr, p);
+      btn.textContent = p;
+      btn.addEventListener('click', () => onPageChange(p));
+      li.appendChild(btn);
+      ul.insertBefore(li, nextLi);
+    }
+  };
+  const updateClassPagination = () => {
+    rebuildPaginationButtons(
+      classPaginationPrev, classPaginationNext, classCurrentPage, classTotalPages,
+      'data-class-page', 'data-page-item',
+      (p) => { classCurrentPage = p; renderClassTable(false); }
+    );
+  };
+  const updateBlueprintPagination = () => {
+    rebuildPaginationButtons(
+      blueprintPaginationPrev, blueprintPaginationNext, blueprintCurrentPage, blueprintTotalPages,
+      'data-blueprint-page', 'data-blueprint-page-item',
+      (p) => { blueprintCurrentPage = p; renderBlueprintTable(false); }
+    );
+  };
+  const updateManualPagination = (total, count) => {
+    const start = (manualQuestionCurrentPage - 1) * manualQuestionPageSize;
+    if (manualQuestionPaginationSummary) {
+      manualQuestionPaginationSummary.textContent = total === 0 ? 'Không có câu hỏi phù hợp.' : `Hiển thị ${start + 1}-${start + count} trên ${total} câu hỏi.`;
+    }
+    rebuildPaginationButtons(
+      manualQuestionPaginationPrev, manualQuestionPaginationNext, manualQuestionCurrentPage, manualQuestionTotalPages,
+      'data-manual-page', 'data-manual-page-item',
+      (p) => { manualQuestionCurrentPage = p; renderManualTable(false); }
+    );
+  };
   const updateManualSummary = () => { if(manualQuestionSummary) manualQuestionSummary.textContent = `Đã chọn ${manualSelectedQuestionIds.size} câu hỏi thủ công.`; };
   const updateSelectedClass = () => { if(selectedCount) { const sel = toArray(classTableBody.querySelectorAll('.class-item')).find(i => i.checked); selectedCount.textContent = sel ? `Đã chọn: ${sel.closest('tr').getAttribute('data-class-code')}` : 'Chưa chọn lớp học'; } };
   const syncSubjectFiltersBySelectedClass = () => { /* Logic sync disabled/value */ };
-  const applyPublicMode = () => { /* Logic toggle d-none và sync filters */ };
+  const applyPublicMode = () => {
+    const isPublic = Boolean(publicToggle?.checked);
+    if (classSelectionBlock) classSelectionBlock.classList.toggle('d-none', isPublic);
+    if (publicSubjectSection) publicSubjectSection.classList.toggle('d-none', !isPublic);
+    if (manualQuestionSubjectFilter && publicSubjectFilter) {
+      if (isPublic) {
+        manualQuestionSubjectFilter.value = publicSubjectFilter.value || '';
+        manualQuestionSubjectFilter.disabled = true;
+      } else {
+        manualQuestionSubjectFilter.disabled = false;
+      }
+    }
+  };
 
+  const loadFilterOptions = async () => {
+    if (!teacherId) {
+      if (classTableBody) showStatusRow(classTableBody, 'classStatusTemplate', 'Vui lòng truyền teacherId.', 4);
+      return;
+    }
+    try {
+      const data = await apiGetJson('/filters', { teacherId });
+      applySubjectFilters(Array.isArray(data?.subjects) ? data.subjects : []);
+      applySemesterFilters(Array.isArray(data?.semesters) ? data.semesters : []);
+      renderClassTable(true);
+      renderBlueprintTable(true);
+      await syncManualChapterOptions();
+      await renderManualTable();
+      syncSubjectFiltersBySelectedClass();
+      applyPublicMode();
+    } catch (e) {
+      if (classTableBody) showStatusRow(classTableBody, 'classStatusTemplate', 'Lỗi tải danh sách lớp.', 4);
+    }
+  };
+
+  applyExamGenerationMode();
+  applyPublicMode();
   loadFilterOptions();
+  classSubjectFilter?.addEventListener('change', () => renderClassTable(true));
+  classSemesterFilter?.addEventListener('change', () => renderClassTable(true));
+  classSearchInput?.addEventListener('input', () => renderClassTable(true));
+  classPaginationPrev?.addEventListener('click', () => { if (classCurrentPage > 1) { classCurrentPage--; renderClassTable(false); } });
+  classPaginationNext?.addEventListener('click', () => { if (classCurrentPage < classTotalPages) { classCurrentPage++; renderClassTable(false); } });
+  blueprintSubjectFilter?.addEventListener('change', () => renderBlueprintTable(true));
+  blueprintSearchInput?.addEventListener('input', () => renderBlueprintTable(true));
+  blueprintPaginationPrev?.addEventListener('click', () => { if (blueprintCurrentPage > 1) { blueprintCurrentPage--; renderBlueprintTable(false); } });
+  blueprintPaginationNext?.addEventListener('click', () => { if (blueprintCurrentPage < blueprintTotalPages) { blueprintCurrentPage++; renderBlueprintTable(false); } });
+  manualQuestionSubjectFilter?.addEventListener('change', async () => { await syncManualChapterOptions(); await renderManualTable(true); });
+  manualQuestionChapterFilter?.addEventListener('change', () => renderManualTable(true));
+  manualQuestionLevelFilter?.addEventListener('change', () => renderManualTable(true));
+  publicSubjectFilter?.addEventListener('change', async () => {
+    if (!publicToggle?.checked) return;
+    if (manualQuestionSubjectFilter) manualQuestionSubjectFilter.value = publicSubjectFilter?.value || '';
+    await syncManualChapterOptions();
+    await renderManualTable(true);
+  });
+  manualQuestionPaginationPrev?.addEventListener('click', () => { if (manualQuestionCurrentPage > 1) { manualQuestionCurrentPage--; renderManualTable(false); } });
+  manualQuestionPaginationNext?.addEventListener('click', () => { if (manualQuestionCurrentPage < manualQuestionTotalPages) { manualQuestionCurrentPage++; renderManualTable(false); } });
+  document.body.addEventListener('click', (e) => {
+    if (!e.target.closest('#manualQuestionClearButton')) return;
+    manualSelectedQuestionIds.clear();
+    toArray(document.querySelectorAll('#manualQuestionTable input[type="checkbox"]')).forEach((cb) => { cb.checked = false; });
+    updateManualSummary();
+  });
   saveConfigTopButton?.addEventListener('click', saveAssignExam);
   saveConfigBottomButton?.addEventListener('click', saveAssignExam);
   publicToggle?.addEventListener('change', applyPublicMode);

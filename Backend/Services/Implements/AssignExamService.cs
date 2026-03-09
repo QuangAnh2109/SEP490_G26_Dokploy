@@ -375,12 +375,12 @@ public class AssignExamService : IAssignExamService
                     ? ShuffleQuestionIds(questionIds)
                     : questionIds.ToList();
 
-                // Insert into PaperQuestion join table using raw SQL (no DbSet available)
-                foreach (var (qid, idx) in orderedQuestionIds.Select((q, i) => (q, i)))
+                // Insert into PaperQuestion join table (schema: PaperId, QuestionId only)
+                foreach (var qid in orderedQuestionIds)
                 {
                     await _db.Database.ExecuteSqlRawAsync(
-                        "INSERT INTO PaperQuestion (PaperId, QuestionId, [Index]) VALUES ({0}, {1}, {2})",
-                        paper.PaperId, qid, idx + 1);
+                        "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
+                        paper.PaperId, qid);
                 }
                 await _db.SaveChangesAsync(cancellationToken);
 

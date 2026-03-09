@@ -48,8 +48,13 @@ window.AssignExamValidator = (() => {
             markFieldInvalid(f.maxAttempts, true);
         }
 
-        if (!(data.paperCount >= 1 && data.paperCount <= 50)) {
-            errors.push('Số mã đề từ 1-50.');
+        const paperCountVal = data.paperCount;
+        const paperCount = Number(paperCountVal);
+        if (paperCountVal === '' || paperCountVal == null || paperCountVal === undefined) {
+            errors.push('Vui lòng nhập số mã đề.');
+            markFieldInvalid(f.paperCount, true);
+        } else if (!Number.isInteger(paperCount) || paperCount < 1 || paperCount > 50) {
+            errors.push('Số mã đề phải là số nguyên từ 1 đến 50.');
             markFieldInvalid(f.paperCount, true);
         }
 
