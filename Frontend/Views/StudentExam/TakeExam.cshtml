@@ -16,6 +16,12 @@
         #question-block-mcq {
             list-style-type: upper-alpha;
         }
+
+        math-field {
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
     </style>
 }
 
@@ -75,8 +81,21 @@
                     <p class="form-note mb-0 text-success">Hệ thống sẽ tự động lưu bài</p>
                 </aside>
 
-                <div class="toolbar d-flex gap-2 mt-3">
+                <div class="toolbar d-flex gap-2 mt-3 mb-3">
                     <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                </div>
+
+                <div id="inputTypeContainer" class="soft-card" hidden>
+                    <div class="summary-label text-center mb-2">Giới hạn nhập liệu</div>
+                    <table class="table table-bordered table-sm text-center mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Loại dữ liệu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTypeBody">
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -91,6 +110,22 @@
             <math-span></math-span>
         </label>
     </li>
+</template>
+
+<template id="input-limit-btn-template">
+    <tr>
+        <td>
+            <button type="button" class="btn btn-outline-primary btn-sm w-100"></button>
+        </td>
+    </tr>
+</template>
+
+<template id="input-limit-text-template">
+    <tr>
+        <td class="align-middle">
+            <span class="text-muted fw-bold"></span>
+        </td>
+    </tr>
 </template>
 
 @section Scripts {
@@ -235,13 +270,63 @@
 
         function selectPlaceholder(mathField, placeholderId){
             const pos = mathField.position;
+            let isInsidePlaceholder = false;
 
             for (const id of placeholderId) {
                 const range = mathField.getPromptRange(id);
 
-                if (pos >= range[0] && pos <= range[1]) {
+                if (range && pos >= range[0] && pos <= range[1]) {
                     console.log(id);
+                    isInsidePlaceholder = true;
+
+                    const currentQuestion = exam.questions[questionNumber - 1];
+                    const answer = currentQuestion.answers.find(a => {
+                        const match = a.content.match(regexPlaceholder);
+                        return match && match[1] === id;
+                    });
+
+                    const container = document.getElementById('inputTypeContainer');
+                    const tbody = document.getElementById('inputTypeBody');
+                    const btnTemplate = document.getElementById('input-limit-btn-template');
+                    const textTemplate = document.getElementById('input-limit-text-template');
+
+                    if (container && tbody) {
+                        tbody.innerHTML = '';
+                        if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
+                            answer.inputTypes.forEach(it => {
+                                if (it.groupType === 'Sets') {
+                                    const newRow = textTemplate.content.cloneNode(true);
+                                    const span = newRow.querySelector('span');
+                                    span.textContent = 'Tập hợp: ' + it.name;
+                                    tbody.appendChild(newRow);
+                                } else {
+                                    const newRow = btnTemplate.content.cloneNode(true);
+                                    const btn = newRow.querySelector('button');
+                                    btn.textContent = it.name;
+                                    
+                                    btn.onmousedown = function(e) {
+                                        // Check user intent to not lose focus
+                                        e.preventDefault();
+                                    };
+                                    btn.onclick = function() {
+                                        mathField.focus();
+                                        mathField.insert('\\text{' + it.name + '}');
+                                    };
+                                    tbody.appendChild(newRow);
+                                }
+                            });
+                            container.hidden = false;
+                        } else {
+                            container.hidden = true;
+                        }
+                    }
+                    break;
                 }
+            }
+
+            if (!isInsidePlaceholder) {
+                const container = document.getElementById('inputTypeContainer');
+                if (container) container.hidden = true;
             }
         }
     </script>
