@@ -81,6 +81,21 @@ function getUserEmail() {
         || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
 }
 
+// Xác định tài khoản đăng nhập bằng Google hay mật khẩu thường từ JWT
+function getAuthProvider() {
+    const token = getToken();
+    if (!token) return null;
+
+    const decoded = parseJwt(token);
+    if (!decoded) return null;
+
+    return decoded['auth_provider'] || null; // 'google' hoặc 'password'
+}
+
+function isGoogleUser() {
+    return getAuthProvider() === 'google';
+}
+
 function isAuthenticated() {
     return getToken() !== null;
 }
