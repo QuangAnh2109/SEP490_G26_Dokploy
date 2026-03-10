@@ -129,10 +129,7 @@ window.QuestionEditorFITB = (() => {
         UTILS.toArray(list.querySelectorAll('[data-blank-answer-item]')).forEach(r => existingMap.set(r.getAttribute('data-blank-num'), r));
         const currentActiveNum = list.querySelector('[data-blank-answer-item].active')?.getAttribute('data-blank-num');
         while (list.firstChild) list.removeChild(list.firstChild);
-        while (nav.firstChild) {
-            if (nav.firstChild.tagName === 'TEMPLATE') break; // Keep the template
-            nav.removeChild(nav.firstChild);
-        }
+        UTILS.toArray(nav.children).forEach(c => { if (c.tagName !== 'TEMPLATE') c.remove(); });
 
         numbered.forEach(num => {
             const sNum = String(num);

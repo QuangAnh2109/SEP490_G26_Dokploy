@@ -134,48 +134,21 @@
   <section class="panel-card">
     <div class="table-responsive">
       <table class="table table-soft mb-0">
-        <thead>
+          <thead>
           <tr>
-            <th style="width:40px;"><input class="form-check-input" id="questionMasterCheckbox" type="checkbox" aria-label="Chọn tất cả câu hỏi"></th>
-            <th>ID</th>
-            <th>Nội dung</th>
-            <th>Loại</th>
-            <th>Mức độ</th>
-            <th>Môn học</th>
-            <th>Chương</th>
-            <th>Cập nhật</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
+              <th style="width:40px;"><input class="form-check-input" id="questionMasterCheckbox" type="checkbox" aria-label="Chọn tất cả câu hỏi"></th>
+              <th>ID</th>
+              <th>Nội dung</th>
+              <th>Loại</th>
+              <th>Mức độ</th>
+              <th>Môn học</th>
+              <th>Chương</th>
+              <th>Cập nhật</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
           </tr>
-        </thead>
-          <template id="questionRowTemplate">
-            <tr class="interactive-row">
-              <td><input class="form-check-input question-item-checkbox" type="checkbox"></td>
-              <td data-field-id></td>
-              <td><math-field read-only class="math-preview" data-field-content></math-field></td>
-              <td data-field-type></td>
-              <td><span class="badge" data-field-difficulty></span></td>
-              <td data-field-subject></td>
-              <td data-field-chapter></td>
-              <td data-field-updated></td>
-              <td><span class="badge" data-field-status></span></td>
-              <td>
-                <div class="toolbar">
-                  <button class="btn btn-sm btn-outline-secondary" data-action-edit>Sửa</button>
-                  <button class="btn btn-sm btn-outline-danger" data-action-archive>Lưu trữ</button>
-                </div>
-              </td>
-            </tr>
-          </template>
-          <template id="tableLoadingTemplate">
-            <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
-          </template>
-          <template id="tableEmptyTemplate">
-            <tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
-          </template>
-          <template id="tableErrorTemplate">
-            <tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
-          </template>
+          </thead>
+          <tbody id="questionTableBody">
           <tr id="initialLoadingRow"><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
         </tbody>
       </table>
@@ -203,7 +176,37 @@
     </nav>
   </div>
 </div>
-<!-- Archive Confirmation Modal -->
+  <!-- Table Templates -->
+  <template id="questionRowTemplate">
+    <tr class="interactive-row">
+      <td><input class="form-check-input question-item-checkbox" type="checkbox"></td>
+      <td data-field-id></td>
+      <td><math-field read-only class="math-preview" data-field-content></math-field></td>
+      <td data-field-type></td>
+      <td><span class="badge" data-field-difficulty></span></td>
+      <td data-field-subject></td>
+      <td data-field-chapter></td>
+      <td data-field-updated></td>
+      <td><span class="badge" data-field-status></span></td>
+      <td>
+        <div class="toolbar">
+          <button class="btn btn-sm btn-outline-secondary" data-action-edit>Sửa</button>
+          <button class="btn btn-sm btn-outline-danger" data-action-archive>Lưu trữ</button>
+        </div>
+      </td>
+    </tr>
+  </template>
+  <template id="tableLoadingTemplate">
+    <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+  </template>
+  <template id="tableEmptyTemplate">
+    <tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
+  </template>
+  <template id="tableErrorTemplate">
+    <tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
+  </template>
+
+  <!-- Archive Confirmation Modal -->
 <div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">

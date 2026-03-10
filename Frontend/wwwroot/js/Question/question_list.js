@@ -98,6 +98,10 @@
         }
 
         const template = document.getElementById('questionRowTemplate');
+        if (!template) {
+            console.error('Template questionRowTemplate not found!');
+            return;
+        }
         items.forEach(q => {
             const row = template.content.cloneNode(true).firstElementChild;
             const badgeDiff = difficultyBadgeClass[q.difficulty] || 'badge-easy';
@@ -340,6 +344,7 @@
         try {
             const qs = buildQuery(page);
             const data = await apiClient.get(`/api/questions?${qs}`);
+            console.log('Successfully loaded questions:', data);
             renderTable(data);
         } catch (err) {
             console.error('Failed to load questions', err);
