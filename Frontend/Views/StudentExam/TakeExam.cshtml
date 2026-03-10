@@ -16,6 +16,12 @@
         #question-block-mcq {
             list-style-type: upper-alpha;
         }
+
+        math-field {
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
     </style>
 }
 
@@ -75,8 +81,21 @@
                     <p class="form-note mb-0 text-success">Hệ thống sẽ tự động lưu bài</p>
                 </aside>
 
-                <div class="toolbar d-flex gap-2 mt-3">
+                <div class="toolbar d-flex gap-2 mt-3 mb-3">
                     <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                </div>
+
+                <div id="inputTypeContainer" class="soft-card" hidden>
+                    <div class="summary-label text-center mb-2">Giới hạn nhập liệu</div>
+                    <table class="table table-bordered table-sm text-center mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Loại dữ liệu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTypeBody">
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -93,11 +112,29 @@
     </li>
 </template>
 
+<template id="input-limit-btn-template">
+    <tr>
+        <td>
+            <button type="button" class="btn btn-outline-primary btn-sm w-100"></button>
+        </td>
+    </tr>
+</template>
+
+<template id="input-limit-text-template">
+    <tr>
+        <td class="align-middle">
+            <span class="text-muted fw-bold"></span>
+        </td>
+    </tr>
+</template>
+
 @section Scripts {
     <!-- MathLive for math rendering -->
     <script defer src="https://unpkg.com/mathlive"></script>
     <script>
+        var regexPlaceholder = /\\placeholder\[([^\]]+)\]\{\}/;
         var exam;
+        var selectionHandler = null;
         const fillInBlank = "FillInBlank";
         const multipleChoice = "MultipleChoice";
         var questionNumber = 1;
@@ -119,7 +156,7 @@
             questionMcq = document.getElementById('question-block-mcq');
             questionBlockFib = document.getElementById('question-block-fib');
             questionBlockFibField = document.getElementById('question-block-fib-field');
-            //Lấy giá trị của tham số "examId"
+            //Lấy giá trị examId
             const examId = new URLSearchParams(window.location.search).get('examId');
 
             //Kiểm tra tính hợp lệ
@@ -141,12 +178,21 @@
         });
 
         function renderQuestion(question){
+            // remove event cũ nếu có
+            if (selectionHandler) {
+                questionBlockFibField.removeEventListener("selection-change", selectionHandler);
+                selectionHandler = null;
+            }
+
+            //Ẩn câu hỏi cũ và hiện loading
             questionHeader.hidden = true;
             questionArea.hidden = true;
             questionLoading.hidden = false;
             questionBlockFib.hidden = true;
             questionMcq.hidden = true;
             questionBlockFibField.hidden = true;
+
+            //Truyền nội dung câu hỏi
             if(question.questionType == fillInBlank){
                 var questionContent = JSON.parse(question.questionContent);
                 questionStem.textContent = questionContent.stem;
@@ -154,6 +200,15 @@
                 document.getElementById('question-block-fib-field').value = questionContent.frame;
                 questionBlockFib.hidden = false;
                 questionBlockFibField.hidden = false;
+                selectionHandler = () => {
+                    let placeholderId = [];
+                    for (const item of question.answers) {
+                        placeholderId.push(item.content.match(regexPlaceholder)?.[1]);
+                    }
+                    selectPlaceholder(questionBlockFibField, placeholderId);
+                };
+
+                questionBlockFibField.addEventListener("selection-change", selectionHandler);
             }
             else if(question.questionType == multipleChoice){
                 questionStem.textContent = question.questionContent;
@@ -178,6 +233,8 @@
                     questionMcq.appendChild(newOption);
                 });
             }
+
+            //Hiện câu hỏi
             questionLoading.hidden = true;
             questionHeader.hidden = false;
             questionArea.hidden = false;
@@ -198,9 +255,8 @@
 
         function goToQuestion(num) {
             questionNumber = num;
-            renderQuestion(exam.questions[questionNumber - 1]);
+            renderQuestion(exam.questions[num-1]);
 
-            // Highlight active button
             document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
                 if (idx + 1 === questionNumber) {
                     btn.classList.remove('btn-outline-primary');
@@ -210,6 +266,68 @@
                     btn.classList.add('btn-outline-primary');
                 }
             });
+        }
+
+        function selectPlaceholder(mathField, placeholderId){
+            const pos = mathField.position;
+            let isInsidePlaceholder = false;
+
+            for (const id of placeholderId) {
+                const range = mathField.getPromptRange(id);
+
+                if (range && pos >= range[0] && pos <= range[1]) {
+                    console.log(id);
+                    isInsidePlaceholder = true;
+
+                    const currentQuestion = exam.questions[questionNumber - 1];
+                    const answer = currentQuestion.answers.find(a => {
+                        const match = a.content.match(regexPlaceholder);
+                        return match && match[1] === id;
+                    });
+
+                    const container = document.getElementById('inputTypeContainer');
+                    const tbody = document.getElementById('inputTypeBody');
+                    const btnTemplate = document.getElementById('input-limit-btn-template');
+                    const textTemplate = document.getElementById('input-limit-text-template');
+
+                    if (container && tbody) {
+                        tbody.innerHTML = '';
+                        if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
+                            answer.inputTypes.forEach(it => {
+                                if (it.groupType === 'Sets') {
+                                    const newRow = textTemplate.content.cloneNode(true);
+                                    const span = newRow.querySelector('span');
+                                    span.textContent = 'Tập hợp: ' + it.name;
+                                    tbody.appendChild(newRow);
+                                } else {
+                                    const newRow = btnTemplate.content.cloneNode(true);
+                                    const btn = newRow.querySelector('button');
+                                    btn.textContent = it.name;
+                                    
+                                    btn.onmousedown = function(e) {
+                                        // Check user intent to not lose focus
+                                        e.preventDefault();
+                                    };
+                                    btn.onclick = function() {
+                                        mathField.focus();
+                                        mathField.insert('\\text{' + it.name + '}');
+                                    };
+                                    tbody.appendChild(newRow);
+                                }
+                            });
+                            container.hidden = false;
+                        } else {
+                            container.hidden = true;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (!isInsidePlaceholder) {
+                const container = document.getElementById('inputTypeContainer');
+                if (container) container.hidden = true;
+            }
         }
     </script>
 }
