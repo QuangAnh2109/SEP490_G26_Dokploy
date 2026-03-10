@@ -34,12 +34,14 @@ namespace Backend.Services.Implements
 
             if (user == null)
             {
-                System.Console.WriteLine($"[AUTH_DEBUG] User with email '{request.Email}' is NULL when queried from DB. Checking precise length: {request.Email.Length}");
                 throw new UnauthorizedAccessException(ErrorMessages.InvalidEmailOrPassword);
+            }
+            if (string.IsNullOrEmpty(user.PasswordHash))
+            {
+                throw new UnauthorizedAccessException("Tài khoản này đăng nhập bằng Google. Vui lòng sử dụng Đăng nhập bằng Google.");
             }
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                System.Console.WriteLine($"[AUTH_DEBUG] Verification failed for '{request.Email}'. PasswordHash in DB was: '{user.PasswordHash}', requested password length: {request.Password.Length}");
                 throw new UnauthorizedAccessException(ErrorMessages.InvalidEmailOrPassword);
             }
 
@@ -96,7 +98,7 @@ namespace Backend.Services.Implements
 
             var user = new User
             {
-                PasswordHash = Guid.NewGuid().ToString(),
+                PasswordHash = null,
                 RoleId = request.RoleId,
                 Email = userEmail,
                 SecurityStamp = DateTime.UtcNow

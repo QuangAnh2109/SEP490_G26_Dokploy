@@ -5,11 +5,16 @@ $(document).ready(function () {
         const email = $('#Email').val().trim();
         const otpCode = $('#OtpCode').val().trim();
         const newPassword = $('#NewPassword').val();
+        const confirmPassword = $('#ConfirmPassword').val();
         const $msg = $('#formMessage');
         const $btn = $('#btnSubmit');
 
-        if (!otpCode || !newPassword) {
+        if (!otpCode || !newPassword || !confirmPassword) {
             $msg.text("Vui lòng điền đầy đủ thông tin.").removeClass('text-success').addClass('text-danger');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            $msg.text("Mật khẩu nhập lại không khớp.").removeClass('text-success').addClass('text-danger');
             return;
         }
         if (!/^\d{6}$/.test(otpCode)) {
