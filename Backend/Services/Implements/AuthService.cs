@@ -380,14 +380,11 @@ namespace Backend.Services.Implements
 
         private string GenerateRefreshTokenAsJwt(User user)
         {
-            var authProvider = string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password";
-
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim("AspNet.Identity.SecurityStamp", user.SecurityStamp.ToString("o")), // Embed SecurityStamp
-                new Claim("auth_provider", authProvider)
+                new Claim("AspNet.Identity.SecurityStamp", user.SecurityStamp.ToString("o")) // Embed SecurityStamp
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
@@ -433,14 +430,12 @@ namespace Backend.Services.Implements
 
         private string GenerateJwtToken(User user)
         {
-            var authProvider = string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password";
-
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role?.Name ?? "User"),
-                new Claim("auth_provider", authProvider)
+                new Claim("auth_provider", string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
