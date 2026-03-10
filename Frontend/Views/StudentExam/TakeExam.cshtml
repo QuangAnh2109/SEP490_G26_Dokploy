@@ -3,62 +3,213 @@
 }
 
 @section Styles {
-    <!-- MathLive for math rendering -->
-    <script defer src="https://unpkg.com/mathlive"></script>
     <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
+    <style>
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
+
+        #question-block-mcq {
+            list-style-type: upper-alpha;
+        }
+    </style>
 }
 
-<!-- Hidden Inputs to pass Razor Variables to Javascript -->
-<input type="hidden" id="ExamId" value="@ViewBag.ExamId" />
-<input type="hidden" id="SubmissionId" value="" />
-
-<main class="page-shell py-4" id="examWorkspace" style="display: none;">
+<main class="page-shell py-4" id="examWorkspace">
     <div class="container-fluid px-3 px-md-4">
-      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
-        <div>
-          <h1 class="page-title" id="examTitle">Loading...</h1>
-          <p class="page-subtitle" id="examSubtitle">Đang chuẩn bị dữ liệu thi...</p>
-          <div class="badge bg-info mt-2" style="font-size: 1rem;"><i class="bi bi-file-earmark-text"></i> Mã đề: <span id="paperCodeDisplay">...</span></div>
-        </div>
-        <div class="soft-card">
-          <div class="summary-label">Thời gian còn lại</div>
-          <div class="countdown" data-countdown="2400" id="countdownTimer">40:00</div>
-        </div>
-      </section>
 
-      <div class="row g-3">
-        <div class="col-12 col-xl-8" id="questionContainer">
-          <!-- Dynamic Question Blocks will be loaded here -->
-        </div>
-
-        <div class="col-12 col-xl-4">
-          <aside class="panel-card mb-3">
-            <h2 class="panel-title">Điều hướng câu hỏi</h2>
-            <div class="question-nav mb-2" id="questionNavMap">
-              <!-- Dynamic Nav Buttons -->
+        @* ── Header ── *@
+        <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <h1 class="page-title">Kiểm tra</h1>
+                <div class="badge bg-info mt-2" style="font-size: 1rem;">
+                    <i class="bi bi-file-earmark-text"></i> Mã đề thi: <span>204</span>
+                </div>
             </div>
-            <p class="form-note mb-0 text-success" id="autoSaveStatus">Hệ thống sẽ tự động lưu bài.</p>
-          </aside>
+            <div class="soft-card">
+                <div class="summary-label">Thời gian còn lại</div>
+                <div class="countdown" id="countdownTimer">40:00</div>
+            </div>
+        </section>
 
-          <div class="toolbar d-flex gap-2 mt-3">
-            <button class="btn btn-warning flex-grow-1" data-action="validate-unanswered" onclick="highlightUnanswered()">Kiểm tra câu chưa trả lời</button>
-            <button class="btn btn-danger flex-grow-1" onclick="submitExam()">Nộp bài</button>
-          </div>
+        <div class="row g-3">
+            <div class="col-12 col-xl-8" id="question-loading">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Question Area (single question) ── *@
+            <div class="col-12 col-xl-8" id="question-area" hidden>
+                <div id="question-header" hidden>
+                    <div id="question-title"></div>
+                    <div class="mb-3">
+                        <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
+                    </div>
+                </div>
+
+                @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
+                <ul id="question-block-mcq" hidden>
+                </ul>
+
+                @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
+                <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
+                    <math-field hidden read-only id="question-block-fib-field"></math-field>
+                </div>
+
+            </div>
+
+            @* ── Sidebar ── *@
+            <div class="col-12 col-xl-4">
+                <aside class="panel-card mb-3">
+                    <h2 class="panel-title">Điều hướng câu hỏi</h2>
+                    <div class="question-nav mb-2" id="questionNav">
+                        <!-- Navigation buttons will go here -->
+                    </div>
+                    <p class="form-note mb-0 text-success">Hệ thống sẽ tự động lưu bài</p>
+                </aside>
+
+                <div class="toolbar d-flex gap-2 mt-3">
+                    <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                </div>
+            </div>
+
         </div>
-      </div>
     </div>
 </main>
 
-<div class="text-center mt-5" id="loadingSpinner">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Đang tải đề thi...</p>
-</div>
+<template id="mcq-template">
+    <li>
+        <label>
+            <input type="checkbox" name="answer">
+            <math-span></math-span>
+        </label>
+    </li>
+</template>
 
 @section Scripts {
-    <!-- SignalR for Live Proctoring -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/StudentExam/exam_taking.js"></script>
+    <!-- MathLive for math rendering -->
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script>
+        var exam;
+        const fillInBlank = "FillInBlank";
+        const multipleChoice = "MultipleChoice";
+        var questionNumber = 1;
+
+        var questionHeader;
+        var questionLoading;
+        var questionArea;
+        var questionStem;
+        var questionTitle;
+        var questionMcq;
+        var questionBlockFib;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            questionHeader = document.getElementById('question-header');
+            questionLoading = document.getElementById('question-loading');
+            questionArea = document.getElementById('question-area');
+            questionStem = document.getElementById('question-stem');
+            questionTitle = document.getElementById('question-title');
+            questionMcq = document.getElementById('question-block-mcq');
+            questionBlockFib = document.getElementById('question-block-fib');
+            questionBlockFibField = document.getElementById('question-block-fib-field');
+            //Lấy giá trị của tham số "examId"
+            const examId = new URLSearchParams(window.location.search).get('examId');
+
+            //Kiểm tra tính hợp lệ
+            if (!examId || isNaN(examId)) {
+                alert("Không tìm thấy mã bài thi hợp lệ trong URL.");
+                return;
+            }
+
+            apiClient.post(`/api/student/exams/${examId}/take`)
+                .then((response) => {
+                    exam = response;
+                    console.log(exam);
+                    buildQuestionNav(exam.questions.length);
+                    goToQuestion(1);
+                })
+                .catch((error) => {
+                    alert("Lỗi: " + error.message);
+                });
+        });
+
+        function renderQuestion(question){
+            questionHeader.hidden = true;
+            questionArea.hidden = true;
+            questionLoading.hidden = false;
+            questionBlockFib.hidden = true;
+            questionMcq.hidden = true;
+            questionBlockFibField.hidden = true;
+            if(question.questionType == fillInBlank){
+                var questionContent = JSON.parse(question.questionContent);
+                questionStem.textContent = questionContent.stem;
+                questionTitle.textContent = "Câu " + questionNumber;
+                document.getElementById('question-block-fib-field').value = questionContent.frame;
+                questionBlockFib.hidden = false;
+                questionBlockFibField.hidden = false;
+            }
+            else if(question.questionType == multipleChoice){
+                questionStem.textContent = question.questionContent;
+                questionStem.render?.();
+                questionTitle.textContent = "Câu " + questionNumber;
+                questionMcq.hidden = false;
+
+                var template = document.getElementById("mcq-template");
+
+                questionMcq.innerHTML = "";
+
+                question.answers.forEach((answer) => {
+
+                    var newOption = template.content.cloneNode(true);
+
+                    var li = newOption.querySelector("li");
+
+                    li.querySelector("input").value = answer.questionAnswerId;
+
+                    li.querySelector("math-span").textContent = answer.content;
+
+                    questionMcq.appendChild(newOption);
+                });
+            }
+            questionLoading.hidden = true;
+            questionHeader.hidden = false;
+            questionArea.hidden = false;
+        }
+
+        function buildQuestionNav(total) {
+            const nav = document.getElementById('questionNav');
+            nav.innerHTML = '';
+            for (let i = 1; i <= total; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary btn-sm m-1';
+                btn.textContent = i;
+                btn.style.minWidth = '40px';
+                btn.addEventListener('click', () => goToQuestion(i));
+                nav.appendChild(btn);
+            }
+        }
+
+        function goToQuestion(num) {
+            questionNumber = num;
+            renderQuestion(exam.questions[questionNumber - 1]);
+
+            // Highlight active button
+            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                if (idx + 1 === questionNumber) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
+        }
+    </script>
 }

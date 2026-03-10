@@ -18,13 +18,15 @@ $(document).ready(function () {
         const roleId = $('#RoleId').val();
 
         if (!roleId) {
-            alert("Vui lòng chọn vai trò của bạn");
+            showToast("Vui lòng chọn vai trò của bạn", "error");
             return;
         }
 
         if (!idToken) {
-            alert("Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại Google.");
-            window.location.href = '/Auth/Login';
+            showToast("Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại Google.", "error");
+            setTimeout(() => {
+                window.location.href = '/Auth/Login';
+            }, 1000);
             return;
         }
 

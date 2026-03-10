@@ -53,12 +53,12 @@ function handleCredentialResponse(response) {
                 const returnUrl = $('#returnUrl').val();
                 window.location.href = returnUrl ? returnUrl : '/';
             } else {
-                alert('Đăng nhập Google thất bại');
+                showToast('Đăng nhập Google thất bại', 'error');
             }
         })
         .catch(function (err) {
             console.error('Error:', err);
-            alert('Có lỗi xảy ra khi xác thực với Google.');
+            showToast('Có lỗi xảy ra khi xác thực với Google.', 'error');
         });
 }
 

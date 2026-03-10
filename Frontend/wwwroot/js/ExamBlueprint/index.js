@@ -54,10 +54,17 @@ $(document).ready(function () {
             try {
                 const warnings = JSON.parse(flashWarningsRaw);
                 if (Array.isArray(warnings) && warnings.length > 0) {
-                    $('#pageError')
-                        .removeClass('d-none alert-danger')
-                        .addClass('alert-warning')
-                        .html(`<strong>Cảnh báo khi lưu nháp:</strong><ul class="mb-0 ps-3 mt-1">${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`);
+                    const $container = $('#flashWarningContainer');
+                    const $list = $('#flashWarningList');
+                    const t = document.getElementById('flashWarningItemTemplate');
+                    
+                    $list.empty();
+                    warnings.forEach(w => {
+                        const li = t.content.cloneNode(true).firstElementChild;
+                        li.textContent = w;
+                        $list.append(li);
+                    });
+                    $container.removeClass('d-none');
                 }
             } catch (e) {
                 console.warn('Cannot parse flash warnings', e);
@@ -75,7 +82,7 @@ $(document).ready(function () {
                 $select.find('option:not(:first)').remove();
                 (subjects || []).forEach(function (subject) {
                     const text = subject.code ? `${subject.code} - ${subject.name}` : subject.name;
-                    $select.append($('<option></option>').val(subject.subjectId).text(text));
+                    $select.append(new Option(text, subject.subjectId));
                 });
             })
             .catch(function (error) {
@@ -97,7 +104,8 @@ $(document).ready(function () {
         if (keyword) params.set('keyword', keyword);
         if (subjectId) params.set('subjectId', subjectId);
 
-        $('#blueprintTableBody').html('<tr><td colspan="6" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>');
+        const $tbody = $('#blueprintTableBody');
+        $tbody.empty().append(document.getElementById('blueprintLoadingTemplate').content.cloneNode(true));
 
         apiClient.get(`/api/exam-blueprints?${params.toString()}`)
             .then(function (response) {
@@ -117,7 +125,7 @@ $(document).ready(function () {
             })
             .catch(function (error) {
                 console.error(error);
-                $('#blueprintTableBody').html('<tr><td colspan="6" class="text-center text-danger py-4">Không thể tải danh sách ma trận đề.</td></tr>');
+                $tbody.empty().append(document.getElementById('blueprintErrorTemplate').content.cloneNode(true));
                 renderEmptyDetail('Không thể tải chi tiết do lỗi danh sách.');
                 renderPagination(1, 0);
                 showPageError(resolveApiError(error));
@@ -125,59 +133,64 @@ $(document).ready(function () {
     }
 
     function renderTable(items) {
+        const $tbody = $('#blueprintTableBody');
+        $tbody.empty();
+
         if (!items.length) {
-            $('#blueprintTableBody').html('<tr><td colspan="6" class="text-center text-muted py-4">Chưa có ma trận đề nào.</td></tr>');
+            $tbody.append(document.getElementById('blueprintEmptyTemplate').content.cloneNode(true));
             return;
         }
 
-        const html = items.map(function (item) {
+        const t = document.getElementById('blueprintRowTemplate');
+        items.forEach(function (item) {
+            const row = t.content.cloneNode(true).firstElementChild;
             const subjectText = item.subjectCode || item.subjectName || '';
-            return `
-                <tr data-blueprint-id="${item.examBlueprintId}" class="${item.examBlueprintId === state.selectedId ? 'table-active' : ''}">
-                    <td>${escapeHtml(item.name || '')}</td>
-                    <td>${item.totalQuestions ?? 0}</td>
-                    <td>${escapeHtml(subjectText)}</td>
-                    <td><span class="badge ${getStatusClass(item.status)}">${escapeHtml(item.statusLabel || '')}</span></td>
-                    <td>${escapeHtml(formatDate(item.updatedAtUtc))}</td>
-                    <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="view-blueprint">Xem</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Sửa</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Lưu trữ</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        $('#blueprintTableBody').html(html);
+            
+            row.setAttribute('data-blueprint-id', item.examBlueprintId);
+            if (item.examBlueprintId === state.selectedId) row.classList.add('table-active');
+            
+            row.querySelector('[data-field-name]').textContent = item.name || '';
+            row.querySelector('[data-field-questions]').textContent = item.totalQuestions ?? 0;
+            row.querySelector('[data-field-subject]').textContent = subjectText;
+            
+            const badge = row.querySelector('[data-field-status]');
+            badge.className = 'badge ' + getStatusClass(item.status);
+            badge.textContent = item.statusLabel || '';
+            
+            row.querySelector('[data-field-updated]').textContent = formatDate(item.updatedAtUtc);
+            
+            $tbody.append(row);
+        });
     }
 
     function renderPagination(page, totalPages) {
         const $pagination = $('#blueprintPagination');
-        if (!totalPages || totalPages <= 1) {
-            $pagination.empty();
-            return;
-        }
+        $pagination.empty();
 
-        let html = '';
-        html += page > 1
-            ? `<li class="page-item"><a class="page-link" href="#" data-page="${page - 1}">Trước</a></li>`
-            : '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+        if (!totalPages || totalPages <= 1) return;
+
+        const prevT = document.getElementById(page > 1 ? 'paginationPrevTemplate' : 'paginationPrevDisabledTemplate');
+        const prevLi = prevT.content.cloneNode(true).firstElementChild;
+        if (page > 1) prevLi.querySelector('[data-page]').setAttribute('data-page', page - 1);
+        $pagination.append(prevLi);
 
         for (let i = 1; i <= totalPages; i++) {
+            const pageT = document.getElementById(i === page ? 'paginationPageActiveTemplate' : 'paginationPageTemplate');
+            const pageLi = pageT.content.cloneNode(true).firstElementChild;
             if (i === page) {
-                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                pageLi.querySelector('.page-link').textContent = i;
             } else {
-                html += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                const a = pageLi.querySelector('[data-page]');
+                a.setAttribute('data-page', i);
+                a.textContent = i;
             }
+            $pagination.append(pageLi);
         }
 
-        html += page < totalPages
-            ? `<li class="page-item"><a class="page-link" href="#" data-page="${page + 1}">Sau</a></li>`
-            : '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
-
-        $pagination.html(html);
+        const nextT = document.getElementById(page < totalPages ? 'paginationNextTemplate' : 'paginationNextDisabledTemplate');
+        const nextLi = nextT.content.cloneNode(true).firstElementChild;
+        if (page < totalPages) nextLi.querySelector('[data-page]').setAttribute('data-page', page + 1);
+        $pagination.append(nextLi);
     }
 
     function loadDetail(id) {
@@ -193,20 +206,25 @@ $(document).ready(function () {
                 $('#blueprintInfoQuestionCount').text(`${detail.totalQuestions ?? 0} câu`);
 
                 const rows = detail.rows || [];
+                const $matrixBody = $('#blueprintMatrixBody');
+                $matrixBody.empty();
+
                 if (!rows.length) {
-                    $('#blueprintMatrixBody').html('<tr><td colspan="3" class="text-center text-muted py-3">Ma trận đề chưa có dòng nào.</td></tr>');
+                    const emptyT = document.getElementById('matrixEmptyTemplate');
+                    const emptyRow = emptyT.content.cloneNode(true).firstElementChild;
+                    emptyRow.querySelector('[data-message]').textContent = 'Ma trận đề chưa có dòng nào.';
+                    $matrixBody.append(emptyRow);
                     return;
                 }
 
-                $('#blueprintMatrixBody').html(rows.map(function (row) {
-                    return `
-                        <tr>
-                            <td>${escapeHtml(row.chapterName || '')}</td>
-                            <td>${escapeHtml(row.difficultyLabel || '')}</td>
-                            <td>${row.totalQuestions ?? 0}</td>
-                        </tr>
-                    `;
-                }).join(''));
+                const t = document.getElementById('blueprintMatrixRowTemplate');
+                rows.forEach(function (row) {
+                    const tr = t.content.cloneNode(true).firstElementChild;
+                    tr.querySelector('[data-field-chapter]').textContent = row.chapterName || '';
+                    tr.querySelector('[data-field-difficulty]').textContent = row.difficultyLabel || '';
+                    tr.querySelector('[data-field-questions]').textContent = row.totalQuestions ?? 0;
+                    $matrixBody.append(tr);
+                });
             })
             .catch(function (error) {
                 console.error(error);
@@ -220,7 +238,13 @@ $(document).ready(function () {
         $('#blueprintInfoSubject').text('--');
         $('#blueprintInfoUpdated').text('--');
         $('#blueprintInfoQuestionCount').text('--');
-        $('#blueprintMatrixBody').html(`<tr><td colspan="3" class="text-center text-muted py-3">${escapeHtml(message || 'Chọn một ma trận đề để xem chi tiết.')}</td></tr>`);
+        
+        const $matrixBody = $('#blueprintMatrixBody');
+        $matrixBody.empty();
+        const emptyT = document.getElementById('matrixEmptyTemplate');
+        const emptyRow = emptyT.content.cloneNode(true).firstElementChild;
+        emptyRow.querySelector('[data-message]').textContent = message || 'Chọn một ma trận đề để xem chi tiết.';
+        $matrixBody.append(emptyRow);
     }
 
     function getStatusClass(status) {
@@ -251,7 +275,6 @@ $(document).ready(function () {
         return error?.xhr?.responseJSON?.message || error?.message || 'Đã có lỗi xảy ra từ máy chủ.';
     }
 
-    function escapeHtml(value) {
-        return $('<div/>').text(value ?? '').html();
-    }
+    // escapeHtml is no longer needed in many places due to .textContent, 
+    // but kept as helper if needed for text node creation in complex scenarios.
 });

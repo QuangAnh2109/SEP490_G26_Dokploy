@@ -9,7 +9,5 @@ public partial class GroupAnswer
 
     public string Name { get; set; } = null!;
 
-    public string AnswersContent { get; set; } = null!;
-
     public virtual ICollection<QuestionAnswer> QuestionAnswers { get; set; } = new List<QuestionAnswer>();
 }

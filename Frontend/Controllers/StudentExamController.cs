@@ -4,9 +4,8 @@ namespace Frontend.Controllers
 {
     public class StudentExamController : Controller
     {
-        // POST: /StudentExam/TakeExam
-        // Hides examId from the URL
-        [HttpPost]
+        // GET: /StudentExam/TakeExam
+        [HttpGet]
         public IActionResult TakeExam(int examId)
         {
             if (examId <= 0)

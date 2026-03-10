@@ -1,0 +1,237 @@
+@{
+    ViewData["Title"] = "Cài đặt lớp học";
+    var classId = ViewBag.ClassId ?? 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+        }
+    </style>
+}
+
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <aside class="bg-light border-end" style="width: 250px;">
+        <div class="p-3 border-bottom">
+            <h5 class="mb-0">Quản lý lớp học</h5>
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action">
+                <i class="fas fa-list me-2"></i> Danh sách đề
+            </a>
+            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
+                <i class="fas fa-users me-2"></i> Danh sách học sinh
+            </a>
+            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action active">
+                <i class="fas fa-cog me-2"></i> Cài đặt
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1 p-4">
+
+        <section class="mb-4">
+            <h2>Cài đặt lớp học</h2>
+        </section>
+
+        <section class="card p-4 mx-auto" style="max-width: 800px;">
+            <form id="settingsForm">
+                <!-- Tên lớp -->
+                <div class="mb-4">
+                    <label for="classNameInput" class="form-label fw-bold">Tên lớp học</label>
+                    <input type="text" class="form-control" id="classNameInput" required>
+                </div>
+
+                <!-- Môn & Kỳ (Readonly) -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Môn học</label>
+                        <input type="text" class="form-control bg-light" id="subjectInput" readonly>
+                    </div>
+                    <div class="col-md-6 mt-3 mt-md-0">
+                        <label class="form-label fw-bold">Học kỳ</label>
+                        <input type="text" class="form-control bg-light" id="semesterInput" readonly>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Mã mời -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <label class="form-label fw-bold mb-0">Mã mời vào lớp</label>
+                        <div class="form-check form-switch ps-0 m-0 d-flex align-items-center">
+                            <label class="form-check-label me-5" for="invitationStatusSwitch">Cho phép dùng mã mời</label>
+                            <input class="form-check-input m-0 ms-2" type="checkbox" role="switch" id="invitationStatusSwitch" checked>
+                        </div>
+                    </div>
+
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Code</span>
+                        <input type="text" class="form-control bg-light fs-5 font-monospace text-primary" id="inviteCodeInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('inviteCodeInput')" title="Sao chép Code">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+
+                    <div class="input-group">
+                        <span class="input-group-text">Link</span>
+                        <input type="text" class="form-control bg-light text-primary" id="inviteLinkInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('inviteLinkInput')" title="Sao chép Link">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        Học sinh có thể tham gia lớp học bằng cách nhập mã code này, hoặc truy cập trực tiếp bằng đường link phía trên.
+                    </small>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Nút lưu -->
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary px-4 py-2" id="saveButton">
+                        <i class="fas fa-save me-2"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </section>
+
+    </main>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="actionToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage">
+                Cập nhật thành công!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const classId = @classId;
+        const API_BASE = "https://localhost:7167";
+
+        async function loadSettings() {
+            const token = getToken();
+            if (!token) {
+                alert("Bạn chưa đăng nhập");
+                window.location.href = "/Auth/Login";
+                return;
+            }
+
+            const role = getUserRole();
+            if (role === "Student") {
+                alert("Bạn không có quyền truy cập trang này.");
+                window.location.href = `/Course/ExamListInCourse/${classId}`;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = "/Auth/Login";
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Không thể tải thông tin lớp học.");
+                }
+
+                const data = await response.json();
+                
+                // Binding dữ liệu
+                document.getElementById("classNameInput").value = data.className;
+                document.getElementById("subjectInput").value = (data.subjectCode ? data.subjectCode + ' - ' : '') + data.subjectName;
+                document.getElementById("semesterInput").value = data.semester;
+                document.getElementById("inviteCodeInput").value = data.invitationCode;
+                
+                // Generate link
+                const baseUrl = window.location.origin;
+                document.getElementById("inviteLinkInput").value = `${baseUrl}/Course/Join?code=${data.invitationCode}`;
+
+                const statusSwitch = document.getElementById("invitationStatusSwitch");
+                if (statusSwitch) statusSwitch.checked = data.invitationCodeStatus !== 0;
+
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi khi tải dữ liệu cài đặt lớp.");
+            }
+        }
+
+        document.getElementById("settingsForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const token = getToken();
+            const saveBtn = document.getElementById("saveButton");
+
+            const className = document.getElementById("classNameInput").value;
+            const status = document.getElementById("invitationStatusSwitch").checked ? 1 : 0;
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Đang lưu...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
+                    method: 'PUT',
+                    headers: { 
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        className: className,
+                        invitationCodeStatus: status
+                    })
+                });
+
+                if (response.ok) {
+                    showLocalToast("Lưu cài đặt thành công!", "success");
+                } else {
+                    const err = await response.text();
+                    showLocalToast(err || "Lỗi khi lưu cài đặt", "danger");
+                }
+            } catch (error) {
+                showLocalToast("Đã xảy ra lỗi mạng.", "danger");
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i> Lưu thay đổi';
+            }
+        });
+
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            el.select();
+            el.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            
+            showLocalToast("Đã sao chép vào clipboard!", "success");
+        }
+
+        function showLocalToast(message, type) {
+            const toastEl = document.getElementById("actionToast");
+            const toastMsg = document.getElementById("toastMessage");
+            
+            toastEl.classList.remove("bg-success", "bg-danger", "bg-warning");
+            toastEl.classList.add(`bg-${type}`);
+            toastMsg.textContent = message;
+
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+        document.addEventListener("DOMContentLoaded", loadSettings);
+    </script>
+}

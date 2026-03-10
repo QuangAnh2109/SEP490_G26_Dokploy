@@ -1,0 +1,59 @@
+@{
+    Layout = null;
+}
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sửa câu hỏi</title>
+  <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/Exam_preview.css">
+  <link rel="stylesheet" href="/css/question_add.css">
+  <script defer src="https://unpkg.com/mathlive"></script>
+</head>
+
+<body>
+  <main class="page-shell py-4">
+    <div class="container-fluid px-3 px-md-4">
+      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <h1 class="page-title">Chỉnh sửa câu hỏi</h1>
+          <p class="page-subtitle">Sửa nội dung chi tiết của câu hỏi.</p>
+        </div>
+        <div class="page-actions">
+          <a class="btn btn-outline-secondary" href="/Question">Hủy</a>
+          <button class="btn btn-primary" id="saveQuestionBtn">Cập nhật câu hỏi</button>
+        </div>
+      </section>
+
+      <div class="vstack gap-3" id="editQuestionContainer">
+        <!-- Hidden input for the Question ID -->
+        <input type="hidden" id="currentQuestionId" value="@ViewBag.QuestionId" />
+        
+        <section class="form-section form-section-single" data-question-item data-question-index="1">
+          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+            <h2 class="section-title mb-0" data-question-title>Sửa câu hỏi Q-@ViewBag.QuestionId</h2>
+            <div data-loading-spinner class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+          </div>
+          
+          <partial name="_QuestionEditor" />
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/lib/jquery/dist/jquery.min.js"></script>
+  <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/site.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_utils.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_mcq.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_fitb.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_shared.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_edit.js" asp-append-version="true"></script>
+</body>
+
+</html>

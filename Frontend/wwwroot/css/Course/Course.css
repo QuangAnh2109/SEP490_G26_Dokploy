@@ -212,6 +212,14 @@ body {
     border-radius: 0.75rem;
     background: #ffffff;
     padding: 0.9rem;
+    position: relative;
+    z-index: 1;
+}
+
+.class-card a,
+.class-card button {
+    position: relative;
+    z-index: 10;
 }
 
 .card-title {

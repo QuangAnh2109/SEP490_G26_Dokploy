@@ -5,7 +5,7 @@ namespace Backend.Models;
 
 public partial class QuestionAnswer
 {
-    public int QuestionAnswersId { get; set; }
+    public int QuestionAnswerId { get; set; }
 
     public int QuestionId { get; set; }
 
@@ -15,17 +15,15 @@ public partial class QuestionAnswer
 
     public int? GroupAnswerId { get; set; }
 
-    public int? InputTypeId { get; set; }
-
     public bool? IsCorrect { get; set; }
 
     public int? Point { get; set; }
 
     public byte[] ConcurrencyStamp { get; set; } = null!;
 
-    public virtual GroupAnswer? GroupAnswer { get; set; }
+    public virtual ICollection<BlankInput> BlankInputs { get; set; } = new List<BlankInput>();
 
-    public virtual InputType? InputType { get; set; }
+    public virtual GroupAnswer? GroupAnswer { get; set; }
 
     public virtual Question Question { get; set; } = null!;
 

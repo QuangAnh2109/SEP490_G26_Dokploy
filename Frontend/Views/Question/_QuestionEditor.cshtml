@@ -1,0 +1,232 @@
+<div class="row g-3">
+    <div class="col-12 col-xl-8">
+        <div class="row g-2 mb-2">
+            <div class="col-12 col-md-6">
+                <label class="form-label">Loại câu hỏi</label>
+                <select class="form-select" data-question-type-select>
+                    <option value="FillInBlank" selected>Điền vào ô trống</option>
+                    <option value="MultipleChoice">Trắc nghiệm</option>
+                </select>
+            </div>
+        </div>
+        <label class="form-label">Đề bài</label>
+        <math-field class="math-input" data-question-stem></math-field>
+        <textarea class="math-raw-textarea d-none" rows="2" data-stem-raw
+                  placeholder="Nhập LaTeX cho đề bài..."></textarea>
+        <div class="render-toggle-bar">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       data-stem-render-toggle checked>
+                <label class="form-check-label">Hiển thị dạng toán học</label>
+            </div>
+            <span class="form-note">Tắt để chỉnh sửa dạng văn bản thuần (LaTeX)</span>
+        </div>
+        <hr class="section-divider">
+
+        <!-- ═══ FILL BLANK ═══ -->
+        <section class="question-type-panel" data-question-type-panel="FillInBlank">
+            <h3 class="section-title">Điền vào ô trống</h3>
+            <label class="form-label">
+                Khung trả lời — gõ <code>\placeholder[1]{}</code>, <code>\placeholder[2]{}</code>…
+                để tạo ô trống có đánh số
+            </label>
+            <math-field class="math-input" data-frame-editor></math-field>
+            <textarea class="math-raw-textarea d-none" rows="2" data-frame-raw
+                      placeholder="Nhập LaTeX..."></textarea>
+            <div class="render-toggle-bar">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch" data-render-toggle
+                           checked>
+                    <label class="form-check-label">Hiển thị dạng toán học</label>
+                </div>
+                <span class="form-note">Tắt để chỉnh sửa dạng văn bản thuần (LaTeX)</span>
+            </div>
+            <div class="toolbar mt-2">
+                <button class="btn btn-outline-secondary" type="button" data-insert-placeholder>Chèn ô trống</button>
+                <span class="form-note mb-0" data-placeholder-count>0 ô trống</span>
+            </div>
+            <!-- Scoring toggle -->
+            <div class="scoring-toggle-bar" data-scoring-toggle-bar>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           data-scoring-toggle>
+                    <label class="form-check-label">Đặt hệ số điểm riêng cho từng ô trống</label>
+                </div>
+                <span class="form-note">Khi tắt, tất cả ô trống có điểm bằng nhau.</span>
+            </div>
+            <p class="field-help mt-2 mb-0" data-blank-answer-empty>
+                Chưa có ô trống có đánh số trong khung. Hãy dùng
+                <code>\placeholder[1]{}</code> để tạo ô trống.
+            </p>
+            <div class="placeholder-manager mt-2 d-none" data-placeholder-manager>
+                <div class="placeholder-nav mb-3 d-flex flex-wrap gap-2" data-placeholder-nav>
+                    <template data-blank-nav-button-template>
+                        <button type="button" class="btn btn-sm btn-outline-primary px-3"></button>
+                    </template>
+                    <!-- Nav buttons [1] [2] ... -->
+                </div>
+                <div class="placeholder-active-editor" data-placeholder-active-editor>
+                    <!-- Templates moved outside of blank-answer-list container to prevent deletion by innerHTML = '' -->
+                    <template data-blank-answer-template>
+                        <div class="blank-answer-row">
+                            <div class="blank-answer-main">
+                                <div class="blank-answer-header">
+                                    <span class="badge rounded-pill bg-primary" data-blank-label>Ô trống</span>
+                                </div>
+                                <div class="d-flex gap-2 align-items-center mb-2">
+                                    <math-field class="math-input flex-grow-1" data-blank-answer placeholder="Đáp án đúng..."></math-field>
+                                </div>
+                                <div class="blank-constraint-body" data-blank-constraint-body>
+                                    <p class="form-note" data-blank-constraint-loading>Đang tải...</p>
+                                    <template data-constraint-section-template>
+                                        <div class="constraint-section">
+                                            <div class="constraint-section-label" data-constraint-group-label></div>
+                                            <div class="constraint-grid" data-constraint-grid></div>
+                                        </div>
+                                    </template>
+                                    <template data-constraint-chip-template>
+                                        <div class="constraint-chip">
+                                            <span data-constraint-name></span>
+                                        </div>
+                                    </template>
+                                    <div class="constraint-container" data-constraint-container></div>
+                                </div>
+                                <div class="blank-score-field mt-2" data-blank-score-field>
+                                    <label class="form-label small mb-1">Hệ số điểm (%)</label>
+                                    <input class="form-control form-control-sm" type="number" value="0" min="0" max="100" data-blank-score>
+                                </div>
+                                <button type="button" class="blank-constraint-toggle mt-1" data-blank-constraint-toggle>Giới hạn nhập liệu</button>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="blank-answer-list" data-blank-answer-list>
+                        <!-- One row at a time -->
+                    </div>
+                </div>
+            </div>
+            <!-- Score summary -->
+            <div class="score-summary-bar mt-2 d-none" data-score-summary>
+                <strong>Tổng hệ số điểm:</strong> <span data-score-total>0</span>% / 100%
+            </div>
+        </section>
+
+        <!-- ═══ MCQ ═══ -->
+        <section class="question-type-panel d-none" data-question-type-panel="MultipleChoice">
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                <div>
+                    <h3 class="section-title mb-0">Trắc nghiệm</h3>
+                    <span class="mcq-multi-note mt-1 d-inline-flex">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
+                            <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" />
+                        </svg>
+                        Cho phép chọn nhiều đáp án đúng
+                    </span>
+                </div>
+                <button class="btn btn-outline-secondary" type="button" data-add-answer>
+                    Thêm lựa chọn
+                </button>
+            </div>
+            <div class="render-toggle-bar mb-2">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           data-mcq-render-toggle checked>
+                    <label class="form-check-label">Hiển thị dạng toán học</label>
+                </div>
+                <span class="form-note">Tắt để chỉnh sửa tất cả đáp án dạng văn bản thuần (LaTeX)</span>
+            </div>
+            <!-- Template moved outside and converted to real <template> -->
+            <template data-answer-template>
+                <div class="answer-row">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="input-group-text" data-answer-index></span>
+                        <math-field class="math-input flex-grow-1" data-option-content></math-field>
+                        <textarea class="math-raw-textarea flex-grow-1 d-none" rows="1" data-option-raw></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" data-option-correct>
+                        <label class="form-check-label" data-option-correct-label>Đúng</label>
+                    </div>
+                    <button class="btn btn-outline-danger" type="button" data-remove-answer>Xóa</button>
+                </div>
+            </template>
+            <div data-answer-list>
+                <!-- Answers will be inserted here -->
+            </div>
+            <p class="field-help mt-2 mb-0">Đánh dấu một hoặc nhiều đáp án đúng.</p>
+            <!-- MCQ score -->
+            <div class="score-summary-bar mt-2" data-mcq-score-bar>
+                <label class="form-label mb-0 me-2"><strong>Hệ số điểm (%):</strong></label>
+                <input class="form-control form-control-sm" type="number" value="0" min="0" max="100" step="1"
+                       style="width:100px" data-mcq-score>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+        <label class="form-label">Giải thích</label>
+        <textarea class="form-control" rows="3" placeholder="Nhập lời giải thích cho câu hỏi" data-explanation></textarea>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <section class="soft-card">
+            <h3 class="section-title">Thông tin phân loại</h3>
+            <label class="form-label">Môn học</label>
+            <select class="form-select mb-2" data-subject-select>
+                <option value="">Chọn môn học</option>
+            </select>
+            <label class="form-label">Chương</label>
+            <select class="form-select mb-2" data-chapter-select>
+                <option value="">Chọn chương</option>
+            </select>
+            <label class="form-label">Mức độ</label>
+            <select class="form-select mb-2" data-difficulty-select>
+                <option value="1">Nhận biết</option>
+                <option value="2">Thông hiểu</option>
+                <option value="3">Vận dụng</option>
+                <option value="4">Vận dụng cao</option>
+            </select>
+        </section>
+
+        <!-- ═══ BLANK GROUPS ═══ -->
+        <section class="blank-group-section" data-blank-group-section>
+            <div class="blank-group-card">
+                <h3 class="section-title">Nhóm ô trống</h3>
+                <p class="form-note mb-2">
+                    Nhóm các dòng trong khung trả lời lại để chấm điểm hoặc xử lý cùng nhau.
+                    Mỗi dòng (phân tách bởi <code>\\</code>) sẽ xuất hiện để chọn vào nhóm.
+                </p>
+                <p class="form-note mb-2 d-none" data-blank-group-no-placeholders>
+                    <em>Chưa có nội dung. Hãy nhập biểu thức với <code>\placeholder[n]{}</code> trong khung trả lời.</em>
+                </p>
+                <div class="blank-group-list" data-blank-group-list>
+                    <!-- Template for cloning -->
+                    <div class="blank-group-item d-none" data-blank-group-template>
+                        <div class="blank-group-header">
+                            <input type="text" class="blank-group-name" value="Nhóm" data-blank-group-name>
+                            <button type="button" class="blank-group-remove" data-remove-blank-group>&times;</button>
+                        </div>
+                        <div class="blank-group-segments" data-blank-group-segments>
+                            <!-- Template for segment card moved outside content container -->
+                            <template data-blank-group-segment-template>
+                                <div class="blank-group-segment">
+                                    <div class="blank-group-segment-head"><span data-segment-label></span></div>
+                                    <math-field read-only class="math-display" data-segment-content></math-field>
+                                </div>
+                            </template>
+                            <p class="form-note mb-0 d-none" data-blank-group-empty-note><em>Khung trả lời trống</em></p>
+                            <div class="segments-container" data-segments-container></div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="blank-group-add-btn mt-2" data-add-blank-group>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
+                    </svg>
+                    Thêm nhóm mới
+                </button>
+            </div>
+        </section>
+    </div>
+</div>

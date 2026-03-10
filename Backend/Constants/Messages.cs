@@ -5,6 +5,7 @@ namespace Backend.Constants
         // Auth errors
         public const string InvalidEmailOrPassword = "Invalid email or password";
         public const string UserAlreadyExists = "User already exists";
+        public const string UserNotFound = "Tài khoản không tồn tại.";
         public const string EmailAlreadyRegistered = "Email này đã được đăng ký trong hệ thống. Vui lòng sử dụng Email khác.";
         public const string OtpExpiredOrNotExists = "OTP đã hết hạn hoặc không tồn tại.";
         public const string InvalidOtp = "Mã OTP không chính xác.";
@@ -17,6 +18,12 @@ namespace Backend.Constants
         public const string GoogleRegistrationProcessingError = "An error occurred while processing the Google registration";
         public const string SendOtpError = "Lỗi khi gửi OTP";
         public const string AccountCreationError = "Lỗi khi tạo tài khoản";
+
+        // Submission errors
+        public const string SubmissionNotFound = "Không tìm thấy bài làm.";
+        public const string SubmissionAlreadySubmitted = "Bài làm đã được nộp trước đó.";
+        public const string SubmissionLateNotAllowed = "Đã quá thời gian nộp bài.";
+        public const string InvalidQuestionAnswer = "Câu trả lời không hợp lệ.";
     }
 
     public static class SuccessMessages

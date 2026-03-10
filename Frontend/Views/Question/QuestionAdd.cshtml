@@ -1,0 +1,94 @@
+@{
+    Layout = null;
+}
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thêm câu hỏi</title>
+  <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/Exam_preview.css">
+  <link rel="stylesheet" href="/css/question_add.css">
+  <script defer src="https://unpkg.com/mathlive"></script>
+</head>
+
+<body>
+  <main class="page-shell py-4">
+    <div class="container-fluid px-3 px-md-4">
+      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <h1 class="page-title">Thêm câu hỏi</h1>
+          <p class="page-subtitle">Thêm nhiều câu hỏi vào ngân hàng câu hỏi của giáo viên trên cùng một màn hình.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline-secondary" data-bs-toggle="modal"
+            data-bs-target="#questionImportModal">Nhập</button>
+          <a class="btn btn-outline-secondary" href="/Question">Hủy</a>
+          <button class="btn btn-outline-secondary" id="saveDraftBtn">Lưu nháp</button>
+          <button class="btn btn-primary" id="saveAllBtn">Lưu tất cả</button>
+        </div>
+      </section>
+
+      <section class="panel-card mb-3">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+          <div>
+            <h2 class="section-title mb-1">Thêm nhiều câu hỏi trong một lần</h2>
+            <p class="form-note mb-0">Mỗi giáo viên chỉ có một ngân hàng câu hỏi duy nhất.</p>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="form-note mb-0" id="questionCountText">Đang soạn: 1 câu hỏi</span>
+            <button class="btn btn-outline-primary" type="button" id="addQuestionItemBtn">Thêm câu hỏi mới</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="vstack gap-3" id="questionBatchList">
+        <section class="form-section" data-question-item data-question-index="1">
+          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+            <h2 class="section-title mb-0" data-question-title>Câu hỏi #1</h2>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-remove-question>Xóa câu hỏi</button>
+          </div>
+          
+          <partial name="_QuestionEditor" />
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal fade" id="questionImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5">Nhập câu hỏi</h2><button type="button" class="btn-close" data-bs-dismiss="modal"
+            aria-label="Đóng"></button>
+        </div>
+        <form class="modal-body" data-import-form data-allowed-ext=".csv,.xlsx,.json">
+          <div class="mb-2"><label class="form-label">Chọn tệp nguồn</label><input class="form-control" type="file"
+              data-import-file></div>
+          <div class="mb-2"><label class="form-label">Chế độ nhập</label><select class="form-select">
+              <option>Thêm mới (Append)</option>
+              <option>Ghi đè (Replace)</option>
+              <option>Chỉ kiểm tra (Validate only)</option>
+            </select></div>
+          <div class="import-result" data-import-result></div>
+          <div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-outline-secondary"
+              data-bs-dismiss="modal">Đóng</button><button type="submit" class="btn btn-primary">Nhập dữ liệu mô
+              phỏng</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/lib/jquery/dist/jquery.min.js"></script>
+  <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/site.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_utils.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_mcq.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_fitb.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_shared.js" asp-append-version="true"></script>
+  <script src="/js/Question/question_add.js" asp-append-version="true"></script>
+</body>
+
+</html>

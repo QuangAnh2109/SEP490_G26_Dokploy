@@ -8,12 +8,13 @@ namespace Backend.Repositories.Interfaces
         Task<Paper?> GetPaperWithQuestionsAsync(int examId, int paperId);
         Task<Submission> CreateSubmissionAsync(Submission submission);
         Task<Submission?> GetAnyActiveSubmissionAsync(int studentId);
-        Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionIndex);
+        Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId);
         Task AddOrUpdateBulkStudentAnswersAsync(IEnumerable<StudentAnswer> answers);
         Task CompleteSubmissionAsync(int submissionId);
         Task<int> GetExamSubmissionCountAsync(int studentId, int examId);
         Task<Paper?> GetPaperWithExamAsync(int paperId);
         Task<Paper?> GetRandomPaperForExamAsync(int examId);
+        Task<int?> GetPreviousPaperIdAsync(int studentId, int examId);
         
         // Security and validations
         Task<bool> CanStudentTakeExamAsync(int studentId, int examId);
@@ -21,6 +22,9 @@ namespace Backend.Repositories.Interfaces
         Task ForceSubmitOverdueExamsAsync(int examId);
 
         Task<ExamPreviewData?> GetExamPreviewAsync(int examId);
+
+        Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId);
+        Task<Submission?> GetActiveSubmissionForExamAsync(int studentId, int examId);
 
     }
 

@@ -14,6 +14,17 @@ math-field::part(placeholder-field) {
     opacity: 1 !important;
 }
 
+/* Ẩn thanh menu/virtual keyboard mặc định của MathLive */
+#question-block-fib::part(menu-toggle),
+#question-block-fib::part(virtual-keyboard-toggle) {
+    display: none !important;
+}
+
+/* Con trỏ chỉ hiện khi focus vào placeholder */
+#question-block-fib {
+    --caret-color: #0d6efd;
+}
+
 .math-input {
     min-height: 45px;
     display: flex;
