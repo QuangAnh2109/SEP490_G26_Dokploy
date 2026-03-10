@@ -104,26 +104,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="matrix-body">
-                                    <template id="matrixRowTemplate">
-                                        <tr class="interactive-row">
-                                            <th data-field-chapter></th>
-                                            <td data-field-recognize></td>
-                                            <td data-field-understand></td>
-                                            <td data-field-apply></td>
-                                            <td data-field-advanced></td>
-                                            <td data-field-total></td>
-                                        </tr>
-                                    </template>
-                                    <template id="matrixTotalRowTemplate">
-                                        <tr class="fw-bold">
-                                            <th>Tổng</th>
-                                            <td data-field-recognize></td>
-                                            <td data-field-understand></td>
-                                            <td data-field-apply></td>
-                                            <td data-field-advanced></td>
-                                            <td data-field-total></td>
-                                        </tr>
-                                    </template>
                                 </tbody>
                             </table>
                         </div>
@@ -168,7 +148,6 @@
 @section Scripts {
     <script>
         const EXAM_ID = @examId;
-        const API_BASE = 'https://localhost:7167'; // TODO: đổi sang biến config nếu cần
     </script>
     <script src="~/js/StudentExam/exam_preview.js" asp-append-version="true"></script>
 }
