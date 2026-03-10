@@ -252,7 +252,7 @@
 
                 if (isStudent && status === "open") {
                     actions += `
-                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam/${exam.examId}">
+                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam?examId=${exam.examId}">
                             Vào làm
                         </a>
                     `;
