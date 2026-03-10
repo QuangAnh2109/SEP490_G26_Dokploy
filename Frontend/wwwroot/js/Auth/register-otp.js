@@ -47,7 +47,7 @@ $(document).ready(function () {
             RoleId: parseInt(roleId)
         };
 
-        apiClient.post('api/auth/send-otp', requestData)
+        apiClient.post('/api/auth/send-otp', requestData)
             .then(function (response) {
                 // OTP sent successfully!
                 localStorage.setItem('pendingRegistrationEmail', email);
@@ -64,14 +64,24 @@ function showError(message) {
     $('#formError').text(message).show();
 }
 
-// 3. Handle Google Registration
+// 3. Handle Google Registration - click nút Google ẩn (script tự render từ g_id_onload)
 function triggerGoogleRegister() {
-    const googleButton = document.querySelector('.g_id_signin div[role=button]');
+    // Google render button vào #googleSignInWrapper - có thể là div hoặc iframe
+    var wrapper = document.getElementById('googleSignInWrapper');
+    var googleButton = wrapper && (wrapper.querySelector('[role=button]') || wrapper.querySelector('div') || wrapper.querySelector('iframe'));
     if (googleButton) {
         googleButton.click();
     } else {
-        console.error("Google button not found");
-        showError("Không thể tải dịch vụ Google. Vui lòng F5 trang.");
+        // Script có thể chưa load - chờ rồi thử lại
+        setTimeout(function () {
+            wrapper = document.getElementById('googleSignInWrapper');
+            googleButton = wrapper && (wrapper.querySelector('[role=button]') || wrapper.querySelector('div') || wrapper.querySelector('iframe'));
+            if (googleButton) {
+                googleButton.click();
+            } else {
+                showError("Không thể tải dịch vụ Google. Vui lòng F5 trang và thử lại.");
+            }
+        }, 1500);
     }
 }
 
@@ -88,7 +98,7 @@ function handleCredentialResponse(response) {
         RoleId: parseInt(roleId)
     };
 
-    apiClient.post('api/auth/google-register', requestData)
+    apiClient.post('/api/auth/google-register', requestData)
         .then(function (data) {
             if (data.token) {
                 localStorage.setItem('jwtToken', data.token);

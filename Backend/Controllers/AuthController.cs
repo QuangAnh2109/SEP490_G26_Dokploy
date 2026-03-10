@@ -106,6 +106,24 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request)
+        {
+            try
+            {
+                await _authService.ResendOtpAsync(request.Email);
+                return Ok(new { message = SuccessMessages.OtpSentSuccess });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ErrorMessages.SendOtpError, details = ex.Message });
+            }
+        }
+
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
         {

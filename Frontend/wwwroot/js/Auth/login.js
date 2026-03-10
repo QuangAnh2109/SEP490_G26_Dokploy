@@ -12,6 +12,11 @@ $(document).ready(function () {
             $('#EmailError').text("Vui lòng nhập Email");
             return;
         }
+        var emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+        if (!emailPattern.test(email)) {
+            $('#EmailError').text("Vui lòng nhập địa chỉ Email hợp lệ.");
+            return;
+        }
         if (!password) {
             $('#PasswordError').text("Vui lòng nhập Mật khẩu");
             return;

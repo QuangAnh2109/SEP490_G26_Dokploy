@@ -60,15 +60,16 @@ function setupOtpInputs() {
 }
 
 function startTimer() {
+    if (countdownTimer) clearInterval(countdownTimer);
     timeLeft = 60;
-    $('#resendLink').addClass('disabled');
-    $('#timer').text(timeLeft);
+    $('#resendLink').addClass('disabled').html('Gửi lại mã (<span id="timer">' + timeLeft + '</span>s)');
 
     countdownTimer = setInterval(function () {
         timeLeft--;
         $('#timer').text(timeLeft);
         if (timeLeft <= 0) {
             clearInterval(countdownTimer);
+            countdownTimer = null;
             $('#resendLink').removeClass('disabled').html('Gửi lại mã');
         }
     }, 1000);
@@ -98,7 +99,7 @@ function verifyOtp() {
         OtpCode: otpCode
     };
 
-    apiClient.post('api/auth/verify-otp', requestData)
+    apiClient.post('/api/auth/verify-otp', requestData)
         .then(function (data) {
             if (data.token) {
                 // Success! Log the user in
@@ -130,23 +131,16 @@ function resendOtp() {
     $('#loadingText').text('Đang gửi lại mã...');
     $('#loadingOverlay').css('display', 'flex');
 
-    // Retrieve previous data to construct the Request model again
-    var roleId = localStorage.getItem('pendingRegistrationRole');
-    var password = "DummyPassword123!"; // Note: Because we need the password again, but we didn't save it (for security). 
-    // Wait, we need the original full RegisterRequest to re-send!
-    // Since we throw away the password, a true resend would mean we need to ask user for info again, 
-    // OR Backend needs a different "resend" endpoint. 
-    // For now we will just show a success message but warn them they might need to go back to register form.
-
-    // In a real scenario, the backend SendOtp should accept just an Email if it wants to resend.
-    // However, our backend SendOtp requires full registration info (password).
-    // Let's redirect them back to the register form to fill it again safely instead of storing plain text password in localStorage.
-
-    $('#loadingOverlay').hide();
-    showToast("Vì lý do bảo mật, vui lòng điền lại mật khẩu của bạn để chúng tôi gửi mã mới.", "info");
-    setTimeout(() => {
-        window.location.href = '/Auth/Register';
-    }, 1500);
+    apiClient.post('/api/auth/resend-otp', { Email: targetEmail })
+        .then(function () {
+            $('#loadingOverlay').hide();
+            showSuccess('Mã OTP mới đã được gửi đến email của bạn.');
+            startTimer();
+        })
+        .catch(function (err) {
+            $('#loadingOverlay').hide();
+            showError(err.xhr?.responseJSON?.message || err.message || "Không thể gửi lại mã. Mã OTP có thể đã hết hạn.");
+        });
 }
 
 function showError(message) {

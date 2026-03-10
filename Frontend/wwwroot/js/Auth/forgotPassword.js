@@ -10,6 +10,11 @@ $(document).ready(function () {
             $msg.text("Vui lòng nhập Email.").removeClass('text-success').addClass('text-danger');
             return;
         }
+        var emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+        if (!emailPattern.test(email)) {
+            $msg.text("Vui lòng nhập địa chỉ Email hợp lệ.").removeClass('text-success').addClass('text-danger');
+            return;
+        }
 
         $btn.prop('disabled', true).text('Đang gửi OTP...');
         $msg.text("");

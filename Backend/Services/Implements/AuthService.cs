@@ -144,6 +144,31 @@ namespace Backend.Services.Implements
             await _emailService.SendEmailAsync(request.Email, "Mã Xác Thực OTP - Math Test Creator", htmlMessage);
         }
 
+        public async Task ResendOtpAsync(string email)
+        {
+            var cacheKey = $"OTP_{email}";
+            if (!_cache.TryGetValue(cacheKey, out dynamic? cacheData) || cacheData == null)
+            {
+                throw new UnauthorizedAccessException(ErrorMessages.OtpExpiredOrNotExists);
+            }
+
+            var regRequest = (RegisterRequest)cacheData.Request;
+            var newOtp = new Random().Next(100000, 999999).ToString();
+            var newCacheData = new { Request = regRequest, Otp = newOtp };
+            _cache.Set(cacheKey, newCacheData, TimeSpan.FromMinutes(10));
+
+            var htmlMessage = $@"
+                <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h2>Xác thực Email đăng ký</h2>
+                    <p>Chào bạn,</p>
+                    <p>Mã OTP mới để hoàn tất đăng ký tài khoản của bạn là:</p>
+                    <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{newOtp}</h1>
+                    <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.</p>
+                </div>";
+
+            await _emailService.SendEmailAsync(email, "Mã Xác Thực OTP - Math Test Creator", htmlMessage);
+        }
+
         public async Task<LoginResponse> VerifyOtpAndRegisterAsync(VerifyOtpRequest request)
         {
             var cacheKey = $"OTP_{request.Email}";

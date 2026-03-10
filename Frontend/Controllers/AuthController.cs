@@ -15,7 +15,8 @@ namespace Frontend.Controllers
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-            ViewData["GoogleClientId"] = _configuration["Google:ClientId"];
+            var clientId = (_configuration["Google:ClientId"] ?? _configuration["Google:client_id"] ?? "").Trim();
+            ViewData["GoogleClientId"] = clientId;
             return View();
         }
 
@@ -34,6 +35,8 @@ namespace Frontend.Controllers
         [HttpGet]
         public IActionResult Register()
         {
+            var clientId = (_configuration["Google:ClientId"] ?? _configuration["Google:client_id"] ?? "").Trim();
+            ViewData["GoogleClientId"] = clientId;
             return View();
         }
 

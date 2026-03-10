@@ -12,9 +12,14 @@ $(document).ready(function () {
             $msg.text("Vui lòng điền đầy đủ thông tin.").removeClass('text-success').addClass('text-danger');
             return;
         }
+        if (!/^\d{6}$/.test(otpCode)) {
+            $msg.text("Mã OTP phải là 6 chữ số.").removeClass('text-success').addClass('text-danger');
+            return;
+        }
 
-        if (newPassword.length < 6) {
-            $msg.text("Mật khẩu mới phải có ít nhất 6 ký tự.").removeClass('text-success').addClass('text-danger');
+        var passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,72}$/;
+        if (!passwordPattern.test(newPassword)) {
+            $msg.text("Mật khẩu phải từ 8-72 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.").removeClass('text-success').addClass('text-danger');
             return;
         }
 
