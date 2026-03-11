@@ -72,7 +72,8 @@ namespace Backend.Services.Implements
                     Email = userEmail
                 };
             }
-
+            // đảm bảo token nhận diện là google
+            user.PasswordHash = null;
             var token = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshTokenAsJwt(user);
 
@@ -105,7 +106,8 @@ namespace Backend.Services.Implements
             };
 
             await _authRepository.AddUserAsync(user);
-
+            // đảm bảo auth_provider = google
+            user.PasswordHash = null;
             var token = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshTokenAsJwt(user);
 
