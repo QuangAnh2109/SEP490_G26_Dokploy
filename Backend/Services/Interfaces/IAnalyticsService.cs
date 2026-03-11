@@ -6,10 +6,14 @@ namespace Backend.Services.Interfaces;
 public interface IAnalyticsService
 {
     /// <summary>
-    /// Tính toán và đưa ra phân tích chi tiết kết quả môn Toán theo từng chương cho 1 bài thi.
-    /// Kèm theo Đề xuất tự động (Actionable Insights).
+    /// Phân tích chi tiết bài thi cho Giáo viên:
+    /// Điểm TB, phân bố, theo chương + độ khó, câu khó nhất, danh sách HS, đề xuất cải thiện.
     /// </summary>
-    /// <param name="examId">ID của bài thi</param>
-    /// <returns>ExamAnalyticsDto chứa số liệu và Lời khuyên</returns>
-    Task<ExamAnalyticsDto> GetExamAnalyticsAsync(int examId);
+    Task<ExamAnalyticsDetailDto> GetExamAnalyticsDetailAsync(int examId);
+
+    /// <summary>
+    /// Phân tích bài làm cá nhân cho Học sinh:
+    /// Xem lại bài (luôn có), điểm + biểu đồ (ShowScore), đáp án (ShowAnswer).
+    /// </summary>
+    Task<StudentSubmissionAnalyticsDto> GetStudentSubmissionAnalyticsAsync(int examId, int studentId);
 }
