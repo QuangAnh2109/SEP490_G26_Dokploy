@@ -434,7 +434,8 @@ namespace Backend.Services.Implements
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role?.Name ?? "User")
+                new Claim(ClaimTypes.Role, user.Role?.Name ?? "User"),
+                new Claim("auth_provider", string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
