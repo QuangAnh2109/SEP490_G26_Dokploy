@@ -1,137 +1,206 @@
 @{
-    ViewData["Title"] = "Phân tích Kết quả Đề thi";
+    ViewData["Title"] = "Phân tích Kết quả Bài thi";
 }
 
-<!-- Sử dụng CDN của Chart.js để vẽ biểu đồ -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@section Styles {
+    <link rel="stylesheet" href="~/css/teacher_analytics.css" />
+}
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-12 text-center mb-4">
-            <h2 id="examTitle">Phân tích Kết quả Bài thi</h2>
-            <p class="text-muted">Tổng số bài nộp: <span id="totalSubmissions" class="fw-bold">0</span></p>
+<main class="container-fluid px-3 px-md-4 py-4" id="analyticsRoot" data-exam-id="@ViewBag.ExamId">
+    <!-- ── Loading ── -->
+    <div id="analyticsLoading" class="analytics-loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Đang tải...</span>
         </div>
+        <p class="mt-3 text-muted">Đang phân tích dữ liệu bài thi...</p>
     </div>
 
-    <!-- Hàng chứa Biểu đồ -->
-    <div class="row mb-5">
-        <div class="col-md-8 offset-md-2">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Tỉ lệ chính xác theo từng Chương</h5>
+    <!-- ── Error State ── -->
+    <div id="analyticsError" class="analytics-empty" hidden>
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+        <h5>Không thể tải dữ liệu</h5>
+        <p id="errorMessage" class="text-muted"></p>
+    </div>
+
+    <!-- ── Main Content ── -->
+    <div id="analyticsContent" hidden>
+
+        <!-- Header -->
+        <header class="d-flex flex-wrap justify-content-between align-items-center mb-5 gap-3">
+            <div>
+                <h1 class="page-title mb-1" id="examTitle">Phân tích Bài thi</h1>
+                <p class="text-muted mb-0"><i class="bi bi-person-badge"></i> Chế độ dành cho Giáo viên — Thống kê & Phân tích tổng quát</p>
+            </div>
+            <div id="quickStats" class="d-flex gap-4">
+                <div class="text-center">
+                    <div class="h3 fw-bold mb-0 text-primary" id="totalSubmissions">—</div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Lượt nộp</small>
                 </div>
-                <div class="card-body">
-                    <canvas id="chapterChart" height="120"></canvas>
+                <div class="text-center">
+                    <div class="h3 fw-bold mb-0 text-success" id="avgScoreQuick">—</div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Điểm TB</small>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stat Cards -->
+        <div class="row g-4 mb-5">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card stat-success">
+                    <div class="stat-value" id="avgScore">0</div>
+                    <div class="stat-label">Hiệu suất Trung bình</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card stat-primary">
+                    <div class="stat-value" id="maxScore">0</div>
+                    <div class="stat-label">Thành tích Cao nhất</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card stat-danger">
+                    <div class="stat-value" id="minScore">0</div>
+                    <div class="stat-label">Điểm số Thấp nhất</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card stat-info">
+                    <div class="stat-value" id="medianScore">0</div>
+                    <div class="stat-label">Điểm số Trung vị</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- LEFT COLUMN -->
+            <div class="col-12 col-xl-8">
+
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <i class="bi bi-graph-up-arrow text-primary"></i> Phân tích Phổ điểm Lớp học
+                    </div>
+                    <div class="card-body">
+                        <canvas id="scoreDistChart" height="100"></canvas>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="analytics-card h-100">
+                            <div class="card-header">
+                                <i class="bi bi-pie-chart text-success"></i> Năng lực theo Chương
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chapterChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="analytics-card h-100">
+                            <div class="card-header">
+                                <i class="bi bi-layers-half text-warning"></i> Năng lực theo Độ khó
+                            </div>
+                            <div class="card-body">
+                                <canvas id="difficultyChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <i class="bi bi-lightning-charge text-danger"></i> Nhóm Câu hỏi cần Lưu tâm
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="analytics-table" id="hardestTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>Nội dung câu hỏi</th>
+                                        <th>Chương</th>
+                                        <th>Mức độ</th>
+                                        <th class="text-center">Tỉ lệ đúng</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <i class="bi bi-person-lines-fill text-primary"></i> Bảng Kết quả Chi tiết
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="analytics-table" id="studentTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>Học sinh</th>
+                                        <th class="text-center">Điểm số</th>
+                                        <th>Ngày hoàn thành</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="col-12 col-xl-4">
+                <div class="analytics-card" style="position: sticky; top: 1.5rem;">
+                    <div class="card-header">
+                        <i class="bi bi-magic text-warning"></i> Trình phân tích AI & Gợi ý
+                    </div>
+                    <div class="card-body" id="recommendationsBox">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-muted"></div>
+                            <span class="ms-2 text-muted">Đang tổng hợp dữ liệu...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</main>
 
-    <!-- Hàng chứa Lời khuyên Đề xuất (Actionable Insights) -->
-    <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="card shadow-sm border-info">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Đề xuất Giảng dạy Tự động từ Hệ thống</h5>
-                </div>
-                <div class="card-body" id="recommendationsBox">
-                    <!-- Dữ liệu JS sẽ đổ thẻ <li> vào đây -->
-                    <ul class="list-group list-group-flush" id="recommendationsList">
-                        <li class="list-group-item text-muted">Đang phân tích dữ liệu...</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ════════════════════════════════════════
+     TEMPLATES — JS sẽ clone các template này
+     ════════════════════════════════════════ -->
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Lấy chuỗi JSON từ ViewBag mà Controller đã nhét vào
-        var rawData = '@Html.Raw(ViewBag.AnalyticsData)';
-        
-        if (!rawData) {
-            document.getElementById("examTitle").innerText = "Lỗi tải dữ liệu Phân tích";
-            return;
-        }
+<!-- Template: Hàng bảng câu hỏi khó nhất -->
+<template id="tpl-hardest-row">
+    <tr>
+        <td data-col="index"></td>
+        <td><math-span data-col="content"></math-span></td>
+        <td data-col="chapter"></td>
+        <td data-col="difficulty"></td>
+        <td><span class="score-badge" data-col="accuracy"></span></td>
+    </tr>
+</template>
 
-        var data = JSON.parse(rawData);
+<!-- Template: Hàng bảng sinh viên -->
+<template id="tpl-student-row">
+    <tr>
+        <td data-col="index"></td>
+        <td data-col="name"></td>
+        <td><span class="score-badge" data-col="score"></span></td>
+        <td data-col="date"></td>
+    </tr>
+</template>
 
-        // Render Title
-        document.getElementById("examTitle").innerText = "Phân tích Bài thi: " + (data.examTitle || "N/A");
-        document.getElementById("totalSubmissions").innerText = data.totalSubmissions;
+<!-- Template: Đề xuất -->
+<template id="tpl-rec-item">
+    <div class="rec-item"></div>
+</template>
 
-        // Render Biểu đồ Cột (Bar Chart)
-        var labels = [];
-        var accuracyRates = [];
-        var backgroundColors = [];
-
-        if (data.chapterStats && data.chapterStats.length > 0) {
-            data.chapterStats.forEach(function(stat) {
-                labels.push(stat.chapterName);
-                accuracyRates.push(stat.accuracyRate);
-
-                // Màu sắc cột tùy thuộc vào Rule (Dưới 40 Đỏ, Dưới 70 Vàng, Trên 70 Xanh)
-                if (stat.accuracyRate < 40) {
-                    backgroundColors.push('rgba(255, 99, 132, 0.7)'); // Đỏ
-                } else if (stat.accuracyRate < 70) {
-                    backgroundColors.push('rgba(255, 205, 86, 0.7)'); // Vàng
-                } else {
-                    backgroundColors.push('rgba(75, 192, 192, 0.7)'); // Xanh lá
-                }
-            });
-
-            var ctx = document.getElementById('chapterChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Tỷ lệ làm đúng (%)',
-                        data: accuracyRates,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        }
-
-        // Render Lời đề xuất (Actionable Insights)
-        var recList = document.getElementById("recommendationsList");
-        recList.innerHTML = ""; // Xóa text load
-
-        if (data.recommendations && data.recommendations.length > 0) {
-            data.recommendations.forEach(function(rec) {
-                var colorClass = "text-dark";
-                var iconHtml = "";
-
-                if (rec.includes("CẢNH BÁO")) {
-                    colorClass = "text-danger fw-bold";
-                    iconHtml = '<i class="fas fa-exclamation-triangle"></i> ';
-                } else if (rec.includes("LƯU Ý")) {
-                    colorClass = "text-warning text-dark fw-bold";
-                    iconHtml = '<i class="fas fa-exclamation-circle"></i> ';
-                } else if (rec.includes("ĐIỂM SÁNG")) {
-                    colorClass = "text-success fw-bold";
-                    iconHtml = '<i class="fas fa-star"></i> ';
-                }
-
-                recList.innerHTML += `<li class="list-group-item ${colorClass}">${iconHtml} ${rec}</li>`;
-            });
-        } else {
-            recList.innerHTML = `<li class="list-group-item">Chưa có đủ dữ liệu để đưa ra đề xuất.</li>`;
-        }
-    });
-</script>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script src="~/js/Analytics/exam_analytics.js"></script>
+}

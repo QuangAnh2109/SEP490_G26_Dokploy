@@ -2,6 +2,7 @@ using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace Backend.Controllers;
@@ -18,17 +19,15 @@ public class AnalyticsController : ControllerBase
     }
 
     /// <summary>
-    /// API lấy phân tích kết quả bài thi theo từng chương (Dành cho Giáo viên)
+    /// Phân tích chi tiết bài thi — dành cho Giáo viên.
     /// </summary>
-    /// <param name="examId"></param>
-    /// <returns></returns>
-    [HttpGet("exam/{examId}")]
-    [Authorize] // Chỉ Giáo viên mới được xem. Nếu có Role thì thêm Role
-    public async Task<IActionResult> GetExamAnalytics(int examId)
+    [HttpGet("exam/{examId}/detail")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> GetExamAnalyticsDetail(int examId)
     {
         try
         {
-            var result = await _analyticsService.GetExamAnalyticsAsync(examId);
+            var result = await _analyticsService.GetExamAnalyticsDetailAsync(examId);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -37,8 +36,35 @@ public class AnalyticsController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Log exception here
-            return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích dữ liệu bài thi.", details = ex.Message });
+            return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích chi tiết bài thi.", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Phân tích bài làm cá nhân — dành cho Học sinh.
+    /// </summary>
+    [HttpGet("exam/{examId}/student")]
+    [Authorize(Roles = "Student,Học sinh")]
+    public async Task<IActionResult> GetStudentSubmissionAnalytics(int examId)
+    {
+        try
+        {
+            var userIdString = User.Claims
+                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var studentId))
+                return Unauthorized(new { message = "Token không hợp lệ." });
+
+            var result = await _analyticsService.GetStudentSubmissionAnalyticsAsync(examId, studentId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích bài làm.", details = ex.Message });
         }
     }
 }

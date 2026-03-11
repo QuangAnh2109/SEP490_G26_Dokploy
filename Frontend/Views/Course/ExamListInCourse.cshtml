@@ -258,10 +258,19 @@
                     `;
                 }
 
+                if (isStudent && (status === "closed" || exam.showScore)) {
+                    actions += `
+                        <a class="btn btn-sm btn-info text-white d-inline"
+                           href="/Analytics/StudentResult?examId=${exam.examId}">
+                            <i class="fas fa-chart-bar"></i> Xem kết quả
+                        </a>
+                    `;
+                }
+
                 if (isTeacher) {
                     actions += `
                         <a class="btn btn-sm btn-info text-white"
-                           href="/Course/ExamAnalytics?examId=${exam.examId}">
+                           href="/Analytics/ExamAnalytics?examId=${exam.examId}">
                             <i class="fas fa-chart-pie"></i> Phân tích
                         </a>
                         <a class="btn btn-sm btn-primary"

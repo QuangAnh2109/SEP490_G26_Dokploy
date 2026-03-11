@@ -35,6 +35,7 @@ namespace Backend
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
             builder.Services.AddScoped<IExamRepository, ExamRepository>();
             builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+            builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
@@ -78,7 +79,11 @@ namespace Backend
             // =========================
             // OTHER SERVICES
             // =========================
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                });
             builder.Services.AddSignalR();
             builder.Services.AddMemoryCache();
 
