@@ -106,17 +106,6 @@
     </main>
 </div>
 
-<!-- Toast Notification -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="actionToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body" id="toastMessage">
-                Cập nhật thành công!
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <script>
@@ -126,14 +115,14 @@
         async function loadSettings() {
             const token = getToken();
             if (!token) {
-                alert("Bạn chưa đăng nhập");
+                showToast("Bạn chưa đăng nhập", "error");
                 window.location.href = "/Auth/Login";
                 return;
             }
 
             const role = getUserRole();
             if (role === "Student") {
-                alert("Bạn không có quyền truy cập trang này.");
+                showToast("Bạn không có quyền truy cập trang này.", "error");
                 window.location.href = `/Course/ExamListInCourse/${classId}`;
                 return;
             }
@@ -169,7 +158,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Lỗi khi tải dữ liệu cài đặt lớp.");
+                showToast("Lỗi khi tải dữ liệu cài đặt lớp.", "error");
             }
         }
 
@@ -198,13 +187,13 @@
                 });
 
                 if (response.ok) {
-                    showLocalToast("Lưu cài đặt thành công!", "success");
+                    showToast("Lưu cài đặt thành công!", "success");
                 } else {
                     const err = await response.text();
-                    showLocalToast(err || "Lỗi khi lưu cài đặt", "danger");
+                    showToast(err || "Lỗi khi lưu cài đặt", "error");
                 }
             } catch (error) {
-                showLocalToast("Đã xảy ra lỗi mạng.", "danger");
+                showToast("Đã xảy ra lỗi mạng.", "error");
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save me-2"></i> Lưu thay đổi';
@@ -217,20 +206,9 @@
             el.setSelectionRange(0, 99999);
             document.execCommand("copy");
             
-            showLocalToast("Đã sao chép vào clipboard!", "success");
+            showToast("Đã sao chép vào clipboard!", "info");
         }
 
-        function showLocalToast(message, type) {
-            const toastEl = document.getElementById("actionToast");
-            const toastMsg = document.getElementById("toastMessage");
-            
-            toastEl.classList.remove("bg-success", "bg-danger", "bg-warning");
-            toastEl.classList.add(`bg-${type}`);
-            toastMsg.textContent = message;
-
-            const toast = new bootstrap.Toast(toastEl);
-            toast.show();
-        }
 
         document.addEventListener("DOMContentLoaded", loadSettings);
     </script>

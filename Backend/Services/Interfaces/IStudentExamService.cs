@@ -7,6 +7,6 @@ namespace Backend.Services.Interfaces
     public interface IStudentExamService
     {
         Task<TakeExamDto?> TakeExamInClass(int examId, int studentId);
-        Task<ExamPreviewDto?> GetExamPreviewAsync(int studentId, int examId);
+        Task<ExamPreviewDto?> GetExamPreviewAsync(int userId, int examId, bool isTeacher = false);
     }
 }

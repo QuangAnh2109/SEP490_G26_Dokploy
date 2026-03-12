@@ -91,5 +91,10 @@ namespace Backend.Services.Implements
         {
             return await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
         }
+
+        public async Task LeaveCourseAsync(int classId, int userId)
+        {
+            await _repo.LeaveClassAsync(classId, userId);
+        }
     }
 }

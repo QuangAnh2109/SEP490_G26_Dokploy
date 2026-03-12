@@ -10,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/student/exams")]
     [ApiController]
-    [Authorize(Roles = "Student,Học sinh")]
+    [Authorize(Roles = "Student,Học sinh,Teacher,Giáo viên")]
     public class StudentExamController : ControllerBase
     {
         private readonly IStudentExamService _studentExamService;
@@ -69,12 +69,15 @@ namespace Backend.Controllers
         [HttpGet("{examId}/preview")]
         public async Task<IActionResult> GetExamPreview(int examId)
         {
-            var studentId = GetStudentId();
-            if (studentId == 0) return Unauthorized("Invalid token.");
+            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
+                return Unauthorized("Invalid token.");
+
+            var isTeacher = User.IsInRole("Teacher") || User.IsInRole("Giáo viên");
 
             try
             {
-                var preview = await _studentExamService.GetExamPreviewAsync(studentId, examId);
+                var preview = await _studentExamService.GetExamPreviewAsync(userId, examId, isTeacher);
                 if (preview == null)
                     return NotFound("Exam not found.");
 

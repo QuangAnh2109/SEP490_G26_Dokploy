@@ -79,7 +79,20 @@ namespace Backend.Controllers
         public async Task<IActionResult> LeaveCourse(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            return Ok();
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                await _service.LeaveCourseAsync(id, userId);
+                return Ok(new { message = "Rời lớp thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("join")]

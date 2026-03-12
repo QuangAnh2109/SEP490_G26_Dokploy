@@ -11,11 +11,24 @@ $(document).ready(function () {
         return;
     }
 
+    const userId = typeof getUserIdFromToken === 'function' ? getUserIdFromToken() : 'N/A';
+    console.log('[ExamBlueprint] User identity:', { userId, role });
+
     bindEvents();
     renderNoticeFromQuery();
     loadSubjects().then(function () {
+        console.log('[ExamBlueprint] Subjects loaded, starting loadList(1)');
         loadList(1);
     });
+
+    function appendTemplate($container, templateId) {
+        const template = document.getElementById(templateId);
+        if (template && template.content) {
+            $container.append(template.content.cloneNode(true));
+        } else {
+            console.error(`Template not found: ${templateId}`);
+        }
+    }
 
     function bindEvents() {
         $('#blueprintFilterForm').on('submit', function (e) {
@@ -105,27 +118,34 @@ $(document).ready(function () {
         if (subjectId) params.set('subjectId', subjectId);
 
         const $tbody = $('#blueprintTableBody');
-        $tbody.empty().append(document.getElementById('blueprintLoadingTemplate').content.cloneNode(true));
+        $tbody.empty();
+        appendTemplate($tbody, 'blueprintLoadingTemplate');
 
         apiClient.get(`/api/exam-blueprints?${params.toString()}`)
             .then(function (response) {
+                console.log('[ExamBlueprint] API Response:', response);
                 const items = response.items || [];
+                
+                if (items.length > 0) {
+                    const firstId = items[0].examBlueprintId;
+                    state.selectedId = items.some(i => i.examBlueprintId === state.selectedId) ? state.selectedId : firstId;
+                } else {
+                    state.selectedId = null;
+                }
+
                 renderTable(items);
                 renderPagination(response.page || 1, response.totalPages || 0);
 
-                if (items.length === 0) {
-                    state.selectedId = null;
+                if (state.selectedId) {
+                    loadDetail(state.selectedId);
+                } else {
                     renderEmptyDetail();
-                    return;
                 }
-
-                const firstId = items[0].examBlueprintId;
-                const nextId = items.some(i => i.examBlueprintId === state.selectedId) ? state.selectedId : firstId;
-                loadDetail(nextId);
             })
             .catch(function (error) {
                 console.error(error);
-                $tbody.empty().append(document.getElementById('blueprintErrorTemplate').content.cloneNode(true));
+                $tbody.empty();
+                appendTemplate($tbody, 'blueprintErrorTemplate');
                 renderEmptyDetail('Không thể tải chi tiết do lỗi danh sách.');
                 renderPagination(1, 0);
                 showPageError(resolveApiError(error));
@@ -133,64 +153,106 @@ $(document).ready(function () {
     }
 
     function renderTable(items) {
+        console.log('[ExamBlueprint] renderTable called with items:', items.length);
         const $tbody = $('#blueprintTableBody');
         $tbody.empty();
 
         if (!items.length) {
-            $tbody.append(document.getElementById('blueprintEmptyTemplate').content.cloneNode(true));
+            console.log('[ExamBlueprint] No items to render');
+            appendTemplate($tbody, 'blueprintEmptyTemplate');
             return;
         }
 
         const t = document.getElementById('blueprintRowTemplate');
-        items.forEach(function (item) {
-            const row = t.content.cloneNode(true).firstElementChild;
-            const subjectText = item.subjectCode || item.subjectName || '';
-            
-            row.setAttribute('data-blueprint-id', item.examBlueprintId);
-            if (item.examBlueprintId === state.selectedId) row.classList.add('table-active');
-            
-            row.querySelector('[data-field-name]').textContent = item.name || '';
-            row.querySelector('[data-field-questions]').textContent = item.totalQuestions ?? 0;
-            row.querySelector('[data-field-subject]').textContent = subjectText;
-            
-            const badge = row.querySelector('[data-field-status]');
-            badge.className = 'badge ' + getStatusClass(item.status);
-            badge.textContent = item.statusLabel || '';
-            
-            row.querySelector('[data-field-updated]').textContent = formatDate(item.updatedAtUtc);
-            
-            $tbody.append(row);
+        if (!t) {
+            console.error('[ExamBlueprint] blueprintRowTemplate not found!');
+            return;
+        }
+
+        items.forEach(function (item, index) {
+            try {
+                const row = t.content.cloneNode(true).firstElementChild;
+                const subjectText = item.subjectCode || item.subjectName || '';
+                
+                row.setAttribute('data-blueprint-id', item.examBlueprintId);
+                if (item.examBlueprintId === state.selectedId) {
+                    row.classList.add('table-active');
+                }
+                
+                row.querySelector('[data-field-name]').textContent = item.name || '';
+                row.querySelector('[data-field-questions]').textContent = item.totalQuestions ?? 0;
+                row.querySelector('[data-field-subject]').textContent = subjectText;
+                
+                const badge = row.querySelector('[data-field-status]');
+                if (badge) {
+                    badge.className = 'badge ' + getStatusClass(item.status);
+                    badge.textContent = item.statusLabel || '';
+                }
+                
+                const updatedField = row.querySelector('[data-field-updated]');
+                if (updatedField) {
+                    updatedField.textContent = formatDate(item.updatedAtUtc);
+                }
+                
+                $tbody.append(row);
+            } catch (err) {
+                console.error(`[ExamBlueprint] Error rendering row ${index}:`, err, item);
+            }
         });
+        console.log('[ExamBlueprint] renderTable finished');
     }
 
     function renderPagination(page, totalPages) {
+        console.log('[ExamBlueprint] renderPagination:', { page, totalPages });
         const $pagination = $('#blueprintPagination');
         $pagination.empty();
 
         if (!totalPages || totalPages <= 1) return;
 
-        const prevT = document.getElementById(page > 1 ? 'paginationPrevTemplate' : 'paginationPrevDisabledTemplate');
-        const prevLi = prevT.content.cloneNode(true).firstElementChild;
-        if (page > 1) prevLi.querySelector('[data-page]').setAttribute('data-page', page - 1);
-        $pagination.append(prevLi);
+        try {
+            const prevTId = page > 1 ? 'paginationPrevTemplate' : 'paginationPrevDisabledTemplate';
+            const prevT = document.getElementById(prevTId);
+            if (!prevT) throw new Error(`Template not found: ${prevTId}`);
 
-        for (let i = 1; i <= totalPages; i++) {
-            const pageT = document.getElementById(i === page ? 'paginationPageActiveTemplate' : 'paginationPageTemplate');
-            const pageLi = pageT.content.cloneNode(true).firstElementChild;
-            if (i === page) {
-                pageLi.querySelector('.page-link').textContent = i;
-            } else {
-                const a = pageLi.querySelector('[data-page]');
-                a.setAttribute('data-page', i);
-                a.textContent = i;
+            const prevLi = prevT.content.cloneNode(true).firstElementChild;
+            if (page > 1) {
+                const a = prevLi.querySelector('[data-page]');
+                if (a) a.setAttribute('data-page', page - 1);
             }
-            $pagination.append(pageLi);
-        }
+            $pagination.append(prevLi);
 
-        const nextT = document.getElementById(page < totalPages ? 'paginationNextTemplate' : 'paginationNextDisabledTemplate');
-        const nextLi = nextT.content.cloneNode(true).firstElementChild;
-        if (page < totalPages) nextLi.querySelector('[data-page]').setAttribute('data-page', page + 1);
-        $pagination.append(nextLi);
+            for (let i = 1; i <= totalPages; i++) {
+                const pageTId = i === page ? 'paginationPageActiveTemplate' : 'paginationPageTemplate';
+                const pageT = document.getElementById(pageTId);
+                if (!pageT) continue;
+
+                const pageLi = pageT.content.cloneNode(true).firstElementChild;
+                if (i === page) {
+                    const link = pageLi.querySelector('.page-link');
+                    if (link) link.textContent = i;
+                } else {
+                    const a = pageLi.querySelector('[data-page]');
+                    if (a) {
+                        a.setAttribute('data-page', i);
+                        a.textContent = i;
+                    }
+                }
+                $pagination.append(pageLi);
+            }
+
+            const nextTId = page < totalPages ? 'paginationNextTemplate' : 'paginationNextDisabledTemplate';
+            const nextT = document.getElementById(nextTId);
+            if (nextT) {
+                const nextLi = nextT.content.cloneNode(true).firstElementChild;
+                if (page < totalPages) {
+                    const a = nextLi.querySelector('[data-page]');
+                    if (a) a.setAttribute('data-page', page + 1);
+                }
+                $pagination.append(nextLi);
+            }
+        } catch (err) {
+            console.error('[ExamBlueprint] Error rendering pagination:', err);
+        }
     }
 
     function loadDetail(id) {

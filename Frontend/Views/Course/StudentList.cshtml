@@ -68,7 +68,7 @@
             const token = getToken();
 
             if (!token) {
-                alert("Bạn chưa đăng nhập");
+                showToast("Bạn chưa đăng nhập", "error");
                 window.location.href = "/Auth/Login";
                 return;
             }
@@ -85,7 +85,7 @@
                 });
 
                 if (response.status === 401) {
-                    alert("Phiên đăng nhập hết hạn");
+                    showToast("Phiên đăng nhập hết hạn", "error");
                     removeToken();
                     window.location.href = "/Auth/Login";
                     return;

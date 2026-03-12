@@ -69,8 +69,9 @@
                 const currentUrl = encodeURIComponent(window.location.href);
                 // Assume login page is /Auth/Login or similar
                 // We'll pass the link back
-                alert("Bạn cần đăng nhập để tham gia lớp. Nhấn OK để tới trang đăng nhập.");
-                window.location.href = `/Auth/Login?returnUrl=${currentUrl}`;
+                showConfirm("Bạn cần đăng nhập để tham gia lớp. Đi tới trang đăng nhập?", "Yêu cầu đăng nhập", () => {
+                    window.location.href = `/Auth/Login?returnUrl=${currentUrl}`;
+                });
                 return;
             }
 
@@ -85,9 +86,12 @@
                 });
 
                 if (res.ok) {
-                    alert("Tham gia lớp thành công!");
-                    window.location.href = "/Course/CourseList";
-                } else if (res.status === 400 || res.status === 404) {
+                    showToast("Tham gia lớp thành công!", "success");
+                    setTimeout(() => {
+                        window.location.href = "/Course/CourseList";
+                    }, 1500);
+                }
+ else if (res.status === 400 || res.status === 404) {
                     const text = await res.text();
                     showError("Mã mời không hợp lệ, đã hết hạn, hoặc bạn đã ở sẵn trong lớp này. (" + text + ")");
                 } else {

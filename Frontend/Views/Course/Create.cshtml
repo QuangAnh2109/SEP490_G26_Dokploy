@@ -94,7 +94,7 @@
             // Kiểm tra role Teacher
             const role = localStorage.getItem("userRole");
             if (role !== "Teacher") {
-                alert("Bạn không có quyền truy cập trang này.");
+                showToast("Bạn không có quyền truy cập trang này.", "error");
                 window.location.href = "/Course/CourseList";
                 return;
             }
@@ -127,7 +127,7 @@
                 });
             } catch (error) {
                 console.error(error);
-                alert("Đã có lỗi xảy ra khi tải danh sách môn học.");
+                showToast("Đã có lỗi xảy ra khi tải danh sách môn học.", "error");
             }
         }
 
@@ -164,16 +164,16 @@
                         const errorData = await res.json();
                         // Handle our custom exception text format
                         if (errorData.message) {
-                            alert("Lỗi: " + errorData.message);
+                            showToast("Lỗi: " + errorData.message, "error");
                         } else {
-                            alert("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+                            showToast("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.", "error");
                         }
                     } else {
                         throw new Error("Lỗi máy chủ");
                     }
                 } catch (error) {
                     console.error(error);
-                    alert("Có lỗi xảy ra khi gọi API Tạo lớp.");
+                    showToast("Có lỗi xảy ra khi gọi API Tạo lớp.", "error");
                 } finally {
                     btn.disabled = false;
                     btn.textContent = "Tạo Lớp Học";
@@ -190,7 +190,7 @@
 
             document.getElementById("copyLinkBtn").addEventListener("click", () => {
                 navigator.clipboard.writeText(joinLink).then(() => {
-                    alert("Đã chép link mời vào bộ nhớ tạm!");
+                    showToast("Đã chép link mời vào bộ nhớ tạm!", "info");
                 });
             });
 

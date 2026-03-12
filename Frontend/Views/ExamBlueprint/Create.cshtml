@@ -22,6 +22,7 @@
                 </div>
             </section>
 
+            <div id="createSuccess" class="alert alert-success d-none mt-3"></div>
             <div id="createError" class="alert alert-danger d-none mt-3">
                 <template id="errorListTemplate">
                     <ul class="mb-0 ps-3" data-error-list></ul>
@@ -30,7 +31,10 @@
                     <li data-error-message></li>
                 </template>
             </div>
-            <div id="createWarnings" class="alert alert-warning d-none mt-3"></div>
+            <div id="createWarnings" class="alert alert-warning d-none mt-3">
+                <strong id="warningTitle">Cảnh báo khi lưu nháp:</strong>
+                <ul class="mb-0 ps-3 mt-1" id="warningList"></ul>
+            </div>
 
             <section class="panel-card mb-3">
                 <div class="row g-2">
@@ -81,6 +85,7 @@
                         </select>
                         <input class="form-control matrix-count" type="number" min="0" value="0" />
                         <button class="btn btn-outline-danger" type="button" data-remove-row>Xóa</button>
+                        <div class="row-warning text-danger small d-none mt-1 w-100" style="grid-column: span 3;"></div>
                     </div>
                 </template>
 

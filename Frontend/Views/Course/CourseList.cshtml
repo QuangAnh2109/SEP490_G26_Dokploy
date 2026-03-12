@@ -131,7 +131,7 @@
         function loadCourses() {
             const token = getToken();
             if (!token) {
-                alert("Bạn chưa đăng nhập.");
+                showToast("Bạn chưa đăng nhập.", "error");
                 return;
             }
 
@@ -149,7 +149,7 @@
                 initFilters();
             })
             .catch(() => {
-                alert("Không thể tải danh sách lớp.");
+                showToast("Không thể tải danh sách lớp.", "error");
             });
         }
 
@@ -252,23 +252,23 @@
         }
 
         function leaveCourse(classId) {
-            if (!confirm("Bạn chắc chắn muốn rời khóa học này?")) return;
+            showConfirm("Bạn chắc chắn muốn rời khóa học này?", "Xác nhận rời lớp", () => {
+                const token = getToken();
 
-            const token = getToken();
-
-            fetch(`${API_BASE}/api/course/${classId}/leave`, {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error();
-                alert("Đã rời khóa học.");
-                loadCourses();
-            })
-            .catch(() => {
-                alert("Không thể rời khóa học.");
+                fetch(`${API_BASE}/api/course/${classId}/leave`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    showToast("Đã rời khóa học.", "success");
+                    loadCourses();
+                })
+                .catch(() => {
+                    showToast("Không thể rời khóa học.", "error");
+                });
             });
         }
 
@@ -298,7 +298,7 @@
                     })
                     .then(res => {
                         if (!res.ok) throw new Error();
-                        alert("Tham gia lớp thành công!");
+                        showToast("Tham gia lớp thành công!", "success");
 
                         const modalEl = document.getElementById("joinClassModal");
                         const modal = bootstrap.Modal.getInstance(modalEl);
@@ -308,7 +308,7 @@
                         loadCourses();
                     })
                     .catch(() => {
-                        alert("Mã mời không hợp lệ hoặc đã xảy ra lỗi.");
+                        showToast("Mã mời không hợp lệ hoặc đã xảy ra lỗi.", "error");
                     });
                 });
             }

@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -19,6 +19,7 @@ namespace Backend.Services.Interfaces
         Task JoinCourseAsync(int studentId, string inviteCode);
 
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
+        Task LeaveCourseAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
     }
 }

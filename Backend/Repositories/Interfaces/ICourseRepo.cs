@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -20,6 +20,7 @@ namespace Backend.Repositories.Interfaces
         Task JoinClassAsync(int classId, int userId);
 
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
+        Task LeaveClassAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
     }
 }

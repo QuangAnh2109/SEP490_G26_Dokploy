@@ -134,12 +134,15 @@ namespace Backend.Services.Implements
             };
         }
 
-        public async Task<ExamPreviewDto?> GetExamPreviewAsync(int studentId, int examId)
+        public async Task<ExamPreviewDto?> GetExamPreviewAsync(int userId, int examId, bool isTeacher = false)
         {
-            var canTake = await _studentExamRepository.CanStudentTakeExamAsync(studentId, examId);
-            if (!canTake)
+            if (!isTeacher)
             {
-                throw new UnauthorizedAccessException("Bạn không thuộc lớp được chỉ định để xem bài thi này.");
+                var canTake = await _studentExamRepository.CanStudentTakeExamAsync(userId, examId);
+                if (!canTake)
+                {
+                    throw new UnauthorizedAccessException("Bạn không thuộc lớp được chỉ định để xem bài thi này.");
+                }
             }
 
             var data = await _studentExamRepository.GetExamPreviewAsync(examId);

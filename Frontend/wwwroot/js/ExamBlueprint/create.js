@@ -28,6 +28,7 @@ $(document).ready(function () {
 
         $('#matrixRowList').on('input change', '.matrix-count, .matrix-chapter, .matrix-difficulty', function () {
             recalcTotals();
+            validateRowCapacity($(this).closest('[data-matrix-item]'));
         });
 
         $('#blueprintSubject').on('change', function () {
@@ -169,6 +170,35 @@ $(document).ready(function () {
         return map;
     }
 
+    function setSubmitting(isSubmitting) {
+        $('#btnAddRow, #btnSaveDraft, #btnPublish').prop('disabled', isSubmitting);
+    }
+
+    function validateRowCapacity($row) {
+        const chapterId = parseInt($row.find('.matrix-chapter').val(), 10);
+        const difficulty = parseInt($row.find('.matrix-difficulty').val(), 10);
+        const count = parseInt($row.find('.matrix-count').val(), 10);
+        const $warning = $row.find('.row-warning');
+
+        if (!Number.isInteger(chapterId) || chapterId <= 0 || !Number.isInteger(count) || count <= 0) {
+            $warning.addClass('d-none').text('');
+            return;
+        }
+
+        const chapter = state.chapterOptions.find(c => c.chapterId === chapterId);
+        if (chapter) {
+            const availability = toAvailabilityMap(chapter.availabilityByDifficulty);
+            const available = availability[difficulty] || 0;
+            if (count > available) {
+                $warning.text(`Vượt quá số câu hiện có (tối đa: ${available})`).removeClass('d-none');
+            } else {
+                $warning.addClass('d-none').text('');
+            }
+        } else {
+            $warning.addClass('d-none').text('');
+        }
+    }
+
     function submitCreate(targetStatus) {
         hideMessages();
 
@@ -197,20 +227,26 @@ $(document).ready(function () {
         setSubmitting(true);
         apiClient.post('/api/exam-blueprints', payload)
             .then(function (response) {
-                try {
-                    if (response?.message) {
-                        sessionStorage.setItem('examBlueprintFlashSuccess', response.message);
+                const hasWarnings = Array.isArray(response?.warnings) && response.warnings.length > 0;
+                
+                if (hasWarnings) {
+                    showSuccess(response.message || 'Lưu ma trận đề thành công.');
+                    showWarnings(response.warnings);
+                    // Stay on page, but update UI to let user know they can leave
+                    if (!$('#btnGoBack').length) {
+                        $('.page-actions').prepend('<a id="btnGoBack" class="btn btn-outline-success" href="/ExamBlueprint">Quay lại danh sách</a>');
                     }
-                    if (Array.isArray(response?.warnings) && response.warnings.length > 0) {
-                        sessionStorage.setItem(
-                            'examBlueprintFlashWarnings',
-                            JSON.stringify(response.warnings.map(w => w.message || 'Cảnh báo dữ liệu'))
-                        );
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    try {
+                        if (response?.message) {
+                            sessionStorage.setItem('examBlueprintFlashSuccess', response.message);
+                        }
+                    } catch (e) {
+                        console.warn('Cannot persist flash message', e);
                     }
-                } catch (e) {
-                    console.warn('Cannot persist flash message', e);
+                    window.location.href = '/ExamBlueprint?created=1';
                 }
-                window.location.href = '/ExamBlueprint?created=1';
             })
             .catch(function (error) {
                 console.error(error);
@@ -226,8 +262,17 @@ $(document).ready(function () {
             });
     }
 
-    function setSubmitting(isSubmitting) {
-        $('#btnAddRow, #btnSaveDraft, #btnPublish').prop('disabled', isSubmitting);
+    function showSuccess(message) {
+        $('#createSuccess').text(message).removeClass('d-none');
+    }
+
+    function showWarnings(warnings) {
+        const $list = $('#warningList');
+        $list.empty();
+        warnings.forEach(w => {
+            $list.append(`<li>${w.message || 'Cảnh báo dữ liệu'}</li>`);
+        });
+        $('#createWarnings').removeClass('d-none');
     }
 
     function showError(messages) {
@@ -255,7 +300,8 @@ $(document).ready(function () {
     }
 
     function hideMessages() {
-        $('#createError, #createWarnings').addClass('d-none').empty();
+        $('#createError, #createWarnings, #createSuccess').addClass('d-none').empty();
+        $('#createWarnings #warningList').empty();
     }
 
     function resolveApiError(error) {
