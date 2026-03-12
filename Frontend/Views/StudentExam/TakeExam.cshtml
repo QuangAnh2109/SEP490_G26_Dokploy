@@ -82,7 +82,7 @@
                 </aside>
 
                 <div class="toolbar d-flex gap-2 mt-3 mb-3">
-                    <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                    <button class="btn btn-danger flex-grow-1" id="btnSubmitExam" onclick="confirmSubmit()">Nộp bài</button>
                 </div>
 
                 <div id="inputTypeContainer" class="soft-card" hidden>
@@ -139,6 +139,10 @@
         const multipleChoice = "MultipleChoice";
         var questionNumber = 1;
 
+        // ── Timer variables ──
+        var timerInterval = null;
+        var remainingSeconds = 0;
+
         var questionHeader;
         var questionLoading;
         var questionArea;
@@ -171,6 +175,9 @@
                     console.log(exam);
                     buildQuestionNav(exam.questions.length);
                     goToQuestion(1);
+
+                    // ── Khởi tạo bộ đếm thời gian ──
+                    startCountdown(exam.duration);
                 })
                 .catch((error) => {
                     alert("Lỗi: " + error.message);
@@ -327,6 +334,74 @@
             if (!isInsidePlaceholder) {
                 const container = document.getElementById('inputTypeContainer');
                 if (container) container.hidden = true;
+            }
+        }
+
+        // ══════════════════════════════════════════
+        // ── Bộ đếm thời gian nộp bài ──
+        // ══════════════════════════════════════════
+
+        function startCountdown(durationMinutes) {
+            // Dừng timer cũ nếu có
+            if (timerInterval) clearInterval(timerInterval);
+
+            remainingSeconds = Math.max(0, Math.floor(durationMinutes * 60));
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+
+                if (remainingSeconds <= 0) {
+                    remainingSeconds = 0;
+                    clearInterval(timerInterval);
+                    updateTimerDisplay();
+                    // Hết giờ → tự động nộp bài
+                    alert("Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.");
+                    submitExam(true);
+                    return;
+                }
+
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        /**
+         * Cập nhật hiển thị bộ đếm trên giao diện.
+         */
+        function updateTimerDisplay() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            const display = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+            const el = document.getElementById('countdownTimer');
+            if (el) {
+                el.textContent = display;
+
+                // Đổi màu khi còn ít thời gian (≤ 5 phút)
+                if (remainingSeconds <= 300) {
+                    el.style.color = '#dc3545';
+                } else {
+                    el.style.color = '';
+                }
+            }
+        }
+
+        /**
+         * Xác nhận trước khi nộp bài (cho nút Nộp bài).
+         */
+        function confirmSubmit() {
+            if (confirm('Bạn có chắc chắn muốn nộp bài?')) {
+                submitExam(true);
+            }
+        }
+
+        function submitExam(isFinal) {
+            // TODO: Implement logic nộp bài
+            console.log('submitExam called with isFinal =', isFinal);
+
+            if (isFinal) {
+                // Dừng bộ đếm khi nộp bài chính thức
+                if (timerInterval) clearInterval(timerInterval);
             }
         }
     </script>
