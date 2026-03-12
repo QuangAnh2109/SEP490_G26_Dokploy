@@ -117,7 +117,7 @@ namespace Backend.Services.Implements
                 };
             }).ToList();
 
-            // 6. Shuffle questions nếu cần
+            // 6. Shuffle questions
             if (paper.Exam.ShuffleQuestion)
             {
                 questions.Shuffle();
