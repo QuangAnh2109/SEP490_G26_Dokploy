@@ -126,7 +126,7 @@ const apiClient = {
             };
 
             if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-                ajaxOptions.data = JSON.stringify(data);
+                ajaxOptions.data = JSON.stringify(data || {});
             }
 
             $.ajax(ajaxOptions);
