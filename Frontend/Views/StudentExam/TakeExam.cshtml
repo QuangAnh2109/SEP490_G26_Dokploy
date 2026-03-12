@@ -214,16 +214,16 @@
                 questionBlockFibField.hidden = false;
 
                 // ── Khôi phục đáp án FIB đã lưu ──
-                question.answers.forEach(answer => {
-                    const answerId = String(answer.questionAnswerId);
-                    if (studentAnswers.has(answerId)) {
-                        const placeholderMatch = answer.content.match(regexPlaceholder);
-                        if (placeholderMatch) {
-                            const promptId = placeholderMatch[1];
-                            questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                    question.answers.forEach(answer => {
+                        const answerId = String(answer.questionAnswerId);
+                        if (studentAnswers.has(answerId)) {
+                            const placeholderMatch = answer.content.match(regexPlaceholder);
+                            if (placeholderMatch) {
+                                const promptId = placeholderMatch[1];
+                                questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                            }
                         }
-                    }
-                });
+                    });
 
                 selectionHandler = () => {
                     let placeholderId = [];
@@ -337,11 +337,15 @@
                 });
             }
             else if (question.questionType === fillInBlank) {
-                // FIB: lấy nội dung latex từ mỗi placeholder
-                question.answers.forEach(answer => {
-                    const placeholderMatch = answer.content.match(regexPlaceholder);
-                    if (placeholderMatch) {
-                        const promptId = placeholderMatch[1];
+                // FIB: dùng getPrompts() của MathLive để lấy danh sách prompt ID
+                const promptIds = questionBlockFibField.getPrompts();
+                promptIds.forEach(promptId => {
+                    // Tìm answer tương ứng với promptId
+                    const answer = question.answers.find(a => {
+                        const match = a.content.match(regexPlaceholder);
+                        return match && match[1] === promptId;
+                    });
+                    if (answer) {
                         const latex = questionBlockFibField.getPromptValue(promptId, 'latex');
                         const answerId = String(answer.questionAnswerId);
                         if (latex && latex.trim() !== '') {
@@ -477,13 +481,78 @@
         }
 
         function submitExam(isFinal) {
-            // TODO: Implement logic nộp bài
-            console.log('submitExam called with isFinal =', isFinal);
+            // Lưu đáp án câu hiện tại trước khi nộp
+            saveCurrentAnswers();
 
             if (isFinal) {
                 // Dừng bộ đếm khi nộp bài chính thức
                 if (timerInterval) clearInterval(timerInterval);
             }
+
+            // Lấy examId từ URL
+            const examId = parseInt(new URLSearchParams(window.location.search).get('examId'));
+
+            // Xây dựng danh sách StudentAnswerDto từ studentAnswers Map
+            const studentAnswerDtos = [];
+            studentAnswers.forEach((response, questionAnswerId) => {
+                console.log('Map key:', questionAnswerId, 'type:', typeof questionAnswerId, 'parseInt:', parseInt(questionAnswerId));
+                studentAnswerDtos.push({
+                    questionAnswerId: parseInt(questionAnswerId),
+                    response: response === '' ? null : response
+                });
+            });
+
+            // Tạo SubmitExamRequest
+            const requestBody = {
+                examId: examId,
+                studentAnswers: studentAnswerDtos,
+                submit: isFinal
+            };
+
+            console.log('submitExam request:', requestBody);
+            console.log('submitExam JSON:', JSON.stringify(requestBody));
+
+            // Disable nút nộp bài để tránh nhấn nhiều lần
+            const btnSubmit = document.getElementById('btnSubmitExam');
+            if (btnSubmit) btnSubmit.disabled = true;
+
+            apiClient.post('/api/submission/submit', requestBody)
+                .then((response) => {
+                    console.log('submitExam response:', response);
+
+                    if (isFinal) {
+                        // Hiển thị thông báo nộp bài
+                        const submittedAt = new Date(response.submittedAtUtc);
+                        const formattedTime = submittedAt.toLocaleString('vi-VN', {
+                            timeZone: 'Asia/Ho_Chi_Minh',
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+
+                        if (response.isLate) {
+                            alert(`Nộp bài trễ!\nThời điểm ghi nhận: ${formattedTime}\nBài làm của bạn đã được nộp nhưng đã quá thời hạn.`);
+                        } else {
+                            alert(`Nộp bài thành công!\nThời điểm ghi nhận: ${formattedTime}`);
+                        }
+
+                        // Chuyển hướng hoặc vô hiệu hóa giao diện sau khi nộp
+                        document.getElementById('examWorkspace').style.pointerEvents = 'none';
+                        document.getElementById('examWorkspace').style.opacity = '0.6';
+                    } else {
+                        // Cập nhật lựa chọn thành công (không cần thông báo)
+                        if (btnSubmit) btnSubmit.disabled = false;
+                    }
+                })
+                .catch((error) => {
+                    console.error('submitExam error:', error);
+                    alert('Lỗi khi nộp bài: ' + error.message);
+                    if (btnSubmit) btnSubmit.disabled = false;
+
+                    // Nếu nộp bài cuối cùng thất bại, khởi động lại timer
+                    if (isFinal && remainingSeconds > 0) {
+                        startCountdown(remainingSeconds / 60);
+                    }
+                });
         }
     </script>
 }
