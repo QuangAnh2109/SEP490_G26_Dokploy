@@ -143,6 +143,11 @@
         var timerInterval = null;
         var remainingSeconds = 0;
 
+        // ── Lưu đáp án học sinh: Map<string, string> ──
+        // key: questionAnswerId (string)
+        // value: response (string) — rỗng với MCQ, latex với FIB
+        var studentAnswers = new Map();
+
         var questionHeader;
         var questionLoading;
         var questionArea;
@@ -207,6 +212,19 @@
                 document.getElementById('question-block-fib-field').value = questionContent.frame;
                 questionBlockFib.hidden = false;
                 questionBlockFibField.hidden = false;
+
+                // ── Khôi phục đáp án FIB đã lưu ──
+                question.answers.forEach(answer => {
+                    const answerId = String(answer.questionAnswerId);
+                    if (studentAnswers.has(answerId)) {
+                        const placeholderMatch = answer.content.match(regexPlaceholder);
+                        if (placeholderMatch) {
+                            const promptId = placeholderMatch[1];
+                            questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                        }
+                    }
+                });
+
                 selectionHandler = () => {
                     let placeholderId = [];
                     for (const item of question.answers) {
@@ -233,13 +251,32 @@
 
                     var li = newOption.querySelector("li");
 
-                    li.querySelector("input").value = answer.questionAnswerId;
+                    var checkbox = li.querySelector("input");
+                    var answerId = String(answer.questionAnswerId);
+                    checkbox.value = answerId;
+
+                    // ── Khôi phục trạng thái checked từ Map ──
+                    if (studentAnswers.has(answerId)) {
+                        checkbox.checked = true;
+                    }
+
+                    // ── Lưu/xóa đáp án MCQ khi checkbox thay đổi ──
+                    checkbox.addEventListener('change', function () {
+                        if (this.checked) {
+                            studentAnswers.set(answerId, '');
+                        } else {
+                            studentAnswers.delete(answerId);
+                        }
+                        console.log('studentAnswers:', Object.fromEntries(studentAnswers));
+                    });
 
                     li.querySelector("math-span").textContent = answer.content;
 
                     questionMcq.appendChild(newOption);
                 });
             }
+
+            console.log(studentAnswers);
 
             //Hiện câu hỏi
             questionLoading.hidden = true;
@@ -261,6 +298,9 @@
         }
 
         function goToQuestion(num) {
+            // ── Lưu đáp án câu hiện tại trước khi chuyển ──
+            saveCurrentAnswers();
+
             questionNumber = num;
             renderQuestion(exam.questions[num-1]);
 
@@ -273,6 +313,47 @@
                     btn.classList.add('btn-outline-primary');
                 }
             });
+        }
+
+        // ══════════════════════════════════════════
+        // ── Lưu đáp án học sinh ──
+        // ══════════════════════════════════════════
+
+        function saveCurrentAnswers() {
+            if (!exam) return;
+            const question = exam.questions[questionNumber - 1];
+            if (!question) return;
+
+            if (question.questionType === multipleChoice) {
+                // MCQ: duyệt tất cả checkbox, cập nhật Map
+                const checkboxes = questionMcq.querySelectorAll('input[name="answer"]');
+                checkboxes.forEach(cb => {
+                    const answerId = String(cb.value);
+                    if (cb.checked) {
+                        studentAnswers.set(answerId, '');
+                    } else {
+                        studentAnswers.delete(answerId);
+                    }
+                });
+            }
+            else if (question.questionType === fillInBlank) {
+                // FIB: lấy nội dung latex từ mỗi placeholder
+                question.answers.forEach(answer => {
+                    const placeholderMatch = answer.content.match(regexPlaceholder);
+                    if (placeholderMatch) {
+                        const promptId = placeholderMatch[1];
+                        const latex = questionBlockFibField.getPromptValue(promptId, 'latex');
+                        const answerId = String(answer.questionAnswerId);
+                        if (latex && latex.trim() !== '') {
+                            studentAnswers.set(answerId, latex);
+                        } else {
+                            studentAnswers.delete(answerId);
+                        }
+                    }
+                });
+            }
+
+            console.log('studentAnswers saved:', Object.fromEntries(studentAnswers));
         }
 
         function selectPlaceholder(mathField, placeholderId){
