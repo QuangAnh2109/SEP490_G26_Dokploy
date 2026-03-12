@@ -94,14 +94,14 @@ namespace Backend.Services.Implements
                 // Map answers
                 var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
                 {
-                    QuestionAnswerId = SecureIdHelper.EncryptId(qa.QuestionAnswerId),
+                    QuestionAnswerId = qa.QuestionAnswerId.ToString(),
                     Content = qa.Content,
                     GroupAnswerId = qa.GroupAnswerId.HasValue
-                        ? SecureIdHelper.EncryptId(qa.GroupAnswerId.Value)
+                        ? qa.GroupAnswerId.Value.ToString()
                         : null,
                     InputTypes = qa.BlankInputs.Select(bi => new TakeExamInputTypeDto
                     {
-                        InputTypeId = SecureIdHelper.EncryptId(bi.InputTypeId),
+                        InputTypeId = bi.InputTypeId.ToString(),
                         Name = bi.InputType.Name,
                         GroupType = bi.InputType.GroupType
                     }).ToList()
@@ -109,7 +109,7 @@ namespace Backend.Services.Implements
 
                 return new TakeExamQuestionDto
                 {
-                    QuestionId = SecureIdHelper.EncryptId(q.QuestionId),
+                    QuestionId = q.QuestionId.ToString(),
                     QuestionType = q.QuestionType,
                     QuestionContent = q.QuestionContent,
                     Difficulty = q.Difficulty,
@@ -126,8 +126,8 @@ namespace Backend.Services.Implements
             // 7. Trả về TakeExamDto
             return new TakeExamDto
             {
-                ExamId = SecureIdHelper.EncryptId(paper.Exam.ExamId),
-                SubmissionId = SecureIdHelper.EncryptId(activeSubmission.SubmissionId),
+                ExamId = paper.Exam.ExamId.ToString(),
+                SubmissionId = activeSubmission.SubmissionId.ToString(),
                 Duration = paper.Exam.Duration,
                 Code = paper.Code,
                 Questions = questions
