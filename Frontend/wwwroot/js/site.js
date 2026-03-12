@@ -42,7 +42,7 @@ function parseJwt(token) {
 
         return JSON.parse(jsonPayload);
     } catch (e) {
-        return null; 
+        return null;
     }
 }
 
@@ -77,7 +77,7 @@ function getUserEmail() {
     const decoded = parseJwt(token);
     if (!decoded) return null;
 
-    return decoded['email'] 
+    return decoded['email']
         || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
 }
 
@@ -89,11 +89,12 @@ function getAuthProvider() {
     const decoded = parseJwt(token);
     if (!decoded) return null;
 
-    return decoded['auth_provider'] || null; // 'google' hoặc 'password'
+    return decoded['auth_provider'] || null;
 }
 
 function isGoogleUser() {
-    return getAuthProvider() === 'google';
+    const provider = getAuthProvider();
+    return provider === 'google';
 }
 
 function isAuthenticated() {
@@ -150,12 +151,12 @@ function showToast(message, type = 'success', duration = 3000) {
     const toastEl = t.content.cloneNode(true).firstElementChild;
     const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
     toastEl.classList.add(bgClass);
-    
+
     const body = toastEl.querySelector('[data-message]');
     if (body) body.textContent = message;
 
     container.appendChild(toastEl);
-    
+
     const bsToast = new bootstrap.Toast(toastEl, { delay: duration });
     bsToast.show();
 
@@ -176,7 +177,7 @@ function showConfirm(message, title = 'Xác nhận', onConfirm) {
     if (msgEl) msgEl.textContent = message;
 
     const modal = new bootstrap.Modal(modalEl);
-    
+
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
