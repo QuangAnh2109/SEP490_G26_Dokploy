@@ -1,8 +1,12 @@
 using System.Security.Claims;
+using System.Text.Json;
+
 using Backend.DTOs;
 using Backend.Services.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Backend.Controllers;
 
@@ -13,9 +17,12 @@ public class SubmissionController : ControllerBase
 {
     private readonly ISubmissionService _submissionService;
 
-    public SubmissionController(ISubmissionService submissionService)
+    private readonly ILogger<SubmissionController> _logger;
+
+    public SubmissionController(ISubmissionService submissionService, ILogger<SubmissionController> logger)
     {
         _submissionService = submissionService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -26,6 +33,8 @@ public class SubmissionController : ControllerBase
         [FromBody] SubmitExamRequest request,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("LOG DỮ LIỆU GỬI VỀ ĐỂ NỘP BÀI");
+        _logger.LogInformation(JsonSerializer.Serialize(request));
         try
         {
             // Lấy studentId từ JWT token

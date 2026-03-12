@@ -82,7 +82,7 @@
                 </aside>
 
                 <div class="toolbar d-flex gap-2 mt-3 mb-3">
-                    <button class="btn btn-danger flex-grow-1">Nộp bài</button>
+                    <button class="btn btn-danger flex-grow-1" id="btnSubmitExam" onclick="confirmSubmit()">Nộp bài</button>
                 </div>
 
                 <div id="inputTypeContainer" class="soft-card" hidden>
@@ -139,6 +139,15 @@
         const multipleChoice = "MultipleChoice";
         var questionNumber = 1;
 
+        // ── Timer variables ──
+        var timerInterval = null;
+        var remainingSeconds = 0;
+
+        // ── Lưu đáp án học sinh: Map<string, string> ──
+        // key: questionAnswerId (string)
+        // value: response (string) — rỗng với MCQ, latex với FIB
+        var studentAnswers = new Map();
+
         var questionHeader;
         var questionLoading;
         var questionArea;
@@ -171,6 +180,9 @@
                     console.log(exam);
                     buildQuestionNav(exam.questions.length);
                     goToQuestion(1);
+
+                    // ── Khởi tạo bộ đếm thời gian ──
+                    startCountdown(exam.duration);
                 })
                 .catch((error) => {
                     alert("Lỗi: " + error.message);
@@ -200,6 +212,19 @@
                 document.getElementById('question-block-fib-field').value = questionContent.frame;
                 questionBlockFib.hidden = false;
                 questionBlockFibField.hidden = false;
+
+                // ── Khôi phục đáp án FIB đã lưu ──
+                    question.answers.forEach(answer => {
+                        const answerId = String(answer.questionAnswerId);
+                        if (studentAnswers.has(answerId)) {
+                            const placeholderMatch = answer.content.match(regexPlaceholder);
+                            if (placeholderMatch) {
+                                const promptId = placeholderMatch[1];
+                                questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                            }
+                        }
+                    });
+
                 selectionHandler = () => {
                     let placeholderId = [];
                     for (const item of question.answers) {
@@ -226,13 +251,32 @@
 
                     var li = newOption.querySelector("li");
 
-                    li.querySelector("input").value = answer.questionAnswerId;
+                    var checkbox = li.querySelector("input");
+                    var answerId = String(answer.questionAnswerId);
+                    checkbox.value = answerId;
+
+                    // ── Khôi phục trạng thái checked từ Map ──
+                    if (studentAnswers.has(answerId)) {
+                        checkbox.checked = true;
+                    }
+
+                    // ── Lưu/xóa đáp án MCQ khi checkbox thay đổi ──
+                    checkbox.addEventListener('change', function () {
+                        if (this.checked) {
+                            studentAnswers.set(answerId, '');
+                        } else {
+                            studentAnswers.delete(answerId);
+                        }
+                        console.log('studentAnswers:', Object.fromEntries(studentAnswers));
+                    });
 
                     li.querySelector("math-span").textContent = answer.content;
 
                     questionMcq.appendChild(newOption);
                 });
             }
+
+            console.log(studentAnswers);
 
             //Hiện câu hỏi
             questionLoading.hidden = true;
@@ -254,6 +298,9 @@
         }
 
         function goToQuestion(num) {
+            // ── Lưu đáp án câu hiện tại trước khi chuyển ──
+            saveCurrentAnswers();
+
             questionNumber = num;
             renderQuestion(exam.questions[num-1]);
 
@@ -266,6 +313,51 @@
                     btn.classList.add('btn-outline-primary');
                 }
             });
+        }
+
+        // ══════════════════════════════════════════
+        // ── Lưu đáp án học sinh ──
+        // ══════════════════════════════════════════
+
+        function saveCurrentAnswers() {
+            if (!exam) return;
+            const question = exam.questions[questionNumber - 1];
+            if (!question) return;
+
+            if (question.questionType === multipleChoice) {
+                // MCQ: duyệt tất cả checkbox, cập nhật Map
+                const checkboxes = questionMcq.querySelectorAll('input[name="answer"]');
+                checkboxes.forEach(cb => {
+                    const answerId = String(cb.value);
+                    if (cb.checked) {
+                        studentAnswers.set(answerId, '');
+                    } else {
+                        studentAnswers.delete(answerId);
+                    }
+                });
+            }
+            else if (question.questionType === fillInBlank) {
+                // FIB: dùng getPrompts() của MathLive để lấy danh sách prompt ID
+                const promptIds = questionBlockFibField.getPrompts();
+                promptIds.forEach(promptId => {
+                    // Tìm answer tương ứng với promptId
+                    const answer = question.answers.find(a => {
+                        const match = a.content.match(regexPlaceholder);
+                        return match && match[1] === promptId;
+                    });
+                    if (answer) {
+                        const latex = questionBlockFibField.getPromptValue(promptId, 'latex');
+                        const answerId = String(answer.questionAnswerId);
+                        if (latex && latex.trim() !== '') {
+                            studentAnswers.set(answerId, latex);
+                        } else {
+                            studentAnswers.delete(answerId);
+                        }
+                    }
+                });
+            }
+
+            console.log('studentAnswers saved:', Object.fromEntries(studentAnswers));
         }
 
         function selectPlaceholder(mathField, placeholderId){
@@ -328,6 +420,139 @@
                 const container = document.getElementById('inputTypeContainer');
                 if (container) container.hidden = true;
             }
+        }
+
+        // ══════════════════════════════════════════
+        // ── Bộ đếm thời gian nộp bài ──
+        // ══════════════════════════════════════════
+
+        function startCountdown(durationMinutes) {
+            // Dừng timer cũ nếu có
+            if (timerInterval) clearInterval(timerInterval);
+
+            remainingSeconds = Math.max(0, Math.floor(durationMinutes * 60));
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+
+                if (remainingSeconds <= 0) {
+                    remainingSeconds = 0;
+                    clearInterval(timerInterval);
+                    updateTimerDisplay();
+                    // Hết giờ → tự động nộp bài
+                    alert("Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.");
+                    submitExam(true);
+                    return;
+                }
+
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        /**
+         * Cập nhật hiển thị bộ đếm trên giao diện.
+         */
+        function updateTimerDisplay() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            const display = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+            const el = document.getElementById('countdownTimer');
+            if (el) {
+                el.textContent = display;
+
+                // Đổi màu khi còn ít thời gian (≤ 5 phút)
+                if (remainingSeconds <= 300) {
+                    el.style.color = '#dc3545';
+                } else {
+                    el.style.color = '';
+                }
+            }
+        }
+
+        /**
+         * Xác nhận trước khi nộp bài (cho nút Nộp bài).
+         */
+        function confirmSubmit() {
+            if (confirm('Bạn có chắc chắn muốn nộp bài?')) {
+                submitExam(true);
+            }
+        }
+
+        function submitExam(isFinal) {
+            // Lưu đáp án câu hiện tại trước khi nộp
+            saveCurrentAnswers();
+
+            if (isFinal) {
+                // Dừng bộ đếm khi nộp bài chính thức
+                if (timerInterval) clearInterval(timerInterval);
+            }
+
+            // Lấy examId từ URL
+            const examId = parseInt(new URLSearchParams(window.location.search).get('examId'));
+
+            // Xây dựng danh sách StudentAnswerDto từ studentAnswers Map
+            const studentAnswerDtos = [];
+            studentAnswers.forEach((response, questionAnswerId) => {
+                console.log('Map key:', questionAnswerId, 'type:', typeof questionAnswerId, 'parseInt:', parseInt(questionAnswerId));
+                studentAnswerDtos.push({
+                    questionAnswerId: parseInt(questionAnswerId),
+                    response: response === '' ? null : response
+                });
+            });
+
+            // Tạo SubmitExamRequest
+            const requestBody = {
+                examId: examId,
+                studentAnswers: studentAnswerDtos,
+                submit: isFinal
+            };
+
+            console.log('submitExam request:', requestBody);
+            console.log('submitExam JSON:', JSON.stringify(requestBody));
+
+            // Disable nút nộp bài để tránh nhấn nhiều lần
+            const btnSubmit = document.getElementById('btnSubmitExam');
+            if (btnSubmit) btnSubmit.disabled = true;
+
+            apiClient.post('/api/submission/submit', requestBody)
+                .then((response) => {
+                    console.log('submitExam response:', response);
+
+                    if (isFinal) {
+                        // Hiển thị thông báo nộp bài
+                        const submittedAt = new Date(response.submittedAtUtc);
+                        const formattedTime = submittedAt.toLocaleString('vi-VN', {
+                            timeZone: 'Asia/Ho_Chi_Minh',
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+
+                        if (response.isLate) {
+                            alert(`Nộp bài trễ!\nThời điểm ghi nhận: ${formattedTime}\nBài làm của bạn đã được nộp nhưng đã quá thời hạn.`);
+                        } else {
+                            alert(`Nộp bài thành công!\nThời điểm ghi nhận: ${formattedTime}`);
+                        }
+
+                        // Chuyển hướng hoặc vô hiệu hóa giao diện sau khi nộp
+                        document.getElementById('examWorkspace').style.pointerEvents = 'none';
+                        document.getElementById('examWorkspace').style.opacity = '0.6';
+                    } else {
+                        // Cập nhật lựa chọn thành công (không cần thông báo)
+                        if (btnSubmit) btnSubmit.disabled = false;
+                    }
+                })
+                .catch((error) => {
+                    console.error('submitExam error:', error);
+                    alert('Lỗi khi nộp bài: ' + error.message);
+                    if (btnSubmit) btnSubmit.disabled = false;
+
+                    // Nếu nộp bài cuối cùng thất bại, khởi động lại timer
+                    if (isFinal && remainingSeconds > 0) {
+                        startCountdown(remainingSeconds / 60);
+                    }
+                });
         }
     </script>
 }
