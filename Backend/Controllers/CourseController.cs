@@ -27,12 +27,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // TEMPORARY for debugging only
-        //[HttpGet]
-        //public async Task<IActionResult> GetAll()
-        //{
-        //    return Ok(await _service.GetAllAsync());
-        //}
 
         [HttpGet("my")]
         [Authorize(Roles = "Teacher,Student")]
@@ -60,8 +54,6 @@ namespace Backend.Controllers
             return Ok(exams);
         }
 
-        // New: return chapters belonging to the class's subject
-        // Route: GET api/course/{id}/chapters
         [HttpGet("{id}/chapters")]
         [Authorize]
         public async Task<IActionResult> GetChaptersForClass(int id)
@@ -83,7 +75,6 @@ namespace Backend.Controllers
             {
                 return Unauthorized();
             }
-
             try
             {
                 await _service.LeaveCourseAsync(id, userId);
@@ -143,8 +134,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                // Typically you might use an ApiException filter or specific exceptions,
-                // but for now catching generic exceptions matched in the Service layer is fine.
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -183,8 +172,6 @@ namespace Backend.Controllers
         [Authorize(Roles = "Teacher")]
         public IActionResult GetSubjects()
         {
-            // A simple endpoint to fetch subjects for the dropdown
-            // Ideally should be in ISubjectService, placing here for quick access matching the plan
             var subjects = _context.Subjects
                 .Select(s => new { s.SubjectId, s.Name, s.Code })
                 .ToList();

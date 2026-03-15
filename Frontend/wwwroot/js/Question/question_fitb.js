@@ -170,14 +170,16 @@ window.QuestionEditorFITB = (() => {
                         const newContent = seg.content;
                         // Use a custom property to track last content to avoid unnecessary DOM updates
                         if (contentElem._lastContent !== newContent) {
-                            UTILS.setMathValue(contentElem, newContent);
+                            UTILS.renderLatexInElement(contentElem, newContent);
                             contentElem._lastContent = newContent;
                         }
-                    }
-                    fragment.appendChild(card);
-                    existingCards.delete(sIdx);
+
                 }
-            });
+                fragment.appendChild(card);
+                existingCards.delete(sNum);
+            }
+        });
+
 
             // Remove cards no longer in use
             existingCards.forEach(c => c.remove());
@@ -201,7 +203,7 @@ window.QuestionEditorFITB = (() => {
         const nameInp = r.querySelector('[data-blank-group-name]');
         if (initialData) {
             if (nameInp) {
-                nameInp.value = initialData.name || 'Nhóm';
+                nameInp.value = initialData.name || 'Hình thức';
             }
             if (initialData.groupAnswerId) {
                 r.setAttribute('data-group-id', initialData.groupAnswerId);
@@ -209,11 +211,12 @@ window.QuestionEditorFITB = (() => {
         } else {
             if (nameInp) {
                 const count = list.querySelectorAll('[data-blank-group-item]').length;
-                nameInp.value = `Nhóm ${count + 1}`;
+                nameInp.value = `Hình thức ${count + 1}`;
             }
         }
 
         const removeBtn = r.querySelector('[data-remove-blank-group]');
+
         removeBtn?.addEventListener('click', () => {
             r.remove();
         });
@@ -357,60 +360,40 @@ window.QuestionEditorFITB = (() => {
         syncBlankGroupSegments(item);
     };
 
+    const insertPlaceholder = (item) => {
+        const latex = UTILS.getFrameLatex(item);
+        const existing = UTILS.getNumberedPlaceholders(latex);
+
+        let next = 1;
+        for (const n of existing.sort((a, b) => a - b)) {
+            if (n === next) {
+                next++;
+            } else if (n > next) {
+                break;
+            }
+        }
+
+        const ph = `\\placeholder[${next}]{}`;
+        const raw = item.querySelector('[data-tabbed-editor="frame"] [data-editor-code]');
+        if (raw) {
+            let pos = raw.selectionStart || raw.value.length;
+            const prefix = (pos > 0 && raw.value[pos - 1] !== ' ' && raw.value[pos - 1] !== '\n') ? ' ' : '';
+            raw.value = raw.value.slice(0, pos) + prefix + ph + raw.value.slice(pos);
+            raw.selectionStart = raw.selectionEnd = pos + prefix.length + ph.length;
+            raw.focus();
+
+            syncPlaceholderState(item, item._inputTypesData);
+            if (item._frameEditor) {
+                item._frameEditor.refreshPreview();
+            }
+        }
+    };
+
     const init = (item) => {
-        const insertBtn = item.querySelector('[data-insert-placeholder]');
-        insertBtn?.addEventListener('click', () => {
-            const mf = item.querySelector('[data-frame-editor]');
-            const latex = UTILS.getFrameLatex(item);
-            const existing = UTILS.getNumberedPlaceholders(latex);
 
-            let next = 1;
-            for (const n of existing.sort((a, b) => a - b)) {
-                if (n === next) {
-                    next++;
-                } else if (n > next) {
-                    break;
-                }
-            }
 
-            const ph = `\\placeholder[${next}]{}`;
 
-            if (mf.classList.contains('d-none')) {
-                const raw = item.querySelector('[data-frame-raw]');
-                let pos = raw.selectionStart || raw.value.length;
-                const textBefore = raw.value.slice(0, pos);
-                const openMatch = textBefore.match(/\\placeholder\s*\[\d+\]\s*\{[^}]*$/);
 
-                if (openMatch) {
-                    const nextBrace = raw.value.indexOf('}', pos);
-                    if (nextBrace !== -1) {
-                        pos = nextBrace + 1;
-                    }
-                }
-
-                const prefix = (pos > 0 && raw.value[pos - 1] !== ' ' && raw.value[pos - 1] !== '\n') ? ' ' : '';
-                raw.value = raw.value.slice(0, pos) + prefix + ph + raw.value.slice(pos);
-                raw.selectionStart = raw.selectionEnd = pos + prefix.length + ph.length;
-                raw.focus();
-            } else {
-                if (typeof mf.insert === 'function') {
-                    mf.focus();
-                    for (let i = 0; i < 3; i++) {
-                        mf.executeCommand('moveAfterParent');
-                    }
-                    mf.insert(ph, {
-                        focus: true,
-                        selectionMode: 'after'
-                    });
-                } else {
-                    UTILS.setMathValue(mf, UTILS.getMathValue(mf) + ph);
-                }
-            }
-
-            setTimeout(() => {
-                syncPlaceholderState(item, item._inputTypesData);
-            }, 50);
-        });
 
         const scoringToggle = item.querySelector('[data-scoring-toggle]');
         scoringToggle?.addEventListener('change', () => {
@@ -500,8 +483,11 @@ window.QuestionEditorFITB = (() => {
     };
 
     const setData = (item, data, inputTypesData) => {
-        const frameEditor = item.querySelector('[data-frame-editor]');
-        UTILS.setMathValue(frameEditor, data.frame || '');
+        if (item._frameEditor) {
+            item._frameEditor.setValue(data.frame || '');
+        }
+
+
 
         setTimeout(() => {
             syncPlaceholderState(item, inputTypesData);
@@ -602,7 +588,9 @@ window.QuestionEditorFITB = (() => {
             }
         },
         init,
+        insertPlaceholder,
         getPayload,
         setData
     };
 })();
+

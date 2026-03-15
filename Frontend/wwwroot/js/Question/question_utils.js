@@ -67,6 +67,9 @@ window.QuestionEditorUtils = (() => {
     };
 
     const getFrameLatex = (item) => {
+        if (item._frameEditor) {
+            return item._frameEditor.getValue();
+        }
         const raw = item.querySelector('[data-frame-raw]');
         if (raw && !raw.classList.contains('d-none')) {
             return raw.value;
@@ -75,58 +78,18 @@ window.QuestionEditorUtils = (() => {
         return getMathValue(editor);
     };
 
-    const setupPairToggle = (mathField, rawTextarea, onChange) => {
-        if (!mathField || !rawTextarea) {
-            return {
-                setRenderMode: () => {}
-            };
-        }
-        let mirroring = false;
-        let currentRenderOn = !mathField.classList.contains('d-none');
-
-        const setRenderMode = (renderOn) => {
-            if (mirroring || renderOn === currentRenderOn) {
-                return;
-            }
-            mirroring = true;
-            currentRenderOn = renderOn;
-            try {
-                if (renderOn) {
-                    setMathValue(mathField, rawTextarea.value);
-                    // Critical: Update display BEFORE triggering onChange events
-                    mathField.classList.remove('d-none');
-                    rawTextarea.classList.add('d-none');
-                } else {
-                    rawTextarea.value = getMathValue(mathField);
-                    mathField.classList.add('d-none');
-                    rawTextarea.classList.remove('d-none');
-                    if (document.activeElement !== rawTextarea) {
-                        rawTextarea.focus();
-                    }
-                }
-                if (onChange) {
-                    onChange();
-                }
-            } finally {
-                setTimeout(() => {
-                    mirroring = false;
-                }, 100);
-            }
-        };
 
 
-        return {
-            setRenderMode
-        };
-    };
+
 
     const parseLatexSegments = (latex) => {
         if (!latex || !latex.trim()) {
             return [];
         }
         let s = latex.trim();
-        const dlMatch = s.match(/^\\displaylines\s*\{([\s\S]*)\}$/);
-        const inner = dlMatch ? dlMatch[1] : s;
+        const dlMatch = s.match(/^\\displaylines\s*\{([\s\S]*)\}\s*$/);
+        const inner = dlMatch ? dlMatch[1].trim() : s;
+
         const segments = [];
         let current = "";
         let envDepth = 0;
@@ -168,13 +131,165 @@ window.QuestionEditorUtils = (() => {
         }));
     };
 
+    const renderLatexInElement = (previewBox, content, options = {}) => {
+        if (!content || !content.trim()) {
+            previewBox.innerHTML = options.placeholder || "<p style='color:#ccc; font-style: italic;'>Nội dung trống...</p>";
+            return;
+        }
+
+        let raw = content.trim();
+        // Robust strip \displaylines{ ... }
+        const dlMatch = raw.match(/^\\displaylines\s*\{([\s\S]*)\}\s*$/);
+        const s = dlMatch ? dlMatch[1].trim() : raw;
+
+        const mathRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\(.*?\\\)|\\\[.*?\\\])/g;
+        const hasDelimiters = mathRegex.test(s);
+
+        try {
+            if (window.katex) {
+                if (hasDelimiters) {
+                    let lastIdx = 0;
+                    let processed = "";
+                    let match;
+                    mathRegex.lastIndex = 0;
+
+                    while ((match = mathRegex.exec(s)) !== null) {
+                        let before = s.substring(lastIdx, match.index);
+                        processed += before.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
+                            .replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                                return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
+                            });
+
+                        let mathBlock = match[0];
+                        processed += mathBlock.replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                            return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
+                        });
+                        lastIdx = mathRegex.lastIndex;
+                    }
+
+                    let remaining = s.substring(lastIdx);
+                    processed += remaining.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
+                        .replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                            return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
+                        });
+
+                    previewBox.innerHTML = processed;
+                    if (window.renderMathInElement) {
+                        window.renderMathInElement(previewBox, {
+                            delimiters: [
+                                { left: '$$', right: '$$', display: true },
+                                { left: '$', right: '$', display: false },
+                                { left: '\\(', right: '\\)', display: false },
+                                { left: '\\[', right: '\\]', display: true }
+                            ],
+                            trust: true,
+                            strict: false
+                        });
+                    } else {
+                        window.katex.render(processed, previewBox, { displayMode: true, trust: true, strict: false });
+                    }
+                } else {
+                    // Pure math mode or no delimiters (typical for old DB content)
+                    let processed = s.replace(/\\placeholder\[(\d+)\]\{\}/g, (match, id) => {
+                        return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
+                    });
+
+                    // If it contains \\, wrap in gathered to support multi-line in displayMode
+                    const finalLatex = processed.includes('\\\\') ? `\\begin{gathered}${processed}\\end{gathered}` : processed;
+
+                    window.katex.render(finalLatex, previewBox, {
+                        displayMode: true,
+                        trust: true,
+                        strict: false
+                    });
+                }
+
+                // Convert htmlId elements to actual inputs
+                const fields = previewBox.querySelectorAll('[id^="field-"]');
+                fields.forEach(f => {
+                    const id = f.id.replace('field-', '');
+                    f.innerHTML = `<input type="text" class="katex-input" placeholder="${id}" readonly>`;
+                });
+            } else {
+                previewBox.innerHTML = `<pre>${content}</pre>`;
+            }
+        } catch (e) {
+            previewBox.innerHTML = `<span style="color:red">Lỗi LaTeX: ${e.message}</span>`;
+        }
+    };
+
+    const setupTabbedEditor = (container, { onChange, onInsertPlaceholder } = {}) => {
+        if (!container) return null;
+
+        const btnEdit = container.querySelector('[data-tab-edit]');
+        const btnView = container.querySelector('[data-tab-view]');
+        const codeArea = container.querySelector('[data-editor-code]');
+        const previewBox = container.querySelector('[data-editor-preview]');
+        const btnInsert = container.querySelector('[data-editor-insert]');
+
+        const render = () => {
+            renderLatexInElement(previewBox, codeArea.value);
+        };
+
+
+        btnEdit?.addEventListener('click', () => {
+            btnEdit.classList.add('active');
+            btnView?.classList.remove('active');
+            codeArea.style.display = 'block';
+            previewBox.style.display = 'none';
+            codeArea.focus();
+        });
+
+        btnView?.addEventListener('click', () => {
+            btnView.classList.add('active');
+            btnEdit?.classList.remove('active');
+            codeArea.style.display = 'none';
+            previewBox.style.display = 'block';
+            render();
+        });
+
+        codeArea?.addEventListener('input', () => {
+            if (onChange) onChange();
+        });
+
+        btnInsert?.addEventListener('click', () => {
+            if (onInsertPlaceholder) {
+                onInsertPlaceholder();
+            } else {
+                // Default insert logic if not provided
+                const start = codeArea.selectionStart;
+                const end = codeArea.selectionEnd;
+                const matches = codeArea.value.match(/\\placeholder\[(\d+)\]/g) || [];
+                const nextId = matches.length + 1;
+                const textToInsert = `\\placeholder[${nextId}]{}`;
+                codeArea.value = codeArea.value.substring(0, start) + textToInsert + codeArea.value.substring(end);
+                codeArea.selectionStart = codeArea.selectionEnd = start + textToInsert.length;
+                codeArea.focus();
+                if (onChange) onChange();
+            }
+        });
+
+        return {
+            getValue: () => codeArea.value,
+            setValue: (val) => {
+                codeArea.value = val || '';
+                if (previewBox.style.display === 'block') {
+                    render();
+                }
+            },
+            refreshPreview: render
+        };
+    };
+
     return {
         toArray,
         getMathValue,
         setMathValue,
         getNumberedPlaceholders,
         getFrameLatex,
-        setupPairToggle,
-        parseLatexSegments
+        parseLatexSegments,
+        renderLatexInElement,
+        setupTabbedEditor
     };
 })();
+

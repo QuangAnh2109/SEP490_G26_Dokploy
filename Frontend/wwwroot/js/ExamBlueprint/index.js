@@ -6,7 +6,11 @@ $(document).ready(function () {
     };
 
     const role = getUserRole();
-    if (!(role === 'Teacher' || role === 'Giáo viên' || role === 'Admin' || role === 'Quản trị viên' || role === 'Administrator')) {
+    const allowedRoles = ['Teacher', 'Giáo viên', 'Admin', 'Quản trị viên', 'Administrator'];
+    const userRoles = Array.isArray(role) ? role : [role];
+    const hasPermission = userRoles.some(r => allowedRoles.includes(r));
+
+    if (!hasPermission) {
         showPageError('Bạn không có quyền truy cập màn hình ma trận đề.');
         return;
     }

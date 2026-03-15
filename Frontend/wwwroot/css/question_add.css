@@ -427,3 +427,97 @@
     border-color: var(--danger);
     background: #f8d7da;
 }
+
+/* ═══ Tabbed Editor Interface ═══ */
+.tabbed-editor-container {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.editor-tab-header {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.editor-tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #666;
+    transition: 0.2s;
+    border-bottom: 3px solid transparent;
+}
+
+.editor-tab-btn:hover {
+    background: #f0f2f5;
+}
+
+.editor-tab-btn.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background: white;
+}
+
+.editor-content-area {
+    padding: 0;
+    min-height: 120px;
+    position: relative;
+}
+
+.editor-code-area {
+    width: 100%;
+    min-height: 120px;
+    border: none;
+    padding: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.95rem;
+    resize: vertical;
+    box-sizing: border-box;
+    display: block;
+    outline: none;
+    background: #fff;
+    color: #212529;
+}
+
+.editor-preview-box {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    box-sizing: border-box;
+    display: none;
+    background: #fff;
+}
+
+.editor-toolbar-bottom {
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* KaTeX Input Styling inside Preview */
+.katex-input {
+    border: 1px solid #0d6efd;
+    border-radius: 4px;
+    width: 60px;
+    text-align: center;
+    padding: 2px;
+    margin: 0 5px;
+    font-size: 1.1em;
+    outline: none;
+}
+
+.katex-input:focus {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
