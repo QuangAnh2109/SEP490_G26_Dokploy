@@ -18,11 +18,18 @@ function loadExamPreview() {
         url: `${API_BASE_URL}/api/student/exams/${EXAM_ID}/preview`,
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`
         },
-        success: function (data) {
-            renderPreview(data);
+        success: function (exam) {
+            // Auto-redirect Teacher to Review page if exam is pending approval
+            const role = getUserRole();
+            const examStatus = (exam.status || exam.Status || "").toLowerCase();
+            
+            if ((role === 'Teacher' || role === 'Giáo viên') && examStatus === 'pending') {
+                window.location.href = `/Exam/ExamReview?examId=${EXAM_ID}`;
+                return;
+            }
+            renderPreview(exam);
         },
         error: function (xhr) {
             if (xhr.status === 401) {
@@ -39,34 +46,54 @@ function loadExamPreview() {
 }
 
 function renderPreview(data) {
-    $('#title-text').text(data.title || 'Đề thi');
-    renderStatusBadge(data.status);
-
-    $('#subject-code').text(data.subjectCode || '—');
-    $('#exam-title-card').text(data.title || '—');
-    $('#total-questions').text(data.totalQuestions ? `${data.totalQuestions} câu hỏi` : '—');
-    $('#duration').text(data.duration ? `${data.duration} phút` : '—');
-    $('#open-at').text(formatDateTime(data.openAt));
-    $('#close-at').text(formatDateTime(data.closeAt));
-
-    renderMatrix(data.blueprintMatrix);
-
-    $('#teacher-name').text(data.teacherName || '—');
-    $('#updated-at').text(formatDateTime(data.updatedAtUtc));
-    $('#description').text(data.description || '—');
-
+    const role = getUserRole();
+    const isTeacher = (role === 'Teacher' || role === 'Giáo viên');
     const now = new Date();
     const openAt = data.openAt ? new Date(data.openAt) : null;
     const closeAt = data.closeAt ? new Date(data.closeAt) : null;
     const canTake = (!openAt || now >= openAt) && (!closeAt || now <= closeAt);
 
-    if (canTake) {
-        $('#btn-take-exam').prop('disabled', false).on('click', function () { goToExam(); });
+    if (isTeacher) {
+        $('main').addClass('teacher-theme').removeClass('student-theme');
+        $('#teacher-admin-view').removeClass('d-none');
+        
+        $('#title-text').text(data.title || 'Đề thi');
+        renderStatusBadge(data.status, '#status-badge');
+        
+        $('#subject-code').text(data.subjectCode || '—');
+        $('#exam-title-card').text(data.title || '—');
+        $('#total-questions').text(data.totalQuestions ? `${data.totalQuestions} câu hỏi` : '—');
+        $('#duration').text(data.duration ? `${data.duration} phút` : '—');
+        $('#open-at').text(formatDateTime(data.openAt));
+        $('#close-at').text(formatDateTime(data.closeAt));
+        
+        renderMatrix(data.blueprintMatrix);
+        $('#paper-count-value').text(`${data.paperCount || 0} mã đề`);
+        $('#teacher-name').text(data.teacherName || '—');
+        $('#updated-at').text(formatDateTime(data.updatedAtUtc));
+        $('#description').text(data.description || '—');
+        
     } else {
-        const tooltip = openAt && now < openAt
-            ? `Đề thi chưa mở. Mở lúc ${formatDateTime(data.openAt)}`
-            : `Đề thi đã kết thúc.`;
-        $('#btn-take-exam').prop('disabled', true).attr('title', tooltip);
+        $('main').addClass('student-theme').removeClass('teacher-theme');
+        $('#student-hub').removeClass('d-none');
+        
+        $('#student-exam-title').text(data.title);
+        $('#student-exam-subject').text(`${data.subjectCode} - ${data.subjectName}`);
+        renderStatusBadge(data.status, '#student-status-badge-container');
+        
+        $('#student-duration').text(`${data.duration} phút`);
+        $('#student-questions').text(`${data.totalQuestions} câu`);
+        $('#student-attempts-remaining').text(data.maxAttempts > 0 ? `${data.remainingAttempts} / ${data.maxAttempts}` : 'Vô hạn');
+        $('#student-deadline').text(formatDateTime(data.closeAt));
+
+        if (canTake) {
+            $('#btn-take-exam-student').prop('disabled', false).on('click', function () { goToExam(); });
+        } else {
+            const tooltip = openAt && now < openAt
+                ? `Mở lúc ${formatDateTime(data.openAt)}`
+                : `Hết hạn`;
+            $('#btn-take-exam-student').prop('disabled', true).text(tooltip);
+        }
     }
 
     // Hiển thị nội dung, ẩn loading
@@ -74,14 +101,19 @@ function renderPreview(data) {
     $('#content-state').removeClass('d-none');
 }
 
-function renderStatusBadge(status) {
+function renderStatusBadge(status, containerId) {
     const map = {
         'public': { label: 'Công khai', cls: 'badge-public' },
         'private': { label: 'Riêng tư', cls: 'badge-private' },
         'closed': { label: 'Đã đóng', cls: 'badge-closed' },
+        'pending': { label: 'Chờ duyệt', cls: 'badge-pending' },
+        'inprogress': { label: 'Đang diễn ra', cls: 'badge-inprogress' },
+        'cancelled': { label: 'Đã hủy', cls: 'badge-cancelled' },
     };
     const info = map[status] || { label: status || '', cls: 'badge-unknown' };
-    $('#status-badge').text(info.label).attr('class', `meta-badge ${info.cls}`);
+    
+    const badgeHtml = `<span class="meta-badge ${info.cls}">${info.label}</span>`;
+    $(containerId).html(badgeHtml);
 }
 
 function renderMatrix(matrix) {

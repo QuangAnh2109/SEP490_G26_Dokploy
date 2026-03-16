@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Frontend.Controllers
 {
@@ -41,13 +41,5 @@ namespace Frontend.Controllers
             return View();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> ExamAnalytics(int examId)
-        {
-            // Do Frontend call trực tiếp từ Browser qua JS fetch
-            // Nên Controller MVC chỉ cần hứng ID để gài vào View
-            ViewBag.ExamId = examId;
-            return View();
-        }
     }
 }

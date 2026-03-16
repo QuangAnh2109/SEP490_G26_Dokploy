@@ -173,12 +173,13 @@ window.QuestionEditorFITB = (() => {
                             UTILS.renderLatexInElement(contentElem, newContent);
                             contentElem._lastContent = newContent;
                         }
-
+                    }
                 }
-                fragment.appendChild(card);
-                existingCards.delete(sNum);
-            }
-        });
+                if (card) {
+                    fragment.appendChild(card);
+                    existingCards.delete(sIdx);
+                }
+            });
 
 
             // Remove cards no longer in use

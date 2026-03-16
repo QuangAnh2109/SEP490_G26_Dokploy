@@ -2,519 +2,372 @@ using Backend.DTOs;
 using Backend.Constants;
 using Backend.Models;
 using Backend.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using Backend.Repositories.Interfaces;
+using System.Linq;
 
 namespace Backend.Services.Implements;
 
 public class AssignExamService : IAssignExamService
 {
-    private const int TeacherRoleId = 1;
-    private readonly MtcaSep490G26Context _db;
+    private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogess];
 
-    public AssignExamService(MtcaSep490G26Context db)
+    private readonly IAssignExamRepository _repo;
+
+    public AssignExamService(IAssignExamRepository repo)
     {
-        _db = db;
+        _repo = repo;
     }
 
-    public async Task<AssignExamFiltersResponseDto> GetFiltersAsync(
-        int? teacherId,
-        CancellationToken cancellationToken = default)
+    private async Task EnsureUserActiveAsync(int? id, CancellationToken ct)
     {
-        if (!teacherId.HasValue || teacherId.Value <= 0)
+        if (id is null or <= 0)
         {
             throw new ArgumentException("TeacherId is required.");
         }
 
-        var teacherExists = await _db.Users.AnyAsync(
-            x => x.UserId == teacherId.Value && x.RoleId == TeacherRoleId && x.Status == 1,
-            cancellationToken);
-        if (!teacherExists)
+        bool isActive = await _repo.IsUserActiveAsync(id.Value, ct);
+        if (!isActive)
         {
-            throw new KeyNotFoundException($"TeacherId {teacherId.Value} not found or is not a teacher.");
+            throw new KeyNotFoundException($"User with Id {id} not found or is inactive.");
         }
+    }
 
-        var classQuery = _db.Classes
-            .Where(x => x.Status == 1 && x.TeacherId == teacherId.Value)
-            .AsQueryable();
+    private static void ThrowIf(bool condition, string msg)
+    {
+        if (condition)
+        {
+            throw new ArgumentException(msg);
+        }
+    }
 
-        var subjectRows = await (
-            from c in classQuery
-            join s in _db.Subjects on c.SubjectId equals s.SubjectId
-            select new
-            {
-                s.SubjectId,
-                Code = s.Code ?? string.Empty,
-                s.Name
-            }
-        )
-            .Distinct()
-            .OrderBy(x => x.Code)
-            .ThenBy(x => x.Name)
-            .ToListAsync(cancellationToken);
+    private static string Clean(string? s)
+    {
+        return s?.Trim() ?? string.Empty;
+    }
 
-        var subjects = subjectRows
-            .Select(x => new SubjectOptionDto(x.SubjectId, x.Code, x.Name))
-            .ToList();
+    public async Task<AssignExamFiltersResponseDto> GetFiltersAsync(int? teacherId, CancellationToken ct = default)
+    {
+        await EnsureUserActiveAsync(teacherId, ct);
 
-        var semesters = await classQuery
-            .Select(x => x.Semester)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToListAsync(cancellationToken);
-
-        return new AssignExamFiltersResponseDto(subjects, semesters);
+        return await _repo.GetAssignExamFilterOptionsAsync(teacherId!.Value, ct);
     }
 
     public async Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
-        int? teacherId,
-        string? keyword,
-        string? subjectCode,
-        string? semester,
-        int page,
-        int pageSize,
-        CancellationToken cancellationToken = default)
+        int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 200);
-        keyword = keyword?.Trim();
-        subjectCode = subjectCode?.Trim();
-        semester = semester?.Trim();
+        size = Math.Clamp(size, 1, 200);
 
-        var query =
-            from c in _db.Classes
-            join s in _db.Subjects on c.SubjectId equals s.SubjectId
-            where c.Status == 1
-            select new { c, s };
+        kw = kw?.Trim();
+        subj = subj?.Trim();
+        sem = sem?.Trim();
 
-        if (teacherId.HasValue)
-        {
-            query = query.Where(x => x.c.TeacherId == teacherId.Value);
-        }
+        var (items, total) = await _repo.GetPagedClassesForTeacherAsync(teacherId, kw, subj, sem, page, size, ct);
 
-        if (!string.IsNullOrWhiteSpace(keyword))
-        {
-            query = query.Where(x => x.c.Name.Contains(keyword));
-        }
+        var classListItems = items.Select(x => new ClassListItemDto(
+            x.ClassId,
+            x.Name,
+            x.SubjectCode,
+            x.Semester,
+            x.MemberCount
+        )).ToList();
 
-        if (!string.IsNullOrWhiteSpace(subjectCode))
-        {
-            query = query.Where(x => x.s.Code == subjectCode);
-        }
-
-        if (!string.IsNullOrWhiteSpace(semester))
-        {
-            query = query.Where(x => x.c.Semester == semester);
-        }
-
-        var totalItems = await query.CountAsync(cancellationToken);
-
-        var pageRows = await query
-            .OrderBy(x => x.c.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(x => new
-            {
-                x.c.ClassId,
-                x.c.Name,
-                x.c.Semester,
-                SubjectCode = x.s.Code ?? string.Empty
-            })
-            .ToListAsync(cancellationToken);
-
-        var classIds = pageRows.Select(x => x.ClassId).ToList();
-        var memberCounts = await _db.ClassMembers
-            .Where(x => classIds.Contains(x.ClassId) && x.MemberStatus == 1)
-            .GroupBy(x => x.ClassId)
-            .Select(g => new { ClassId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ClassId, x => x.Count, cancellationToken);
-
-        var items = pageRows
-            .Select(x => new ClassListItemDto(
-                x.ClassId,
-                x.Name,
-                x.SubjectCode,
-                x.Semester,
-                memberCounts.GetValueOrDefault(x.ClassId, 0)))
-            .ToList();
-
-        return new PagedResultDto<ClassListItemDto>(page, pageSize, totalItems, items);
+        return new PagedResultDto<ClassListItemDto>(page, size, total, classListItems);
     }
 
     public async Task<IReadOnlyList<BlueprintListItemDto>> GetBlueprintsAsync(
-        int? teacherId,
-        string? subjectCode,
-        string? keyword,
-        CancellationToken cancellationToken = default)
+        int? teacherId, string? subj, string? kw, CancellationToken ct = default)
     {
-        subjectCode = subjectCode?.Trim();
-        keyword = keyword?.Trim();
+        subj = subj?.Trim();
+        kw = kw?.Trim();
 
-        var query =
-            from b in _db.ExamBlueprints
-            join s in _db.Subjects on b.SubjectId equals s.SubjectId
-            where b.Status == 1
-            select new { b, s };
-
-        if (teacherId.HasValue)
-        {
-            query = query.Where(x => x.b.TeacherId == teacherId.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(subjectCode))
-        {
-            query = query.Where(x => x.s.Code == subjectCode);
-        }
-
-        if (!string.IsNullOrWhiteSpace(keyword))
-        {
-            query = query.Where(x => x.b.Name.Contains(keyword));
-        }
-
-        return await query
-            .OrderByDescending(x => x.b.UpdatedAtUtc)
-            .Select(x => new BlueprintListItemDto(
-                x.b.ExamBlueprintId,
-                x.b.Name,
-                x.s.Code ?? string.Empty,
-                x.b.UpdatedAtUtc,
-                x.b.TotalQuestions))
-            .ToListAsync(cancellationToken);
+        return await _repo.GetBlueprintsAsync(teacherId, subj, kw, ct);
     }
 
-    public async Task<IReadOnlyList<BlueprintDetailRowDto>> GetBlueprintDetailAsync(
-        int blueprintId,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<BlueprintDetailRowDto>> GetBlueprintDetailAsync(int id, CancellationToken ct = default)
     {
-        return await (
-            from bc in _db.ExamBlueprintChapters
-            join ch in _db.Chapters on bc.ChapterId equals ch.ChapterId
-            where bc.ExamBlueprintId == blueprintId
-            orderby ch.ChapterId, bc.Difficulty
-            select new BlueprintDetailRowDto(
-                bc.ChapterId,
-                ch.Name,
-                bc.Difficulty,
-                bc.TotalOfQuestions)
-        ).ToListAsync(cancellationToken);
+        return await _repo.GetBlueprintDetailAsync(id, ct);
     }
 
     public async Task<IReadOnlyList<QuestionListItemDto>> GetQuestionsAsync(
-        int? teacherId,
-        string? subjectCode,
-        int? chapterId,
-        int? difficulty,
-        CancellationToken cancellationToken = default)
+        int? teacherId, string? subj, int? ch, int? diff, CancellationToken ct = default)
     {
-        subjectCode = subjectCode?.Trim();
-
-        var query =
-            from q in _db.Questions
-            join ch in _db.Chapters on q.ChapterId equals ch.ChapterId
-            join s in _db.Subjects on ch.SubjectId equals s.SubjectId
-            where q.Status == "Active"
-            select new { q, ch, s };
-
-        if (!string.IsNullOrWhiteSpace(subjectCode))
-        {
-            query = query.Where(x => x.s.Code == subjectCode);
-        }
-
-        if (chapterId.HasValue)
-        {
-            query = query.Where(x => x.q.ChapterId == chapterId.Value);
-        }
-
-        if (difficulty.HasValue)
-        {
-            query = query.Where(x => x.q.Difficulty == difficulty.Value);
-        }
-
-        if (teacherId.HasValue && teacherId.Value > 0)
-        {
-            query = query.Where(x => x.q.CreatedByUserId == teacherId.Value);
-        }
-
-        return await query
-            .OrderByDescending(x => x.q.UpdatedAtUtc)
-            .Select(x => new QuestionListItemDto(
-                x.q.QuestionId,
-                x.q.QuestionType,
-                x.q.QuestionContent,
-                x.s.Code ?? string.Empty,
-                x.ch.ChapterId,
-                x.ch.Name,
-                x.q.Difficulty))
-            .ToListAsync(cancellationToken);
+        subj = subj?.Trim();
+        return await _repo.GetQuestionsAsync(teacherId, subj, ch, diff, ActiveStatus, ct);
     }
 
-    public async Task<CreateAssignExamResponse> CreateAssignExamAsync(
-        CreateAssignExamRequest request,
-        CancellationToken cancellationToken = default)
+    public async Task<CreateAssignExamResponse> CreateAssignExamAsync(CreateAssignExamRequest r, CancellationToken ct = default)
     {
-        ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
+        ValidateTimeWindow(r.VisibleFrom, r.OpenAt, r.CloseAt);
+        await EnsureUserActiveAsync(r.TeacherId, ct);
 
-        if (request.TeacherId <= 0)
+        ThrowIf(string.IsNullOrWhiteSpace(r.Title), "Title is required.");
+        ThrowIf(r.Duration <= 0, "Duration must be > 0.");
+        ThrowIf(r.MaxAttempts <= 0, "MaxAttempts must be > 0.");
+        ThrowIf(r.PaperCount <= 0, "PaperCount must be > 0.");
+
+        string generationMode = Clean(r.GenerationMode).ToLower();
+        var mode = generationMode == "manual" ? "manual" : "blueprint";
+
+        int subjectId;
+        int? blueprintId;
+        List<int> questionIds;
+
+        if (mode == "blueprint")
         {
-            throw new ArgumentException("TeacherId is required.");
+            var result = await BuildFromBlueprintAsync(r.ExamBlueprintId, ct);
+            subjectId = result.SubjId;
+            blueprintId = result.BpId;
+            questionIds = result.QIds;
+        }
+        else
+        {
+            var result = await BuildFromManualAsync(r.SubjectId, r.QuestionIds, ct);
+            subjectId = result.SubjId;
+            blueprintId = result.BpId;
+            questionIds = result.QIds;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Title))
-        {
-            throw new ArgumentException("Title is required.");
-        }
+        ThrowIf(!r.IsPublic && !r.ClassId.HasValue, "ClassId required for non-public.");
+        ThrowIf(r.IsPublic && r.ClassId.HasValue, "Public exam must not include ClassId.");
 
-        if (request.Duration <= 0)
+        if (r.ClassId.HasValue)
         {
-            throw new ArgumentException("Duration must be greater than 0.");
-        }
-
-        if (request.MaxAttempts <= 0)
-        {
-            throw new ArgumentException("MaxAttempts must be greater than 0.");
-        }
-
-        if (request.PaperCount <= 0)
-        {
-            throw new ArgumentException("PaperCount must be greater than 0.");
-        }
-
-        var teacherExists = await _db.Users.AnyAsync(
-            x => x.UserId == request.TeacherId && x.RoleId == TeacherRoleId && x.Status == 1,
-            cancellationToken);
-        if (!teacherExists)
-        {
-            throw new KeyNotFoundException($"TeacherId {request.TeacherId} not found or is not a teacher.");
-        }
-
-        var mode = (request.GenerationMode ?? "blueprint").Trim().ToLowerInvariant();
-        if (mode is not ("blueprint" or "manual"))
-        {
-            throw new ArgumentException("GenerationMode must be 'blueprint' or 'manual'.");
-        }
-
-        var (subjectId, blueprintId, questionIds) = mode == "blueprint"
-            ? await BuildFromBlueprintAsync(request.ExamBlueprintId, false, cancellationToken)
-            : await BuildFromManualAsync(request.SubjectId, request.QuestionIds, false, cancellationToken);
-
-        if (!request.IsPublic && !request.ClassId.HasValue)
-        {
-            throw new ArgumentException("ClassId is required when creating non-public exam.");
-        }
-
-        if (request.IsPublic && request.ClassId.HasValue)
-        {
-            throw new ArgumentException("Public exam must not include ClassId.");
-        }
-
-        if (request.ClassId.HasValue)
-        {
-            var classEntity = await _db.Classes
-                .FirstOrDefaultAsync(x => x.ClassId == request.ClassId.Value, cancellationToken);
-            if (classEntity is null)
+            var cls = await _repo.GetClassByIdAsync(r.ClassId.Value, ct);
+            if (cls == null)
             {
-                throw new KeyNotFoundException($"ClassId {request.ClassId.Value} not found.");
+                throw new KeyNotFoundException("Class not found.");
             }
 
-            if (classEntity.TeacherId != request.TeacherId)
-            {
-                throw new ArgumentException("Class does not belong to this teacher.");
-            }
-
-            if (classEntity.SubjectId != subjectId)
-            {
-                throw new ArgumentException("Selected class subject does not match exam subject.");
-            }
+            ThrowIf(cls.TeacherId != r.TeacherId, "Class belongs to another teacher.");
+            ThrowIf(cls.SubjectId != subjectId, "Subject mismatch.");
         }
 
-        if (questionIds.Count == 0)
-        {
-            throw new ArgumentException("No questions available to create paper.");
-        }
+        ThrowIf(questionIds.Count == 0, "No questions selected.");
 
-        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken);
+        using var tx = await _repo.BeginTransactionAsync(ct);
         try
         {
             var exam = new Exam
             {
                 ExamBlueprintId = blueprintId,
-                TeacherId = request.TeacherId,
-                ClassId = request.ClassId,
-                Title = request.Title,
+                TeacherId = r.TeacherId,
+                ClassId = r.ClassId,
+                Title = r.Title,
                 SubjectId = subjectId,
-                Description = request.Description,
-                Duration = request.Duration,
-                ShowScore = request.ShowScore,
-                ShowAnswer = request.ShowAnswer,
-                MaxAttempts = request.MaxAttempts,
-                VisibleFrom = request.VisibleFrom,
-                OpenAt = request.OpenAt,
-                CloseAt = request.CloseAt,
-                ShuffleQuestion = request.ShuffleQuestion,
-                AllowLateSubmission = request.AllowLateSubmission,
+                Description = r.Description,
+                Duration = r.Duration,
+                ShowScore = r.ShowScore,
+                ShowAnswer = r.ShowAnswer,
+                MaxAttempts = r.MaxAttempts,
+                VisibleFrom = r.VisibleFrom,
+                OpenAt = r.OpenAt,
+                CloseAt = r.CloseAt,
+                ShuffleQuestion = r.ShuffleQuestion,
+                AllowLateSubmission = r.AllowLateSubmission,
                 Status = ExamStatus.Ready,
                 UpdatedAtUtc = DateTime.UtcNow
             };
-            _db.Exams.Add(exam);
-            await _db.SaveChangesAsync(cancellationToken);
+
+            await _repo.SaveExamAsync(exam, ct);
 
             var createdPapers = new List<CreatedPaperDto>();
-            var startCode = request.PaperCode > 0 ? request.PaperCode : 1;
+            int startCode = r.PaperCode > 0 ? r.PaperCode : 1;
 
-            for (var i = 0; i < request.PaperCount; i++)
+            for (int i = 0; i < r.PaperCount; i++)
             {
                 var paper = new Paper
                 {
                     ExamId = exam.ExamId,
                     Code = startCode + i
                 };
-                _db.Papers.Add(paper);
-                await _db.SaveChangesAsync(cancellationToken);
 
-                var orderedQuestionIds = request.ShuffleQuestion
+                await _repo.SavePaperAsync(paper, ct);
+
+                var orderedQuestionIds = r.ShuffleQuestion
                     ? ShuffleQuestionIds(questionIds)
-                    : questionIds.ToList();
+                    : [.. questionIds];
 
-                // Insert into PaperQuestion join table (schema: PaperId, QuestionId only)
-                foreach (var qid in orderedQuestionIds)
-                {
-                    await _db.Database.ExecuteSqlRawAsync(
-                        "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
-                        paper.PaperId, qid);
-                }
-                await _db.SaveChangesAsync(cancellationToken);
+                await _repo.AddPaperQuestionsAsync(paper.PaperId, orderedQuestionIds, ct);
 
                 createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code));
             }
 
-            await tx.CommitAsync(cancellationToken);
+            await tx.CommitAsync(ct);
+
             return new CreateAssignExamResponse(
                 exam.ExamId,
-                createdPapers.First().PaperId,
+                createdPapers[0].PaperId,
                 questionIds.Count,
-                createdPapers);
+                createdPapers
+            );
         }
         catch
         {
-            await tx.RollbackAsync(cancellationToken);
+            await tx.RollbackAsync(ct);
             throw;
         }
     }
 
-    private async Task<(int SubjectId, int? BlueprintId, List<int> QuestionIds)> BuildFromBlueprintAsync(
-        int? examBlueprintId,
-        bool shuffle,
-        CancellationToken cancellationToken)
+    public async Task<ExamReviewDto> GetExamReviewAsync(int id, CancellationToken ct = default)
     {
-        if (!examBlueprintId.HasValue)
+        var e = await _repo.GetExamReviewDataAsync(id, ct);
+        if (e == null)
         {
-            throw new ArgumentException("ExamBlueprintId is required for blueprint mode.");
+            throw new KeyNotFoundException("Exam not found.");
         }
 
-        var blueprint = await _db.ExamBlueprints
-            .FirstOrDefaultAsync(x => x.ExamBlueprintId == examBlueprintId.Value, cancellationToken);
-        if (blueprint is null)
+        var matrix = (e.ExamBlueprint?.ExamBlueprintChapters ?? [])
+            .GroupBy(bc => bc.Chapter?.Name ?? "N/A")
+            .Select(g => new BlueprintRowDto
+            {
+                ChapterName = g.Key,
+                Recognize = g.Where(x => x.Difficulty == 1).Sum(x => x.TotalOfQuestions),
+                Understand = g.Where(x => x.Difficulty == 2).Sum(x => x.TotalOfQuestions),
+                Apply = g.Where(x => x.Difficulty == 3).Sum(x => x.TotalOfQuestions),
+                AdvancedApply = g.Where(x => x.Difficulty == 4).Sum(x => x.TotalOfQuestions),
+                Total = g.Sum(x => x.TotalOfQuestions)
+            })
+            .ToList();
+
+        var papers = e.Papers.Select(p => new PaperReviewDto(
+            p.PaperId,
+            p.Code,
+            p.Questions.Select(q => new QuestionReviewDto(
+                q.QuestionId,
+                q.QuestionType,
+                q.QuestionContent,
+                q.Difficulty,
+                q.Chapter?.Name ?? "N/A"
+            )).ToList()
+        )).ToList();
+
+        return new ExamReviewDto(
+            e.ExamId,
+            e.Title,
+            e.Subject?.Code ?? "N/A",
+            e.Description,
+            e.Papers.FirstOrDefault()?.Questions.Count ?? 0,
+            e.Duration,
+            e.OpenAt,
+            e.CloseAt,
+            e.Teacher?.FullName ?? "N/A",
+            e.UpdatedAtUtc,
+            e.Status,
+            matrix,
+            papers
+        );
+    }
+
+    public async Task<IReadOnlyList<QuestionListItemDto>> GetAlternativeQuestionsAsync(int pid, int qid, CancellationToken ct = default)
+    {
+        var p = await _repo.GetPaperWithQuestionsAsync(pid, ct);
+        if (p == null) throw new KeyNotFoundException("Paper not found.");
+
+        var old = await _repo.GetQuestionByIdAsync(qid, ct);
+        if (old == null) throw new KeyNotFoundException("Question not found.");
+
+        var currentIds = p.Questions.Select(q => q.QuestionId).ToList();
+
+        return await _repo.GetAlternativeQuestionsAsync(
+            p.Exam.SubjectId,
+            old.Difficulty,
+            ActiveStatus,
+            currentIds,
+            ct);
+    }
+
+    public async Task SwapPaperQuestionAsync(SwapQuestionRequestDto r, CancellationToken ct = default)
+    {
+        var p = await _repo.GetPaperWithQuestionsAsync(r.PaperId, ct);
+        if (p == null) throw new KeyNotFoundException("Paper not found.");
+
+        var old = p.Questions.FirstOrDefault(q => q.QuestionId == r.OldQuestionId);
+        if (old == null) throw new ArgumentException("Old question not found in this paper.");
+
+        var @new = await _repo.GetQuestionByIdAsync(r.NewQuestionId, ct);
+        if (@new == null) throw new KeyNotFoundException("New question not found.");
+
+        ThrowIf(!ActiveStatus.Contains(@new.Status), "New question is inactive.");
+        ThrowIf(@new.Difficulty != old.Difficulty, "Difficulty mismatch.");
+
+        await _repo.SwapPaperQuestionAsync(r.PaperId, r.OldQuestionId, r.NewQuestionId, ct);
+    }
+
+    public async Task ApproveExamAsync(int id, CancellationToken ct = default)
+    {
+        await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+    }
+
+    private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromBlueprintAsync(int? id, CancellationToken ct)
+    {
+        if (!id.HasValue)
         {
-            throw new KeyNotFoundException($"ExamBlueprintId {examBlueprintId.Value} not found.");
+            throw new ArgumentException("ExamBlueprintId required.");
         }
 
-        var blueprintRows = await _db.ExamBlueprintChapters
-            .Where(x => x.ExamBlueprintId == examBlueprintId.Value)
-            .OrderBy(x => x.ChapterId)
-            .ThenBy(x => x.Difficulty)
-            .ToListAsync(cancellationToken);
+        var bp = await _repo.GetBlueprintWithChaptersAsync(id.Value, ct);
+        if (bp == null)
+        {
+            throw new KeyNotFoundException("Blueprint not found.");
+        }
 
         var questionIds = new List<int>();
-        foreach (var row in blueprintRows)
-        {
-            var picked = await _db.Questions
-                .Where(q =>
-                    q.Status == "Active" &&
-                    q.ChapterId == row.ChapterId &&
-                    q.Difficulty == row.Difficulty)
-                .OrderBy(q => q.QuestionId)
-                .Take(row.TotalOfQuestions)
-                .Select(q => q.QuestionId)
-                .ToListAsync(cancellationToken);
 
-            if (picked.Count < row.TotalOfQuestions)
+        foreach (var r in bp.ExamBlueprintChapters)
+        {
+            var p = await _repo.GetQuestionIdsForBlueprintRowAsync(r.ChapterId, r.Difficulty, r.TotalOfQuestions, ActiveStatus, ct);
+            if (p.Count < r.TotalOfQuestions)
             {
-                throw new InvalidOperationException(
-                    $"Not enough active questions for chapter {row.ChapterId}, difficulty {row.Difficulty}. " +
-                    $"Need {row.TotalOfQuestions}, found {picked.Count}.");
+                throw new InvalidOperationException($"Not enough questions for chapter {r.ChapterId} with difficulty {r.Difficulty}.");
             }
-            questionIds.AddRange(picked);
+            questionIds.AddRange(p);
         }
 
-        if (shuffle)
-        {
-            questionIds = questionIds.OrderBy(_ => Guid.NewGuid()).ToList();
-        }
-
-        return (blueprint.SubjectId, blueprint.ExamBlueprintId, questionIds);
+        return (bp.SubjectId, bp.ExamBlueprintId, questionIds);
     }
 
-    private async Task<(int SubjectId, int? BlueprintId, List<int> QuestionIds)> BuildFromManualAsync(
-        int? subjectId,
-        IReadOnlyCollection<int> questionIds,
-        bool shuffle,
-        CancellationToken cancellationToken)
+    private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
     {
-        if (questionIds.Count == 0)
+        if (ids == null || ids.Count == 0)
         {
-            throw new ArgumentException("QuestionIds is required for manual mode.");
+            throw new ArgumentException("QuestionIds required.");
         }
 
-        var selected = await (
-            from q in _db.Questions
-            join ch in _db.Chapters on q.ChapterId equals ch.ChapterId
-            where questionIds.Contains(q.QuestionId) && q.Status == "Active"
-            select new { q.QuestionId, SubjectId = ch.SubjectId }
-        ).ToListAsync(cancellationToken);
-
-        var pickedIds = selected.Select(x => x.QuestionId).Distinct().ToList();
-        if (pickedIds.Count != questionIds.Distinct().Count())
+        var sel = await _repo.GetQuestionsWithSubjectByIdsAsync(ids, ActiveStatus, ct);
+        if (sel.Count != ids.Distinct().Count())
         {
-            throw new ArgumentException("Some questionIds are invalid or not active.");
+            throw new ArgumentException("One or more invalid or inactive questions.");
         }
 
-        var subjectSet = selected.Select(x => x.SubjectId).Distinct().ToList();
-        if (subjectSet.Count != 1)
+        var subjectIds = sel.Select(x => x.SubjectId).Distinct().ToList();
+        if (subjectIds.Count != 1)
         {
-            throw new ArgumentException("All manual questions must belong to the same subject.");
+            throw new ArgumentException("Questions must belong to the same subject.");
         }
 
-        var resolvedSubjectId = subjectSet[0];
-        if (subjectId.HasValue && subjectId.Value != resolvedSubjectId)
+        if (sid.HasValue && sid.Value != subjectIds[0])
         {
-            throw new ArgumentException("Provided SubjectId does not match selected questions.");
+            throw new ArgumentException("Subject mismatch.");
         }
 
-        if (shuffle)
-        {
-            pickedIds = pickedIds.OrderBy(_ => Guid.NewGuid()).ToList();
-        }
-
-        return (resolvedSubjectId, null, pickedIds);
+        return (subjectIds[0], null, sel.Select(x => x.QuestionId).ToList());
     }
 
-    private static List<int> ShuffleQuestionIds(IReadOnlyList<int> source)
+    private static List<int> ShuffleQuestionIds(IReadOnlyList<int> s)
     {
-        return source
-            .OrderBy(_ => Guid.NewGuid())
-            .ToList();
+        return s.OrderBy(_ => Guid.NewGuid()).ToList();
     }
 
-    private static void ValidateTimeWindow(DateTime? visibleFrom, DateTime? openAt, DateTime? closeAt)
+    private static void ValidateTimeWindow(DateTime? v, DateTime? o, DateTime? c)
     {
-        if (visibleFrom.HasValue && openAt.HasValue && visibleFrom.Value > openAt.Value)
+        if (v > o)
         {
-            throw new ArgumentException("VisibleFrom must be less than or equal to OpenAt.");
+            throw new ArgumentException("VisibleFrom > OpenAt.");
         }
-
-        if (openAt.HasValue && closeAt.HasValue && openAt.Value >= closeAt.Value)
+        if (o >= c)
         {
-            throw new ArgumentException("OpenAt must be less than CloseAt.");
+            throw new ArgumentException("OpenAt >= CloseAt.");
         }
     }
 }

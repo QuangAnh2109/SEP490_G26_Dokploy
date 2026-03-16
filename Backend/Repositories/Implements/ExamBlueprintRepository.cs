@@ -51,7 +51,7 @@ namespace Backend.Repositories.Implements
             {
                 var rawCounts = await _context.Questions
                     .AsNoTracking()
-                    .Where(q => chapterIds.Contains(q.ChapterId) && q.Status == "Active")
+                    .Where(q => chapterIds.Contains(q.ChapterId) && (q.Status == QuestionStatus.Active || q.Status == QuestionStatus.Inprogess))
                     .GroupBy(q => new { q.ChapterId, q.Difficulty })
                     .Select(g => new
                     {

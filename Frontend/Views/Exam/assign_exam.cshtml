@@ -13,400 +13,321 @@
 <body>
   <main class="page-shell py-4">
     <div class="container-fluid px-3 px-md-4">
-      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+      <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
         <div>
-          <h1 class="page-title">Giao đề thi</h1>
-          <p class="page-subtitle">Thiết lập cấu hình đề thi và gán cho lớp học trên cùng một màn hình.</p>
+          <h1 class="page-title">📝 Giao đề thi</h1>
+          <p class="page-subtitle">Thiết lập cấu hình bài tập, đề thi và gán cho sinh viên một cách chuyên nghiệp.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-outline-secondary" type="button" id="closeConfigTop">Đóng</button>
-          <button class="btn btn-primary" type="button" id="saveConfigTop">Lưu cấu hình</button>
+          <button class="btn btn-outline-secondary" type="button" id="closeConfigTop">Hủy bỏ</button>
+          <button class="btn btn-primary px-4" type="button" id="saveConfigTop">🚀 Lưu cấu hình</button>
         </div>
       </section>
 
-      <section class="panel-card mb-3">
-        <p class="meta-line mb-2">Tóm tắt: 40 phút - 1 lần làm - 21/02/2026 07:30 - 09:30</p>
-
-        <h2 class="section-title">Cấu hình cơ bản</h2>
-        <div class="row g-2">
-          <div class="col-12 col-md-8">
-            <label class="form-label">Tiêu đề đề thi *</label>
-            <input class="form-control" id="examTitleInput" value="MAE - SP26 - SE1711">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Mô tả</label>
-            <textarea class="form-control" id="examDescriptionInput" rows="3">No materials allowed. System auto-submits at timeout.</textarea>
-          </div>
-          <div class="col-6 col-md-2">
-            <label class="form-label">Số lần làm</label>
-            <input type="number" class="form-control" id="examMaxAttemptsInput" value="1">
-          </div>
-          <div class="col-6 col-md-2">
-            <label class="form-label">Số mã đề *</label>
-            <input type="number" class="form-control" id="examPaperCountInput" value="1" min="1" max="50" step="1" required placeholder="1-50">
-          </div>
+      <section class="stepper mb-4" id="stepper">
+        <div class="step active" data-step="1">
+          <div class="step-icon">1</div>
+          <div class="step-label">Thông tin chung</div>
         </div>
-
-        <hr class="section-divider">
-
-        <h2 class="section-title">Lịch thi</h2>
-        <div class="row g-2">
-          <div class="col-12 col-md-3">
-            <label class="form-label">Thời điểm học sinh thấy đề</label>
-            <input class="form-control" id="examVisibleFromInput" type="datetime-local">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Thời điểm mở</label>
-            <input class="form-control" id="examOpenAtInput" type="datetime-local">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Thời điểm đóng</label>
-            <input class="form-control" id="examCloseAtInput" type="datetime-local">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Thời lượng (phút)</label>
-            <input class="form-control" id="examDurationInput" type="number" value="40">
-          </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+          <div class="step-icon">2</div>
+          <div class="step-label">Nội dung đề thi</div>
         </div>
-
-        <hr class="section-divider">
-
-        <h2 class="section-title">Quy tắc làm bài</h2>
-        <div class="row g-2">
-          <div class="col-12">
-            <div class="form-check"><input class="form-check-input" type="checkbox" id="rule1" checked><label class="form-check-label" for="rule1">Trộn câu hỏi</label></div>
-            <div class="form-check"><input class="form-check-input" type="checkbox" id="rule3"><label class="form-check-label" for="rule3">Cho phép nộp trễ</label></div>
-          </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3">
+          <div class="step-icon">3</div>
+          <div class="step-label">Cấu hình & Quy tắc</div>
         </div>
+      </section>
 
-        <hr class="section-divider">
-
-        <h2 class="section-title">Bảo mật và công bố</h2>
-        <div class="row g-2">
-          <div class="col-12 d-flex flex-column justify-content-center gap-2">
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="showScore"><label class="form-check-label" for="showScore">Hiển thị điểm ngay khi nộp</label></div>
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="publicExamToggle"><label class="form-check-label" for="publicExamToggle">Tạo đề public</label></div>
-            <p class="form-note mb-0">Khi bật đề public, hệ thống sẽ ẩn phần chọn lớp học.</p>
-            <div id="publicSubjectSection" class="d-none">
-              <label class="form-label mt-1">Môn học (đề public)</label>
-              <select class="form-select" id="publicSubjectFilter">
-                <option value="">Chọn môn học</option>
-              </select>
-              <p class="form-note mb-0 mt-1">Danh sách ma trận đề và câu hỏi thủ công sẽ lọc theo môn đã chọn.</p>
+      <div id="step1Content" class="step-content">
+        <section class="panel-card mb-4">
+          <h2 class="section-title mb-4">📍 Thông tin cơ bản</h2>
+          <div class="row g-2">
+            <div class="col-12 col-md-8">
+              <label class="form-label">Tiêu đề đề thi *</label>
+              <input class="form-control" id="examTitleInput" value="MAE - SP26 - SE1711">
+              <div class="invalid-feedback">Vui lòng nhập tiêu đề đề thi.</div>
             </div>
           </div>
-        </div>
 
-        <div id="classSelectionBlock">
           <hr class="section-divider">
-          <div id="classSelectionSection">
-          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-            <h2 class="section-title mb-0">Chọn lớp học</h2>
-            <span class="form-note" id="selectedClassCount">Chưa chọn lớp học</span>
-          </div>
 
-          <div class="row g-2 mb-2">
-            <div class="col-12 col-md-6">
-              <input class="form-control" id="classSearchInput" placeholder="Tìm theo mã lớp (ví dụ: SE1711)">
-            </div>
-            <div class="col-6 col-md-3">
-              <select class="form-select" id="classSubjectFilter">
-                <option value="">Tất cả môn</option>
-              </select>
-            </div>
-            <div class="col-6 col-md-3">
-              <select class="form-select" id="classSemesterFilter">
-                <option value="">Tất cả học kỳ</option>
-              </select>
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Mô tả</label>
+              <textarea class="form-control" id="examDescriptionInput" rows="3">No materials allowed. System auto-submits at timeout.</textarea>
             </div>
           </div>
-          <p class="form-note mb-2">Chỉ được chọn một lớp học cho mỗi lần giao đề.</p>
-
-          <div class="border rounded bg-white overflow-auto" style="max-height: 320px;">
-            <table class="table table-soft table-sm align-middle mb-0" id="classSelectionTable">
-              <thead>
-                <tr>
-                  <th style="width: 56px;">Chọn</th>
-                  <th>Mã lớp</th>
-                  <th>Môn học</th>
-                  <th>Học kỳ</th>
-                </tr>
-              </thead>
-              <tbody id="classTableBody"></tbody>
-            </table>
-            <template id="classRowTemplate">
-              <tr>
-                <td><input class="form-check-input class-item" type="radio" name="selectedClass"></td>
-                <td data-field-code></td>
-                <td data-field-subject></td>
-                <td data-field-semester></td>
-              </tr>
-            </template>
-            <template id="classStatusTemplate">
-              <tr><td colspan="4" class="text-center" data-message></td></tr>
-            </template>
-          </div>
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
-            <p class="form-note mb-0" id="classPaginationSummary">Đang tải dữ liệu lớp...</p>
-            <nav aria-label="Phân trang danh sách lớp học">
-              <ul class="pagination mb-0">
-                <li class="page-item">
-                  <button class="page-link" type="button" id="classPaginationPrev">Trước</button>
-                </li>
-                <li class="page-item active" data-page-item="1">
-                  <button class="page-link" type="button" data-class-page="1">1</button>
-                </li>
-                <li class="page-item" data-page-item="2">
-                  <button class="page-link" type="button" data-class-page="2">2</button>
-                </li>
-                <li class="page-item">
-                  <button class="page-link" type="button" id="classPaginationNext">Sau</button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-          </div>
-          <hr class="section-divider">
-        </div>
-
-        <h2 class="section-title">Kiểu tạo đề</h2>
-        <div class="row g-2 mb-3">
-          <div class="col-12">
-            <div class="d-flex flex-column flex-md-row gap-3">
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="examGenerationMode" id="examGenerationBlueprint" checked>
-                <label class="form-check-label" for="examGenerationBlueprint">Tạo theo ma trận đề</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="examGenerationMode" id="examGenerationManual">
-                <label class="form-check-label" for="examGenerationManual">Chọn câu hỏi thủ công</label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="blueprintModeSection">
-          <h2 class="section-title">Chọn ma trận đề</h2>
-          <div class="row g-3" id="blueprintSelectionSection">
-          <div class="col-12 col-xl-5">
-            <div class="soft-card h-100">
-              <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                <h3 class="section-title mb-0">Danh sách ma trận đề</h3>
-                <span class="form-note" id="selectedBlueprintName">Đang chọn: pt1</span>
-              </div>
-
-              <div class="row g-2 mb-2">
-                <div class="col-12">
-                  <input class="form-control" id="blueprintSearchInput" placeholder="Tìm theo tên ma trận đề (ví dụ: pt1)">
+          <div id="preSelectedClassInfo" class="mt-4">
+            <h2 class="section-title mb-3">👥 Giao đề cho lớp học</h2>
+            <div class="summary-card py-3 px-3 bg-light border-0 rounded shadow-sm">
+              <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                  <i class="fas fa-users"></i>
                 </div>
-                <div class="col-12">
-                  <select class="form-select" id="blueprintSubjectFilter">
-                    <option value="">Tất cả môn</option>
+                <div>
+                  <h3 class="h5 mb-1" id="displayClassName">Đang tải...</h3>
+                  <script>
+                    (function() {
+                        const name = sessionStorage.getItem('currentClassName');
+                        const el = document.getElementById('displayClassName');
+                        if (name && el) el.textContent = 'Lớp: ' + name;
+                    })();
+                  </script>
+                  <p class="form-note mb-0 text-muted">Môn học: <strong id="displaySubjectCode">@(ViewBag.SubjectCode ?? "-")</strong></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-4">
+            <button class="btn btn-primary px-5 py-3" type="button" id="btnNext1">Tiếp theo: Chọn nội dung ➔</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="step2Content" class="step-content d-none">
+        <section class="panel-card mb-4 shadow-lg">
+          <h2 class="section-title mb-4">🧩 Kiểu tạo đề *</h2>
+          <div class="row g-2 mb-3">
+            <div class="col-12">
+              <div class="d-flex flex-column flex-md-row gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="examGenerationMode" id="examGenerationBlueprint" checked>
+                  <label class="form-check-label" for="examGenerationBlueprint">Tạo theo ma trận đề</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="examGenerationMode" id="examGenerationManual">
+                  <label class="form-check-label" for="examGenerationManual">Chọn câu hỏi thủ công</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="blueprintModeSection">
+            <h2 class="section-title">Chọn ma trận đề *</h2>
+            <div class="row g-3" id="blueprintSelectionSection">
+              <div class="col-12 col-xl-5">
+                <div class="soft-card h-100" id="blueprintTableContainer">
+                  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="section-title mb-0">Danh sách ma trận đề</h3>
+                    <span class="form-note" id="selectedBlueprintName">Đang chọn: -</span>
+                  </div>
+
+                  <div class="row g-2 mb-2">
+                    <div class="col-12">
+                      <input class="form-control" id="blueprintSearchInput" placeholder="Tìm theo tên ma trận đề (ví dụ: pt1)">
+                    </div>
+                  </div>
+
+                  <div class="border rounded bg-white overflow-auto" style="max-height: 320px;">
+                    <table class="table table-soft table-sm align-middle mb-0" id="blueprintListTable">
+                      <thead>
+                        <tr>
+                          <th style="width: 56px;">Chọn</th>
+                          <th>Tên ma trận đề</th>
+                          <th>Môn học</th>
+                          <th>Ngày cập nhật</th>
+                        </tr>
+                      </thead>
+                      <tbody id="blueprintTableBody"></tbody>
+                    </table>
+                    <template id="blueprintRowTemplate">
+                      <tr class="interactive-row">
+                        <td><input class="form-check-input blueprint-item" type="radio" name="selectedBlueprint"></td>
+                        <td data-field-name></td>
+                        <td data-field-subject></td>
+                        <td data-field-updated></td>
+                      </tr>
+                    </template>
+                    <template id="blueprintStatusTemplate">
+                      <tr><td colspan="4" class="text-center" data-message></td></tr>
+                    </template>
+                  </div>
+                  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
+                    <p class="form-note mb-0" id="blueprintFilterSummary">Đang tải danh sách ma trận đề...</p>
+                    <nav aria-label="Phân trang ma trận đề" class="mt-2">
+                      <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item"><button class="page-link" type="button" id="blueprintPaginationPrev">Trước</button></li>
+                        <li class="page-item"><button class="page-link" type="button" id="blueprintPaginationNext">Sau</button></li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-xl-7">
+                <div class="soft-card h-100">
+                  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="section-title mb-0">Chi tiết ma trận đề</h3>
+                    <span class="tag-pill tag-neutral" id="blueprintInfoSubject">-</span>
+                  </div>
+                  <div id="blueprintMatrixContainer">
+                    <div class="row g-2 mb-2">
+                      <div class="col-12">
+                        <div class="summary-card py-2">
+                          <p class="summary-label mb-1">Số câu hỏi của mã đề</p>
+                          <p class="mb-0 fw-semibold" id="blueprintInfoQuestionCount">0 câu</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="table-responsive border rounded bg-white">
+                      <table class="table table-soft table-sm align-middle mb-0" id="blueprintMatrixTable">
+                        <thead>
+                          <tr>
+                            <th>Chương</th>
+                            <th>Mức độ</th>
+                            <th>Số câu</th>
+                          </tr>
+                        </thead>
+                        <tbody id="blueprintMatrixBody"></tbody>
+                      </table>
+                    </div>
+                    <template id="matrixStatusTemplate">
+                      <tr><td colspan="3" class="text-center" data-message></td></tr>
+                    </template>
+                    <template id="blueprintMatrixRowTemplate">
+                      <tr>
+                        <td data-field-chapter></td>
+                        <td data-field-difficulty></td>
+                        <td data-field-questions></td>
+                      </tr>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="invalid-feedback" id="blueprintErrorFeedback">Vui lòng chọn một ma trận đề.</div>
+          </div>
+
+          <div id="manualModeSection" class="d-none">
+            <h2 class="section-title">Thêm câu hỏi thủ công *</h2>
+            <div class="soft-card" id="manualQuestionContainer">
+              <div class="row g-2 mb-2">
+                <div class="col-12 col-md-4">
+                  <label class="form-label">Chương</label>
+                  <select class="form-select" id="manualQuestionChapterFilter">
+                    <option value="">Tất cả chương</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4">
+                  <label class="form-label">Mức độ</label>
+                  <select class="form-select" id="manualQuestionLevelFilter">
+                    <option value="">Tất cả mức độ</option>
+                    <option value="1">Nhận biết</option>
+                    <option value="2">Thông hiểu</option>
+                    <option value="3">Vận dụng</option>
+                    <option value="4">Vận dụng cao</option>
                   </select>
                 </div>
               </div>
-
-              <div class="border rounded bg-white overflow-auto" style="max-height: 320px;">
-                <table class="table table-soft table-sm align-middle mb-0" id="blueprintListTable">
+              <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                <p class="form-note mb-0" id="manualQuestionSummary">Đã chọn 0 câu hỏi thủ công.</p>
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="manualQuestionClearButton">Bỏ chọn tất cả</button>
+              </div>
+              <div class="table-responsive border rounded bg-white" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-soft table-sm align-middle mb-0" id="manualQuestionTable">
                   <thead>
                     <tr>
                       <th style="width: 56px;">Chọn</th>
-                      <th>Tên ma trận đề</th>
-                      <th>Môn học</th>
-                      <th>Ngày cập nhật</th>
+                      <th>Chương</th>
+                      <th>Mức độ</th>
+                      <th>Nội dung</th>
                     </tr>
                   </thead>
-                  <tbody id="blueprintTableBody"></tbody>
+                  <tbody id="manualQuestionTableBody"></tbody>
                 </table>
-                <template id="blueprintRowTemplate">
-                  <tr class="interactive-row">
-                    <td><input class="form-check-input blueprint-item" type="radio" name="selectedBlueprint"></td>
-                    <td data-field-name></td>
-                    <td data-field-subject></td>
-                    <td data-field-updated></td>
+                <template id="manualQuestionRowTemplate">
+                  <tr>
+                    <td><input class="form-check-input manual-item" type="checkbox"></td>
+                    <td data-field-chapter></td>
+                    <td data-field-level></td>
+                    <td data-field-content></td>
                   </tr>
                 </template>
-                <template id="blueprintStatusTemplate">
+                <template id="manualQuestionStatusTemplate">
                   <tr><td colspan="4" class="text-center" data-message></td></tr>
                 </template>
               </div>
               <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
-                <p class="form-note mb-0" id="blueprintFilterSummary">Đang tải danh sách ma trận đề...</p>
-                <nav aria-label="Phân trang danh sách ma trận đề">
-                  <ul class="pagination mb-0">
-                    <li class="page-item">
-                      <button class="page-link" type="button" id="blueprintPaginationPrev">Trước</button>
-                    </li>
-                    <li class="page-item active" data-blueprint-page-item="1">
-                      <button class="page-link" type="button" data-blueprint-page="1">1</button>
-                    </li>
-                    <li class="page-item" data-blueprint-page-item="2">
-                      <button class="page-link" type="button" data-blueprint-page="2">2</button>
-                    </li>
-                    <li class="page-item">
-                      <button class="page-link" type="button" id="blueprintPaginationNext">Sau</button>
-                    </li>
+                <p class="form-note mb-0" id="manualQuestionPaginationSummary">Đang tải danh sách câu hỏi...</p>
+                <nav aria-label="Phân trang câu hỏi" class="mt-2">
+                  <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item"><button class="page-link" type="button" id="manualQuestionPaginationPrev">Trước</button></li>
+                    <li class="page-item"><button class="page-link" type="button" id="manualQuestionPaginationNext">Sau</button></li>
                   </ul>
                 </nav>
               </div>
             </div>
+            <div class="invalid-feedback" id="manualErrorFeedback">Vui lòng chọn ít nhất một câu hỏi.</div>
           </div>
 
-          <div class="col-12 col-xl-7">
-            <div class="soft-card h-100">
-              <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                <h3 class="section-title mb-0">Chi tiết ma trận đề</h3>
-                <span class="tag-pill tag-neutral" id="blueprintInfoSubject">-</span>
-              </div>
+          <div class="d-flex justify-content-between mt-5 pt-3 border-top">
+            <button class="btn btn-outline-secondary px-4" type="button" id="btnBack2">← Quay lại</button>
+            <button class="btn btn-primary px-5" type="button" id="btnNext2">Tiếp theo: Cấu hình ➔</button>
+          </div>
+        </section>
+      </div>
 
-              <div class="row g-2 mb-2">
-                <div class="col-12 col-md-6">
-                  <div class="summary-card py-2">
-                    <p class="summary-label mb-1">Tên ma trận đề</p>
-                    <p class="mb-0 fw-semibold" id="blueprintInfoName">-</p>
-                  </div>
-                </div>
-                <div class="col-12 col-md-6">
-                  <div class="summary-card py-2">
-                    <p class="summary-label mb-1">Ngày cập nhật</p>
-                    <p class="mb-0 fw-semibold" id="blueprintInfoUpdated">-</p>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <div class="summary-card py-2">
-                    <p class="summary-label mb-1">Số câu hỏi của mã đề</p>
-                    <p class="mb-0 fw-semibold" id="blueprintInfoQuestionCount">0 câu</p>
-                  </div>
-                </div>
-              </div>
-              <p class="form-note mb-2">Số câu hỏi của mã đề có thể nhỏ hơn tổng số câu trong ma trận đề.</p>
-
-              <div class="table-responsive border rounded bg-white">
-                <table class="table table-soft table-sm align-middle mb-0" id="blueprintMatrixTable">
-                  <thead>
-                    <tr>
-                      <th>Chương</th>
-                      <th>Mức độ</th>
-                      <th>Số câu</th>
-                    </tr>
-                  </thead>
-                  <tbody id="blueprintMatrixBody"></tbody>
-                </table>
-                <template id="blueprintMatrixRowTemplate">
-                  <tr>
-                    <td data-field-chapter></td>
-                    <td data-field-difficulty></td>
-                    <td data-field-questions></td>
-                  </tr>
-                </template>
-                <template id="matrixStatusTemplate">
-                  <tr><td colspan="3" class="text-center text-muted" data-message></td></tr>
-                </template>
-              </div>
+      <div id="step3Content" class="step-content d-none">
+        <section class="panel-card mb-4 shadow-lg border-0">
+          <h2 class="section-title mb-4">📅 Lịch thi & Thời gian *</h2>
+          <div class="row g-2">
+            <div class="col-12 col-md-3">
+              <label class="form-label">Thời điểm học sinh thấy đề *</label>
+              <input class="form-control" id="examVisibleFromInput" type="datetime-local">
+              <div class="invalid-feedback">Vui lòng chọn thời điểm hiển thị.</div>
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Thời điểm mở *</label>
+              <input class="form-control" id="examOpenAtInput" type="datetime-local">
+              <div class="invalid-feedback">Vui lòng chọn thời điểm mở.</div>
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Thời điểm đóng *</label>
+              <input class="form-control" id="examCloseAtInput" type="datetime-local">
+              <div class="invalid-feedback">Vui lòng chọn thời điểm đóng.</div>
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Thời lượng (phút) *</label>
+              <input class="form-control" id="examDurationInput" type="number" value="40">
+              <div class="invalid-feedback">Vui lòng nhập thời lượng.</div>
             </div>
           </div>
-          </div>
-        </div>
 
-        <hr class="section-divider" id="examGenerationModeDivider">
+          <hr class="section-divider">
 
-        <div id="manualModeSection" class="d-none">
-          <h2 class="section-title">Thêm câu hỏi thủ công</h2>
-          <div class="soft-card">
-          <div class="row g-2 mb-2">
-            <div class="col-12 col-md-4">
-              <label class="form-label">Môn học</label>
-              <select class="form-select" id="manualQuestionSubjectFilter">
-                <option value="">Tất cả môn</option>
-                <option value="MAE">MAE</option>
-                <option value="MAD">MAD</option>
-                <option value="MAS">MAS</option>
-              </select>
+          <h2 class="section-title">Cấu hình làm bài</h2>
+          <div class="row g-2">
+            <div class="col-6 col-md-3">
+              <label class="form-label">Số lần làm *</label>
+              <input type="number" class="form-control" id="examMaxAttemptsInput" value="1">
             </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label">Chương</label>
-              <select class="form-select" id="manualQuestionChapterFilter">
-                <option value="">Tất cả chương</option>
-              </select>
-            </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label">Mức độ</label>
-              <select class="form-select" id="manualQuestionLevelFilter">
-                <option value="">Tất cả mức độ</option>
-                <option value="1">Nhận biết</option>
-                <option value="2">Thông hiểu</option>
-                <option value="3">Vận dụng</option>
-                <option value="4">Vận dụng cao</option>
-              </select>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Số mã đề *</label>
+              <input type="number" class="form-control" id="examPaperCountInput" value="1" min="1" max="50">
             </div>
           </div>
-          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-            <p class="form-note mb-0" id="manualQuestionSummary">Đã chọn 0 câu hỏi thủ công.</p>
-            <button class="btn btn-sm btn-outline-secondary" type="button" id="manualQuestionClearButton">Bỏ chọn tất cả</button>
-          </div>
-          <div class="table-responsive border rounded bg-white">
-            <table class="table table-soft table-sm align-middle mb-0" id="manualQuestionTable">
-              <thead>
-                <tr>
-                  <th style="width: 56px;">Chọn</th>
-                  <th>Môn học</th>
-                  <th>Chương</th>
-                  <th>Mức độ</th>
-                  <th>Nội dung</th>
-                </tr>
-              </thead>
-              <tbody id="manualQuestionTableBody"></tbody>
-            </table>
-            <template id="manualQuestionRowTemplate">
-              <tr>
-                <td><input class="form-check-input manual-question-item" type="checkbox"></td>
-                <td data-field-subject></td>
-                <td data-field-chapter></td>
-                <td data-field-level></td>
-                <td data-field-content></td>
-              </tr>
-            </template>
-            <template id="manualQuestionStatusTemplate">
-              <tr><td colspan="5" class="text-center text-muted" data-message></td></tr>
-            </template>
-            <template id="manualContentTemplate">
-              <span class="manual-question-content"></span>
-            </template>
-            <template id="manualTextTemplate">
-              <span class="manual-question-text"></span>
-            </template>
-            <template id="manualMathTemplate">
-              <math-field class="manual-question-math" read-only></math-field>
-            </template>
-          </div>
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-2">
-            <p class="form-note mb-0" id="manualQuestionPaginationSummary">Hiển thị 0-0 trên 0 câu hỏi.</p>
-            <nav aria-label="Phân trang câu hỏi thủ công">
-              <ul class="pagination mb-0">
-                <li class="page-item">
-                  <button class="page-link" type="button" id="manualQuestionPaginationPrev">Trước</button>
-                </li>
-                <li class="page-item active" data-manual-page-item="1">
-                  <button class="page-link" type="button" data-manual-page="1">1</button>
-                </li>
-                <li class="page-item" data-manual-page-item="2">
-                  <button class="page-link" type="button" data-manual-page="2">2</button>
-                </li>
-                <li class="page-item">
-                  <button class="page-link" type="button" id="manualQuestionPaginationNext">Sau</button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-            <p class="form-note mt-2 mb-0">Giáo viên có thể lọc theo môn/chương rồi chọn thủ công từng câu hỏi để thêm vào đề.</p>
-          </div>
-        </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-3">
-          <button class="btn btn-outline-secondary" type="button" id="closeConfigBottom">Đóng</button>
-          <button class="btn btn-primary" type="button" id="saveConfigBottom">Lưu cấu hình</button>
-        </div>
-      </section>
+          <hr class="section-divider">
+
+          <h2 class="section-title">Quy tắc & Bảo mật</h2>
+          <div class="row g-3">
+            <div class="col-12 d-flex flex-column gap-2">
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="rule1" checked><label class="form-check-label" for="rule1">Trộn câu hỏi</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="rule3"><label class="form-check-label" for="rule3">Cho phép nộp trễ</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="showScore"><label class="form-check-label" for="showScore">Hiển thị điểm ngay khi nộp</label></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-5 pt-3 border-top">
+            <button class="btn btn-outline-secondary px-4" type="button" id="btnBack3">← Quay lại bước 2</button>
+            <button class="btn btn-primary px-5 py-3" type="button" id="saveConfigBottom">🚀 Hoàn tất & Lưu cấu hình</button>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
   <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">

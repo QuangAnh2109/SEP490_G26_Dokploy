@@ -38,109 +38,146 @@
             </div>
         </div>
 
-        <div id="content-state" class="row g-3 d-none">
-
-
-            <div class="col-12 col-xl-8">
-
-
-                <section class="panel-card mb-3">
-                    <h2 class="panel-title">Thông tin tổng quan đề thi</h2>
-                    <div class="row g-2">
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Mã môn</p>
-                                <p class="summary-value mb-0" id="subject-code">—</p>
-                            </div>
+        <div id="content-state" class="d-none">
+            
+            <!-- Student Focused Hub -->
+            <div id="student-hub" class="exam-hub-container d-none">
+                <div class="hero-panel">
+                    <button class="btn btn-link text-decoration-none btn-hub-back p-0" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-1"></i> Quay lại
+                    </button>
+                    <div id="student-status-badge-container" class="mb-3 pt-2"></div>
+                    <h1 class="display-6 fw-bold mb-2" id="student-exam-title"></h1>
+                    <p class="text-muted mb-4" id="student-exam-subject"></p>
+                    
+                    <div class="hero-info-grid">
+                        <div class="hero-info-item">
+                            <div class="summary-label">Thời gian</div>
+                            <div class="summary-value h4 mb-0" id="student-duration"></div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Tên đề thi</p>
-                                <p class="summary-value mb-0" id="exam-title-card">—</p>
-                            </div>
+                        <div class="hero-info-item">
+                            <div class="summary-label">Số câu hỏi</div>
+                            <div class="summary-value h4 mb-0" id="student-questions"></div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Số câu</p>
-                                <p class="summary-value mb-0" id="total-questions">—</p>
-                            </div>
+                        <div class="hero-info-item">
+                            <div class="summary-label">Lượt còn lại</div>
+                            <div class="summary-value h4 mb-0" id="student-attempts-remaining"></div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Thời gian làm bài</p>
-                                <p class="summary-value mb-0" id="duration">—</p>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Bắt đầu vào làm</p>
-                                <p class="summary-value mb-0" id="open-at">—</p>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="summary-card">
-                                <p class="summary-label mb-1">Kết thúc kỳ thi</p>
-                                <p class="summary-value mb-0" id="close-at">—</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-
-                <section class="panel-card">
-                    <h2 class="panel-title">Ma trận đề thi</h2>
-
-                    <div id="matrix-wrapper">
-                        <div class="table-responsive mb-3">
-                            <table class="table table-soft align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Chương</th>
-                                        <th>Nhận biết</th>
-                                        <th>Thông hiểu</th>
-                                        <th>Vận dụng</th>
-                                        <th>Vận dụng cao</th>
-                                        <th>Tổng</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="matrix-body">
-                                </tbody>
-                            </table>
+                        <div class="hero-info-item">
+                            <div class="summary-label">Hạn chót</div>
+                            <div class="summary-value h5 mb-0" id="student-deadline"></div>
                         </div>
                     </div>
 
-                    <div id="no-matrix" class="d-none text-muted fst-italic mb-3">
-                        Đề thi này không có ma trận cấu trúc.
+                    <div class="text-center mt-5">
+                        <button class="btn btn-primary btn-take-exam-lg" id="btn-take-exam-student" disabled>
+                            BẮT ĐẦU LÀM BÀI
+                        </button>
                     </div>
 
-                    <h3 class="section-title">Hướng dẫn làm bài</h3>
-                    <ul class="mb-0 muted">
-                        <li>Đọc kỹ từng câu hỏi trước khi chọn đáp án.</li>
-                        <li>Hệ thống tự nộp khi hết thời gian làm bài.</li>
-                        <li>Không đóng trình duyệt trong quá trình làm bài.</li>
-                    </ul>
-                </section>
+                    <div class="mt-4 p-3 bg-light rounded-3 text-start">
+                        <h4 class="h6 fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Hướng dẫn:</h4>
+                        <ul class="mb-0 small text-muted">
+                            <li>Vui lòng kiểm tra kết nối internet trước khi bắt đầu.</li>
+                            <li>Đề thi sẽ tự động nộp khi hết thời gian quy định.</li>
+                            <li>Hệ thống ghi nhận mỗi lần bắt đầu là một lượt làm bài.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
+            <!-- Teacher/Admin Grid (Original Layout refined) -->
+            <div id="teacher-admin-view" class="row g-3 d-none">
+                <div class="col-12 col-xl-8">
+                    <section class="panel-card mb-3">
+                        <h2 class="panel-title">Thông tin tổng quan đề thi</h2>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Mã môn</p>
+                                    <p class="summary-value mb-0" id="subject-code">—</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Tên đề thi</p>
+                                    <p class="summary-value mb-0" id="exam-title-card">—</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Số câu</p>
+                                    <p class="summary-value mb-0" id="total-questions">—</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Thời gian làm bài</p>
+                                    <p class="summary-value mb-0" id="duration">—</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Bắt đầu vào làm</p>
+                                    <p class="summary-value mb-0" id="open-at">—</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="summary-card">
+                                    <p class="summary-label mb-1">Kết thúc kỳ thi</p>
+                                    <p class="summary-value mb-0" id="close-at">—</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-            <div class="col-12 col-xl-4">
-                <aside class="panel-card">
-                    <h2 class="panel-title">Thông tin bổ sung</h2>
-                    <div class="info-card mb-2">
-                        <p class="info-label mb-1">Giáo viên</p>
-                        <p class="info-value mb-0" id="teacher-name">—</p>
-                    </div>
-                    <div class="info-card mb-2">
-                        <p class="info-label mb-1">Ngày cập nhật</p>
-                        <p class="info-value mb-0" id="updated-at">—</p>
-                    </div>
-                    <div class="info-card" id="note-card">
-                        <p class="info-label mb-1">Ghi chú</p>
-                        <p class="info-value mb-0" id="description">—</p>
-                    </div>
-                </aside>
+                    <section class="panel-card" id="matrix-section">
+                        <h2 class="panel-title">Ma trận đề thi</h2>
+                        <div id="matrix-wrapper">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-soft align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Chương</th>
+                                            <th>Nhận biết</th>
+                                            <th>Thông hiểu</th>
+                                            <th>Vận dụng</th>
+                                            <th>Vận dụng cao</th>
+                                            <th>Tổng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="matrix-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="no-matrix" class="d-none text-muted fst-italic mb-3">
+                            Đề thi này không có ma trận cấu trúc.
+                        </div>
+                    </section>
+                </div>
+
+                <div class="col-12 col-xl-4">
+                    <aside class="panel-card">
+                        <h2 class="panel-title">Thông tin bổ sung (Admin)</h2>
+                        <div class="info-card mb-2">
+                            <p class="info-label mb-1">Giáo viên</p>
+                            <p class="info-value mb-0" id="teacher-name">—</p>
+                        </div>
+                        <div class="info-card mb-2" id="paper-count-card">
+                            <p class="info-label mb-1">Mã đề versions</p>
+                            <p class="info-value mb-0" id="paper-count-value">—</p>
+                        </div>
+                        <div class="info-card mb-2">
+                            <p class="info-label mb-1">Ngày cập nhật</p>
+                            <p class="info-value mb-0" id="updated-at">—</p>
+                        </div>
+                        <div class="info-card" id="note-card">
+                            <p class="info-label mb-1">Ghi chú</p>
+                            <p class="info-value mb-0" id="description">—</p>
+                        </div>
+                    </aside>
+                </div>
             </div>
-
         </div>
     </div>
 </main>

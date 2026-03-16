@@ -1,0 +1,178 @@
+@{
+    ViewData["Title"] = "Kiểm tra hậu kì đề thi";
+    var examId = ViewBag.ExamId ?? 0;
+    var classId = ViewBag.ClassId;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <link rel="stylesheet" href="~/css/Exam/exam_review.css" asp-append-version="true" />
+}
+
+<div class="review-wrapper">
+    <!-- Sidebar -->
+    <aside class="review-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Hệ thống hậu kiểm</h6>
+            <div class="text-muted small">Bài thi #@ViewBag.ExamId</div>
+        </div>
+
+        <div class="nav-section-title">Tổng quan</div>
+        <button class="nav-item-custom sidebar-nav active" data-target="view-info">
+            <i class="fas fa-info-circle"></i> Thông tin đề thi
+        </button>
+        <button class="nav-item-custom sidebar-nav" data-target="view-matrix">
+            <i class="fas fa-th"></i> Ma trận đề thi
+        </button>
+        <button class="nav-item-custom sidebar-nav" data-target="view-all-questions">
+            <i class="fas fa-layer-group"></i> Mục lục câu hỏi
+        </button>
+
+        <div class="nav-section-title">Nội dung mã đề</div>
+        <div id="paper-nav-list" class="flex-grow-1">
+            <!-- Dynamic list of papers -->
+            <div class="text-center py-4 text-muted small"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+
+        <div class="pt-4 border-top">
+            <button class="btn btn-success w-100 mb-2 py-2 fw-bold" id="btnApprove" onclick="approveExam()">
+                <i class="fas fa-check-circle me-1"></i> PHÊ DUYỆT
+            </button>
+            <a href="/Course/ExamListInCourse/@ViewBag.ClassId" class="nav-item-custom text-center justify-content-center">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="review-content">
+        <!-- View: Exam Info -->
+        <div id="view-info" class="section-view active">
+            <div class="preview-header">
+                <h2 id="info-exam-title" class="fw-bold mb-1 text-dark">---</h2>
+                <div class="d-flex gap-2">
+                    <span id="info-subject-code" class="meta-badge">---</span>
+                    <span id="info-status-badge" class="meta-badge">---</span>
+                </div>
+            </div>
+
+            <section class="panel-card">
+                <h2 class="panel-title">Chi tiết cấu hình</h2>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Mã môn</p><p class="summary-value" id="card-subject-code">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Số câu hỏi</p><p class="summary-value" id="card-total-questions">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian làm bài</p><p class="summary-value" id="card-duration">---</p></div></div>
+                    <div class="col-md-6"><div class="summary-card"><p class="summary-label">Thời gian mở</p><p class="summary-value" id="card-open-at">---</p></div></div>
+                    <div class="col-md-6"><div class="summary-card"><p class="summary-label">Thời gian đóng</p><p class="summary-value" id="card-close-at">---</p></div></div>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <h2 class="panel-title">Metadata</h2>
+                <div class="row g-2">
+                    <div class="col-sm-6"><div class="info-card"><div class="info-label">Giáo viên khởi tạo</div><div class="info-value" id="card-teacher-name">---</div></div></div>
+                    <div class="col-sm-6"><div class="info-card"><div class="info-label">Lần cuối cập nhật</div><div class="info-value" id="card-updated-at">---</div></div></div>
+                    <div class="col-12"><div class="info-card"><div class="info-label">Ghi chú</div><div class="info-value" id="card-description">---</div></div></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- View: Matrix -->
+        <div id="view-matrix" class="section-view">
+            <h3 class="fw-bold mb-4">Ma trận đề thi (Blueprint)</h3>
+            <div class="panel-card">
+                <div class="table-responsive">
+                    <table class="table table-soft align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Chương học</th>
+                                <th class="text-center">Nhận biết</th>
+                                <th class="text-center">Thông hiểu</th>
+                                <th class="text-center">Vận dụng</th>
+                                <th class="text-center">VD Cao</th>
+                                <th class="text-center">Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: All Questions (Overview) -->
+        <div id="view-all-questions" class="section-view">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold mb-0">Mục lục câu hỏi hệ thống</h3>
+                <span class="text-muted">Tổng số câu hỏi duy nhất</span>
+            </div>
+            <div id="overviewQuestionsList"></div>
+        </div>
+
+        <div id="view-paper-detail" class="section-view">
+            <div class="preview-header">
+                <h2 id="paper-detail-title" class="fw-bold mb-1">---</h2>
+            </div>
+            <div id="paperQuestionsList"></div>
+        </div>
+    </main>
+</div>
+
+
+<!-- Swap Question Modal -->
+<div class="modal fade" id="alternativeQuestionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Chọn câu hỏi thay thế</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Hệ thống gợi ý các câu hỏi cùng mức độ khó và chưa có trong mã đề này.</p>
+                <div id="alternativesList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Alternative questions will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary px-4" id="btnConfirmSwap" onclick="confirmSwap()" disabled>
+                    Xác nhận đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="~/js/Question/question_utils.js"></script>
+    <script src="~/js/exam_review.js"></script>
+    <script>
+        const EXAM_ID = @examId;
+        const CLASS_ID = @(classId ?? "null");
+        document.addEventListener('DOMContentLoaded', () => {
+            // Force full width for the review wrapper by bypassing Bootstrap container
+            const wrapper = document.querySelector('.review-wrapper');
+            if (wrapper) {
+                let parent = wrapper.parentElement;
+                while (parent && parent.tagName !== 'BODY') {
+                    if (parent.classList.contains('container')) {
+                        parent.classList.remove('container');
+                        parent.classList.add('container-fluid');
+                        parent.style.padding = '0';
+                        parent.style.maxWidth = '100%';
+                    }
+                    if (parent.tagName === 'MAIN') {
+                        parent.style.padding = '0';
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+
+            if (EXAM_ID > 0) {
+                initReviewPage(EXAM_ID);
+            }
+        });
+    </script>
+}

@@ -150,13 +150,16 @@ namespace Backend.Services.Implements
 
             var statusLabel = data.Status switch
             {
-                1 => "public",
-                2 => "private",
-                3 => "closed",
+                ExamStatus.Ready => "pending",
+                ExamStatus.Published => "public",
+                ExamStatus.InProgress => "inprogress",
+                ExamStatus.Deleted => "deleted",
+                ExamStatus.Cancelled => "cancelled",
+                ExamStatus.Closed => "closed",
                 _ => "unknown"
             };
 
-            var matrixRows = data.BlueprintChapters
+            var matrixRows = isTeacher ? data.BlueprintChapters
                 .GroupBy(x => x.ChapterName)
                 .Select(g => new BlueprintRowDto
                 {
@@ -167,7 +170,10 @@ namespace Backend.Services.Implements
                     AdvancedApply = g.Where(x => x.Difficulty == 4).Sum(x => x.TotalOfQuestions),
                     Total = g.Sum(x => x.TotalOfQuestions)
                 })
-                .ToList();
+                .ToList() : new List<BlueprintRowDto>();
+
+            var studentAttempts = isTeacher ? 0 : await _studentExamRepository.GetExamSubmissionCountAsync(userId, examId);
+            var remainingAttempts = isTeacher ? 0 : Math.Max(0, data.MaxAttempts - studentAttempts);
 
             return new ExamPreviewDto
             {
@@ -182,6 +188,11 @@ namespace Backend.Services.Implements
                 TeacherName = data.TeacherName,
                 UpdatedAtUtc = data.UpdatedAtUtc,
                 Description = data.Description,
+                MaxAttempts = data.MaxAttempts,
+                RemainingAttempts = remainingAttempts,
+                ShowScore = data.ShowScore,
+                ShowAnswer = data.ShowAnswer,
+                PaperCount = data.PaperCount,
                 BlueprintMatrix = matrixRows
             };
         }

@@ -42,6 +42,10 @@ namespace Backend.Repositories.Interfaces
         public string SubjectName { get; set; } = string.Empty;
         public string TeacherName { get; set; } = string.Empty;
         public int TotalQuestions { get; set; }
+        public int MaxAttempts { get; set; }
+        public int PaperCount { get; set; }
+        public bool ShowScore { get; set; }
+        public bool ShowAnswer { get; set; }
         public List<BlueprintChapterRaw> BlueprintChapters { get; set; } = new();
     }
 

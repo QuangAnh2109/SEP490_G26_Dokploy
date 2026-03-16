@@ -31,7 +31,7 @@
     <main class="flex-grow-1 p-4">
 
         <section class="mb-4">
-            <h2>Danh sách học sinh trong lớp</h2>
+            <h2 id="courseHeaderTitle">Danh sách học sinh trong lớp</h2>
         </section>
 
         <!-- Table -->
@@ -142,6 +142,26 @@
             });
         }
 
-        document.addEventListener("DOMContentLoaded", loadStudents);
+        async function loadClassInfo() {
+            const token = getToken();
+            try {
+                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const className = data.className || data.name || "";
+                    const subCode = data.subjectCode || "";
+                    sessionStorage.setItem('currentClassName', className);
+                    const titleEl = document.getElementById("courseHeaderTitle");
+                    if (titleEl) titleEl.textContent = `Danh sách học sinh trong lớp - ${className} - ${subCode}`;
+                }
+            } catch (e) { console.error("Error loading class info", e); }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadStudents();
+            loadClassInfo();
+        });
     </script>
 }
