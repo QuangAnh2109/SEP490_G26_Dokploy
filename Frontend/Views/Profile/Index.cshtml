@@ -1,21 +1,95 @@
-﻿@{
+@{
     ViewData["Title"] = "Profile";
 }
 <style>
-    button:disabled {
+    .profile-page {
+        max-width: 960px;
+    }
+
+    .profile-sidebar.card {
+        border-radius: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .profile-main-card.card {
+        border-radius: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .profile-nav .nav-link {
+        border-radius: 999px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        color: #4b5563;
+        font-weight: 500;
+    }
+
+    .profile-nav .nav-link.active {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #ffffff;
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+    }
+
+    .profile-section-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .profile-section-subtitle {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+    }
+
+    #profileForm .form-label,
+    #changePasswordForm .form-label {
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: #374151;
+    }
+
+    #profileForm .form-control,
+    #changePasswordForm .form-control {
+        border-radius: 999px;
+        border-color: #e5e7eb;
+        background-color: #f9fafb;
+        padding: 10px 14px;
+    }
+
+    #profileForm .form-control:focus,
+    #changePasswordForm .form-control:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+        background-color: #ffffff;
+    }
+
+    #saveProfileBtn,
+    #changePasswordBtn {
+        border-radius: 999px;
+        padding: 9px 18px;
+        font-weight: 500;
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border: none;
+    }
+
+    #saveProfileBtn:disabled,
+    #changePasswordBtn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
 </style>
-<div class="container mt-4">
+<div class="container mt-4 profile-page">
 
     <div class="row">
 
-        <div class="col-md-3">
-            <div class="card">
+        <div class="col-md-3 mb-3 mb-md-0">
+            <div class="card profile-sidebar">
                 <div class="card-body">
 
-                    <div class="nav flex-column nav-pills">
+                    <div class="nav flex-column nav-pills profile-nav">
 
                         <a class="nav-link active" id="tabProfileBtn">
                             Thông tin cá nhân
@@ -34,14 +108,15 @@
 
         <div class="col-md-9">
 
-            <div class="card">
+            <div class="card profile-main-card">
 
                 <div class="card-body">
 
                     <!-- PROFILE -->
                     <div id="profileTab">
 
-                        <h5 class="mb-3">Thông tin cá nhân</h5>
+                        <h5 class="profile-section-title">Thông tin cá nhân</h5>
+                        <p class="profile-section-subtitle">Cập nhật thông tin liên hệ và mã số sinh viên của bạn.</p>
 
                         <form id="profileForm">
 
@@ -77,7 +152,8 @@
                     <!-- CHANGE PASSWORD -->
                     <div id="passwordTab" style="display:none">
 
-                        <h5 class="mb-3">Đổi mật khẩu</h5>
+                        <h5 class="profile-section-title">Đổi mật khẩu</h5>
+                        <p class="profile-section-subtitle">Đảm bảo mật khẩu đủ mạnh để bảo vệ tài khoản của bạn.</p>
 
                         <form id="changePasswordForm">
 

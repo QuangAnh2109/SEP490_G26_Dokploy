@@ -6,9 +6,9 @@ $(document).ready(function () {
         return;
     }
 
-    // Display human-readable role
+    // Display human-readable role (bold role name)
     var roleName = roleId === "1" ? "Giáo viên" : "Học sinh";
-    $('#roleDisplay').text(`Đăng ký tài khoản với vai trò: ${roleName}`);
+    $('#roleDisplay').html(`Đăng ký tài khoản với vai trò: <strong>${roleName}</strong>`);
 
     // 2. Handle Manual Form Registration -> OTP
     $('#registerForm').submit(function (e) {
