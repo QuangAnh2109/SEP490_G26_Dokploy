@@ -1,122 +1,183 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Frontend</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Frontend.styles.css" asp-append-version="true" />
-    @await RenderSectionAsync("Styles", required: false)
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Frontend</title>
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+	<link rel="stylesheet" href="~/Frontend.styles.css" asp-append-version="true" />
+	@await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Frontend</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1" id="main-nav">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                        </li>
-                        <li class="nav-item role-dependent role-teacher role-student d-none">
-                            <a class="nav-link text-dark" href="/Course/CourseList">Khóa học</a>
-                        </li>
-                        <li class="nav-item role-dependent role-teacher d-none">
-                            <a class="nav-link text-dark" href="/ExamBlueprint">Ma trận đề</a>
-                        </li>
-                        <li class="nav-item role-dependent role-teacher d-none">
-                            <a class="nav-link text-dark" href="/Question">Ngân hàng câu hỏi</a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav" id="auth-nav">
-                        <li class="nav-item auth-guest">
-                            <a class="nav-link text-dark" href="/Auth/Login">Đăng nhập</a>
-                        </li>
-                        <li class="nav-item auth-user d-none dropdown">
-                            <a class="nav-link text-dark dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Tài khoản
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                                <li><a class="dropdown-item" href="/Profile">Thông tin cá nhân</a></li>
-                                <li><a class="dropdown-item" href="/Auth/ChangePassword">Đổi mật khẩu</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-item role-teacher role-dependent d-none">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Exam" asp-action="AssignExam">Assign Exam</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
-        <template id="toastTemplate">
-            <div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body" data-message></div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        </template>
-    </div>
+	<header>
+		<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom app-header">
+			<div class="container-fluid">
+				<button id="appSidebarToggle" class="btn app-icon-btn me-2" type="button" aria-label="Mở menu">
+					<span class="app-hamburger" aria-hidden="true"></span>
+				</button>
+				<a class="navbar-brand app-brand" asp-area="" asp-controller="Home" asp-action="Index" aria-label="Math Test Creator">
+					<span class="app-brand-logo" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false">
+							<path d="M7.5 3.5h9A2.5 2.5 0 0 1 19 6v12a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7.5 3.5Z" />
+							<path d="M8 8h8M8 12h8M8 16h5" />
+						</svg>
+					</span>
+					<span class="app-brand-title">Math Test Creator</span>
+				</a>
+				<ul class="navbar-nav ms-auto" id="auth-nav">
+					<li class="nav-item auth-guest">
+						<a class="nav-link text-dark" href="/Auth/Login">Đăng nhập</a>
+					</li>
+					<li class="nav-item auth-user d-none dropdown">
+						<a class="nav-link text-dark dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+							Tài khoản
+						</a>
+						<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+							<li><a class="dropdown-item" href="/Profile">Thông tin cá nhân</a></li>
+							<li><a class="dropdown-item" href="/Auth/ChangePassword">Đổi mật khẩu</a></li>
+							<li><hr class="dropdown-divider"></li>
+							<li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</header>
 
-    <!-- Global Confirmation Modal -->
-    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="globalConfirmTitle">Xác nhận</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="mb-0 text-muted" id="globalConfirmMessage"></p>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" id="globalConfirmCancelBtn">Hủy</button>
-                    <button type="button" class="btn btn-primary px-4" id="globalConfirmBtn">Đồng ý</button>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="app-shell">
+		<aside class="app-sidebar d-flex">
+			<nav class="app-sidebar-nav" aria-label="Sidebar">
+				<a class="app-sidebar-link role-dependent role-teacher role-student d-none" href="/Course/CourseList">
+					<span class="app-sidebar-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false">
+							<path d="M4.5 5.5h6.25a3 3 0 0 1 2.25 1.02A3 3 0 0 1 15.25 5.5H19.5v13h-4.75a3.5 3.5 0 0 0-2.75 1.35A3.5 3.5 0 0 0 9.25 18.5H4.5v-13Z" />
+							<path d="M12 6.75v12.8" />
+						</svg>
+					</span>
+					<span>Khóa học</span>
+				</a>
+				<a class="app-sidebar-link role-dependent role-teacher d-none" href="/ExamBlueprint">
+					<span class="app-sidebar-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false">
+							<path d="M7.5 4.5h9A2.5 2.5 0 0 1 19 7v10A2.5 2.5 0 0 1 16.5 19.5h-9A2.5 2.5 0 0 1 5 17V7A2.5 2.5 0 0 1 7.5 4.5Z" />
+							<path d="M9 9h6M9 12h6M9 15h6" />
+							<path d="M9 9v6M12 9v6M15 9v6" />
+						</svg>
+					</span>
+					<span>Ma trận đề</span>
+				</a>
+				<a class="app-sidebar-link role-dependent role-teacher d-none" href="/Question">
+					<span class="app-sidebar-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false">
+							<path d="M7.5 4.5h9A2.5 2.5 0 0 1 19 7v10A2.5 2.5 0 0 1 16.5 19.5h-9A2.5 2.5 0 0 1 5 17V7A2.5 2.5 0 0 1 7.5 4.5Z" />
+							<path d="M9 9h6M9 12h6M9 15h4" />
+							<path d="M16.5 11a2.25 2.25 0 0 0-4.5 0c0 1.5 2.25 1.25 2.25 3" />
+							<path d="M14.25 16.5h.01" />
+						</svg>
+					</span>
+					<span>Ngân hàng câu hỏi</span>
+				</a>
+				<a class="app-sidebar-link role-dependent role-teacher d-none" asp-area="" asp-controller="Exam" asp-action="AssignExam">
+					<span class="app-sidebar-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false">
+							<path d="M8 5.5h8" />
+							<path d="M9 4.5h6a1 1 0 0 1 1 1v2H8v-2a1 1 0 0 1 1-1Z" />
+							<path d="M7.5 7.5h9A2.5 2.5 0 0 1 19 10v7A2.5 2.5 0 0 1 16.5 19.5h-9A2.5 2.5 0 0 1 5 17v-7A2.5 2.5 0 0 1 7.5 7.5Z" />
+							<path d="M8.75 12l1.5 1.5 3-3" />
+							<path d="M8.75 15.5h6.5" />
+						</svg>
+					</span>
+					<span>Assign Exam</span>
+				</a>
+			</nav>
+		</aside>
+		<div class="app-content">
+			<div class="container">
+				<main role="main" class="pb-3">
+					@RenderBody()
+				</main>
+			</div>
+		</div>
+	</div>
+	<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
+		<template id="toastTemplate">
+			<div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+				<div class="d-flex">
+					<div class="toast-body" data-message></div>
+					<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+				</div>
+			</div>
+		</template>
+	</div>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    <script>
-        $(document).ready(function() {
-            if (isAuthenticated()) {
-                $('.auth-guest').addClass('d-none');
-                $('.auth-user').removeClass('d-none');
-                
-                const email = getUserEmail();
-                if (email) {
-                    $('#navbarUserDropdown').text(email);
-                }
-                
-                const role = getUserRole();
-                if (role === 'Student' || role === 'Học sinh') {
-                    $('.role-student').removeClass('d-none');
-                } else if (role === 'Teacher' || role === 'Giáo viên') {
-                    $('.role-teacher').removeClass('d-none');
-                }
-            } else {
-                $('.auth-guest').removeClass('d-none');
-                $('.auth-user').addClass('d-none');
-            }
-        });
-    </script>
-    @await RenderSectionAsync("Scripts", required: false)
+	<!-- Global Confirmation Modal -->
+	<div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content border-0 shadow-lg">
+				<div class="modal-header border-0 pb-0">
+					<h5 class="modal-title fw-bold" id="globalConfirmTitle">Xác nhận</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body p-4">
+					<p class="mb-0 text-muted" id="globalConfirmMessage"></p>
+				</div>
+				<div class="modal-footer border-0 pt-0">
+					<button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" id="globalConfirmCancelBtn">Hủy</button>
+					<button type="button" class="btn btn-primary px-4" id="globalConfirmBtn">Đồng ý</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="~/lib/jquery/dist/jquery.min.js"></script>
+	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script>
+		$(document).ready(function() {
+			// Sidebar: collapsed by default, persisted in localStorage
+			(function () {
+				const storageKey = 'sidebarExpanded';
+				const saved = localStorage.getItem(storageKey);
+				const expanded = saved === null ? false : saved === 'true';
+
+				document.body.classList.toggle('sidebar-expanded', expanded);
+				document.body.classList.toggle('sidebar-collapsed', !expanded);
+
+				const toggleBtn = document.getElementById('appSidebarToggle');
+				if (toggleBtn) {
+					toggleBtn.addEventListener('click', function (e) {
+						e.preventDefault();
+						const willExpand = !document.body.classList.contains('sidebar-expanded');
+						document.body.classList.toggle('sidebar-expanded', willExpand);
+						document.body.classList.toggle('sidebar-collapsed', !willExpand);
+						localStorage.setItem(storageKey, String(willExpand));
+					});
+				}
+			})();
+
+			if (isAuthenticated()) {
+				$('.auth-guest').addClass('d-none');
+				$('.auth-user').removeClass('d-none');
+
+				const email = getUserEmail();
+				if (email) {
+					$('#navbarUserDropdown').text(email);
+				}
+
+				const role = getUserRole();
+				if (role === 'Student' || role === 'Học sinh') {
+					$('.role-student').removeClass('d-none');
+				} else if (role === 'Teacher' || role === 'Giáo viên') {
+					$('.role-teacher').removeClass('d-none');
+				}
+			} else {
+				$('.auth-guest').removeClass('d-none');
+				$('.auth-user').addClass('d-none');
+			}
+		});
+	</script>
+	@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
