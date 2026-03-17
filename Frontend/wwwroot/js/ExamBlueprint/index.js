@@ -105,7 +105,7 @@ $(document).ready(function () {
         if (subjectId) params.set('subjectId', subjectId);
 
         const $tbody = $('#blueprintTableBody');
-        $tbody.empty().append(document.getElementById('blueprintLoadingTemplate').content.cloneNode(true));
+        $tbody.empty().append(cloneTemplateOrFallback('blueprintLoadingTemplate', '<tr><td colspan="6" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>'));
 
         apiClient.get(`/api/exam-blueprints?${params.toString()}`)
             .then(function (response) {
@@ -125,11 +125,22 @@ $(document).ready(function () {
             })
             .catch(function (error) {
                 console.error(error);
-                $tbody.empty().append(document.getElementById('blueprintErrorTemplate').content.cloneNode(true));
+                $tbody.empty().append(cloneTemplateOrFallback('blueprintErrorTemplate', '<tr><td colspan="6" class="text-center text-danger py-4">Không thể tải danh sách ma trận đề.</td></tr>'));
                 renderEmptyDetail('Không thể tải chi tiết do lỗi danh sách.');
                 renderPagination(1, 0);
                 showPageError(resolveApiError(error));
             });
+    }
+
+    function cloneTemplateOrFallback(templateId, fallbackHtml) {
+        const t = document.getElementById(templateId);
+        if (t && t.content) {
+            return t.content.cloneNode(true);
+        }
+        console.warn(`Missing template #${templateId}. Falling back to inline row.`);
+        const container = document.createElement('tbody');
+        container.innerHTML = fallbackHtml;
+        return container.firstElementChild || document.createTextNode('');
     }
 
     function renderTable(items) {
