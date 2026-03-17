@@ -17,14 +17,12 @@ namespace Backend.Controllers
         private readonly ICourseService _service;
         private readonly IChapterService _chapterService;
         private readonly ILogger<CourseController> _logger;
-        private readonly MtcaSep490G26Context _context;
 
         public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger, MtcaSep490G26Context context)
         {
             _service = service;
             _chapterService = chapterService;
             _logger = logger;
-            _context = context;
         }
 
         // TEMPORARY for debugging only
@@ -56,8 +54,16 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            var course = await _service.GetByIdAsync(id);
+            if (course == null)
+                return NotFound();
             var exams = await _service.GetExamsByClassAsync(id);
-            return Ok(exams);
+            return Ok(new
+            {
+                CourseId = course.ClassId,
+                CourseName = course.ClassName,
+                Exams = exams
+            });
         }
 
         // New: return chapters belonging to the class's subject
@@ -71,6 +77,8 @@ namespace Backend.Controllers
 
             if (course == null)
                 return NotFound();
+
+            var chapters = await _chapterService.GetBySubjectIdAsync(course.SubjectId);
 
             return Ok(course.Chapters);
         }
@@ -140,8 +148,17 @@ namespace Backend.Controllers
         [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
+            var course = await _service.GetByIdAsync(id);
+            if (course == null)
+                return NotFound();
             var students = await _service.GetStudentsInClassAsync(id);
-            return Ok(students);
+           
+            return Ok(new
+            {
+                CourseId = course.ClassId,
+                CourseName = course.ClassName,
+                students
+            });
         }
 
         [HttpGet("{id}/settings")]
@@ -166,16 +183,5 @@ namespace Backend.Controllers
             return Ok();
         }
 
-        [HttpGet("subjects")]
-        [Authorize(Roles = "Teacher")]
-        public IActionResult GetSubjects()
-        {
-            // A simple endpoint to fetch subjects for the dropdown
-            // Ideally should be in ISubjectService, placing here for quick access matching the plan
-            var subjects = _context.Subjects
-                .Select(s => new { s.SubjectId, s.Name, s.Code })
-                .ToList();
-            return Ok(subjects);
-        }
     }
 }

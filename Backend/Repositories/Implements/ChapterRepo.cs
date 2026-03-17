@@ -66,8 +66,9 @@ namespace Backend.Repositories.Implements
                 SubjectId = c.SubjectId,
                 Name = c.Name
             })
-            .OrderBy(c => c.Name)
             .ToListAsync();
+
+
         }
     }
 }

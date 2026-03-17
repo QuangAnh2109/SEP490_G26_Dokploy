@@ -1,317 +1,418 @@
-@{
-    ViewData["Title"] = "Danh sách lớp học";
-}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>Danh sách lớp học</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-@section Styles {
-    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
-    <link rel="stylesheet" href="~/css/Course/Course.css">
-}
+    <!-- Bootstrap 5.3.8 (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (cho icon kính lúp) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-<main class="page-shell py-4">
-    <div class="container-fluid px-3 px-md-4">
+    <!-- Inline CSS để giống ảnh -->
+    <style>
+        :root{
+          --card-radius: 14px;
+          --brand-blue: #2F6FED;     /* màu nút xanh trong ảnh */
+          --muted: #6B7280;          /* xám nhẹ subtitle */
+          --bg-soft: #F5F6FA;        /* nền trang */
+          --border-soft: #F0F1F5;
+        }
+        body{
+          background: var(--bg-soft);
+        }
+        .page-shell{
+          padding-top: 24px;
+          padding-bottom: 24px;
+        }
+        /* Header */
+        .page-header h1{
+          font-weight: 600;
+          font-size: 1.6rem;
+          margin-bottom: .25rem;
+        }
+        .page-subtitle{
+          color: var(--muted);
+          margin: 0;
+        }
+        /* Button tạo lớp/tham gia lớp */
+        .btn-primary{
+          background: var(--brand-blue);
+          border-color: var(--brand-blue);
+          border-radius: 10px;
+          padding-inline: 16px;
+          font-weight: 600;
+        }
+        .btn-primary:hover{
+          filter: brightness(0.95);
+          background: var(--brand-blue);
+          border-color: var(--brand-blue);
+          color: white;
+        }
+        /* Panel tìm kiếm + filter */
+        .panel-card{
+          background: #fff;
+          border: 1px solid var(--border-soft);
+          border-radius: var(--card-radius);
+          box-shadow: 0 6px 18px rgba(16,24,40,0.05);
+          padding: 16px;
+        }
+        .input-group .input-group-text{
+          background: #fff;
+          border-right: 0;
+          border-radius: 12px 0 0 12px;
+        }
+        .input-group .form-control{
+          border-left: 0;
+          border-radius: 0 12px 12px 0;
+          padding-top: .6rem;
+          padding-bottom: .6rem;
+        }
+        .form-select{
+          border-radius: 12px;
+          padding-top: .6rem;
+          padding-bottom: .6rem;
+        }
+        /* Grid card */
+        #courseGrid .col-12.col-sm-6.col-lg-3{
+          /* đảm bảo spacing giống ảnh */
+        }
+        .class-card.card{
+          border: 1px solid var(--border-soft);
+          border-radius: var(--card-radius);
+          box-shadow: 0 6px 18px rgba(16,24,40,0.05);
+          transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .class-card.card:hover{
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(16,24,40,0.08);
+        }
+        .class-card .card-body h5{
+          font-weight: 600;
+          margin-bottom: 0.25rem;
+        }
+        .class-card .card-body small.text-muted{
+          color: #98A2B3 !important;
+        }
+        .btn-enter{
+          background: var(--brand-blue);
+          border-color: var(--brand-blue);
+          border-radius: 10px;
+          font-weight: 600;
+          color:white;
+        }
+        .btn-enter:hover{
+          filter: brightness(0.95);
+          background: var(--brand-blue);
+          border-color: var(--brand-blue);
+        }
+        /* Modal bo tròn */
+        .modal-content{
+          border-radius: 14px;
+        }
+    </style>
+</head>
+<body>
 
-        <section class="page-header d-flex justify-content-between align-items-start mb-3">
-            <div>
-                <h1 id="pageTitle"></h1>
-                <p class="page-subtitle" id="pageSubtitle"></p>
-            </div>
+    <main class="page-shell">
+        <div class="container-fluid px-3 px-md-4">
 
-            <div id="actionButtonContainer"></div>
-        </section>
-
-        <section class="panel-card mb-3">
-            <div class="row g-2">
-                <div class="col-12 col-lg-4">
-                    <input type="text"
-                           class="form-control"
-                           id="courseSearchInput"
-                           placeholder="Tìm theo tên lớp hoặc giảng viên">
+            <!-- HEADER -->
+            <section class="page-header d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 id="pageTitle"></h1>
+                    <p class="page-subtitle" id="pageSubtitle"></p>
                 </div>
-                <div class="col-6 col-lg-3">
-                    <select class="form-select" id="courseSemesterFilter">
-                        <option value="">Tất cả học kỳ</option>
-                    </select>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <select class="form-select" id="courseSubjectFilter">
-                        <option value="">Tất cả môn học</option>
-                    </select>
-                </div>
-            </div>
-        </section>
+                <div id="actionButtonContainer"></div>
+            </section>
 
-        <section class="card-grid" id="courseGrid"></section>
+            <!-- SEARCH + FILTER -->
+            <section class="panel-card mb-4">
+                <div class="row g-3 align-items-center">
+                    <!-- SEARCH -->
+                    <div class="col-12 col-lg-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   id="courseSearchInput"
+                                   placeholder="Tìm theo tên lớp hoặc giảng viên">
+                        </div>
+                    </div>
+                    <!-- SEMESTER -->
+                    <div class="col-6 col-lg-3">
+                        <select class="form-select" id="courseSemesterFilter">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <!-- SUBJECT -->
+                    <div class="col-6 col-lg-3">
+                        <select class="form-select" id="courseSubjectFilter">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
 
+            <!-- GRID -->
+            <section class="row g-4" id="courseGrid"></section>
+
+        </div>
+    </main>
+
+    <!-- JOIN CLASS MODAL -->
+    <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" id="joinClassForm">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="joinClassModalLabel">Nhập mã mời vào lớp</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="joinClassCodeInput">Mã mời *</label>
+                    <input class="form-control" id="joinClassCodeInput" placeholder="Nhập mã mời (ví dụ: SE1711)" autocomplete="off" required>
+                    <p class="mt-2 mb-0 text-muted">Nhập mã mời do giảng viên cung cấp để tham gia lớp học.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Xác nhận tham gia</button>
+                </div>
+            </form>
+        </div>
     </div>
-</main>
 
-<!-- JOIN CLASS MODAL -->
-<div class="modal fade" id="joinClassModal" tabindex="-1"
-     aria-labelledby="joinClassModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content" id="joinClassForm">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5" id="joinClassModalLabel">
-                    Nhập mã mời vào lớp
-                </h2>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body">
-                <label class="form-label" for="joinClassCodeInput">
-                    Mã mời *
-                </label>
-                <input class="form-control"
-                       id="joinClassCodeInput"
-                       placeholder="Nhập mã mời (ví dụ: SE1711)"
-                       autocomplete="off"
-                       required>
-                <p class="mt-2 mb-0">
-                    Nhập mã mời do giảng viên cung cấp để tham gia lớp học.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">
-                    Hủy
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    Xác nhận tham gia
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+    <!-- Bootstrap JS (Bundle) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/Course/Course.js"></script>
+    <!-- Inline JS: giữ nguyên logic gốc, chỉ đổi markup ở render -->
+    @* <script>
 
-@section Scripts {
-    <script>
         const API_BASE = "https://localhost:7167";
 
+        // ====== STUB cho chạy độc lập demo (có thể XÓA khi tích hợp) ======
+        window.getUserRole = window.getUserRole || function () { return "Teacher"; }; // "Teacher" | "Student"
+        window.getToken = window.getToken || function () { return "demo-token"; };
+        // ==================================================================
+
         document.addEventListener("DOMContentLoaded", function () {
-            initRoleUI();
-            loadCourses();
-            initJoinForm();
+          initRoleUI();
+          loadCourses();
+          initJoinForm();
         });
 
-        // Use global functions from site.js instead of local ones
-
         function initRoleUI() {
-            const role = getUserRole();
-            const title = document.getElementById("pageTitle");
-            const subtitle = document.getElementById("pageSubtitle");
-            const btnContainer = document.getElementById("actionButtonContainer");
+          const role = getUserRole();
+          const title = document.getElementById("pageTitle");
+          const subtitle = document.getElementById("pageSubtitle");
+          const btnContainer = document.getElementById("actionButtonContainer");
 
-            if (role === "Teacher") {
-                title.textContent = "Danh sách lớp giảng dạy";
-                subtitle.textContent = "Tìm kiếm và quản lý các lớp học bạn đang giảng dạy.";
+          if (role === "Teacher") {
+            title.textContent = "Danh sách lớp giảng dạy";
+            subtitle.textContent = "Tìm kiếm và quản lý các lớp học bạn đang giảng dạy.";
 
-                btnContainer.innerHTML = `
-                    <a href="/Course/Create" class="btn btn-primary">
-                        + Tạo lớp
-                    </a>
-                `;
-            } else {
-                title.textContent = "Lớp học của tôi";
-                subtitle.textContent = "Tìm kiếm và truy cập các lớp đã tham gia.";
+            btnContainer.innerHTML = `
+              <a href="/Course/Create" class="btn btn-primary">
+                + Tạo lớp
+              </a>
+            `;
+          } else {
+            title.textContent = "Lớp học của tôi";
+            subtitle.textContent = "Tìm kiếm và truy cập các lớp đã tham gia.";
 
-                btnContainer.innerHTML = `
-                    <button class="btn btn-primary"
-                            type="button"
-                            data-bs-toggle="modal"
-                            data-bs-target="#joinClassModal">
-                        + Tham gia lớp
-                    </button>
-                `;
-            }
+            btnContainer.innerHTML = `
+              <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#joinClassModal">
+                + Tham gia lớp
+              </button>
+            `;
+          }
         }
 
         function loadCourses() {
-            const token = getToken();
-            if (!token) {
-                alert("Bạn chưa đăng nhập.");
-                return;
-            }
+          const token = getToken();
+          if (!token) {
+            alert("Bạn chưa đăng nhập.");
+            return;
+          }
 
-            fetch(`${API_BASE}/api/course/my`, {
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error();
-                return res.json();
-            })
-            .then(data => {
-                renderCourses(data);
-                initFilters();
-            })
-            .catch(() => {
-                alert("Không thể tải danh sách lớp.");
-            });
+          fetch(`${API_BASE}/api/course/my`, {
+            headers: { "Authorization": "Bearer " + token }
+          })
+          .then(res => {
+            if (!res.ok) throw new Error();
+            return res.json();
+          })
+          .then(data => {
+            renderCourses(data);
+            initFilters();
+          })
+          .catch(() => {
         }
 
         function renderCourses(courses) {
-            const role = getUserRole();
-            const isTeacher = role === "Teacher";
-            const grid = document.getElementById("courseGrid");
-            grid.innerHTML = "";
+          const role = getUserRole();
+          const isTeacher = role === "Teacher";
+          const grid = document.getElementById("courseGrid");
+          grid.innerHTML = "";
 
-            if (!courses || courses.length === 0) {
-                grid.innerHTML = "<p>Chưa có lớp học.</p>";
-                return;
-            }
+          if (!courses || courses.length === 0) {
+            grid.innerHTML = `<div class="col-12"><p class="text-muted">Chưa có lớp học.</p></div>`;
+            return;
+          }
 
-            const semesters = new Set();
-            const subjects = new Set();
+          const semesters = new Set();
+          const subjects = new Set();
 
-            courses.forEach(c => {
-                semesters.add(c.semester);
-                
-                const subjectDisplay = c.subjectCode ? c.subjectCode + ' - ' + (c.subjectName || '') : (c.subjectName || '');
-                if (subjectDisplay) {
-                    subjects.add(subjectDisplay);
-                }
+          courses.forEach(c => {
+            semesters.add(c.semester);
 
-                const article = document.createElement("article");
-                article.className = "class-card";
-                article.dataset.subject = subjectDisplay;
-                article.dataset.semester = c.semester || "";
-                article.dataset.keyword =
-                    `${c.className} ${c.teacherName} ${subjectDisplay}`.toLowerCase();
+            const subjectDisplay = c.subjectCode ? c.subjectCode + ' - ' + (c.subjectName || '') : (c.subjectName || '');
+            if (subjectDisplay) subjects.add(subjectDisplay);
 
-                article.innerHTML = `
-                    <h2>${c.className}</h2>
-                    <p>${c.teacherName}</p>
-                    <small>Môn học: ${subjectDisplay}</small><br>
-                    <small>Học kỳ: ${c.semester || ""}</small>
-                    <div class="mt-2">
-                        Exams: ${c.examCount} • Sĩ số: ${c.studentCount}
-                    </div>
-                    <div class="mt-2">
-                        <a class="btn btn-sm ${isTeacher ? "btn-primary" : "btn-outline-primary"}"
-                           href="/Course/ExamListInCourse/${c.classId}">
-                           Vào khóa học
-                        </a>
-                        ${!isTeacher ? `
-                            <button class="btn btn-sm btn-danger"
-                                    onclick="leaveCourse(${c.classId})">
-                                Rời khóa học
-                            </button>
-                        ` : ""}
-                    </div>
-                `;
+            const col = document.createElement("div");
+            col.className = "col-12 col-sm-6 col-lg-3";
 
-                grid.appendChild(article);
-            });
+            col.innerHTML = `
+              <div class="card h-100 shadow-sm rounded-3 class-card"
+                   data-subject="${subjectDisplay}"
+                   data-semester="${c.semester || ''}"
+                   data-keyword="${`${c.className} ${c.teacherName} ${subjectDisplay}`.toLowerCase()}">
 
-            populateSelect("courseSemesterFilter", semesters);
-            populateSelect("courseSubjectFilter", subjects);
+                <div class="card-body d-flex flex-column">
+                  <h5 class="mb-0">${c.className}</h5>
+                  <small class="text-muted mb-2">${c.teacherName}</small>
+
+                  <div class="mb-1">
+                    <small><strong>Môn học:</strong> ${subjectDisplay}</small>
+                  </div>
+                  <div class="mb-2">
+                    <small><strong>Học kỳ:</strong> ${c.semester || ''}</small>
+                  </div>
+
+                  <div class="mt-auto small text-muted mb-3">
+                    Exams: ${c.examCount} &nbsp;•&nbsp; Sĩ số: ${c.studentCount}
+                  </div>
+
+                  <a class="btn btn-enter btn-sm w-100" href="/Course/ExamListInCourse/${c.classId}">
+                    Vào khóa học
+                  </a>
+
+                  ${!isTeacher ? `
+                    <button class="btn btn-outline-danger btn-sm mt-2 w-100"
+                            onclick="leaveCourse(${c.classId})">
+                      Rời khóa học
+                    </button>
+                  ` : ""}
+                </div>
+              </div>
+            `;
+
+            grid.appendChild(col);
+          });
+
+          populateSelect("courseSemesterFilter", semesters);
+          populateSelect("courseSubjectFilter", subjects);
         }
 
         function populateSelect(id, values) {
-            const select = document.getElementById(id);
-            select.innerHTML = '<option value="">Tất cả</option>';
-            values.forEach(v => {
-                if (!v) return;
-                const option = document.createElement("option");
-                option.value = v;
-                option.textContent = v;
-                select.appendChild(option);
-            });
+          const select = document.getElementById(id);
+          const label = (id === "courseSemesterFilter" || id === "courseSubjectFilter") ? "Tất cả" : "Tất cả";
+          select.innerHTML = `<option value="">${label}</option>`;
+          values.forEach(v => {
+            if (!v) return;
+            const option = document.createElement("option");
+            option.value = v;
+            option.textContent = v;
+            select.appendChild(option);
+          });
         }
 
         function initFilters() {
-            const search = document.getElementById("courseSearchInput");
-            const semester = document.getElementById("courseSemesterFilter");
-            const subject = document.getElementById("courseSubjectFilter");
+          const search = document.getElementById("courseSearchInput");
+          const semester = document.getElementById("courseSemesterFilter");
+          const subject = document.getElementById("courseSubjectFilter");
 
-            if(search && semester && subject) {
-                [search, semester, subject].forEach(el => {
-                    el.addEventListener("input", applyFilters);
-                    el.addEventListener("change", applyFilters);
-                });
-            }
+          if (search && semester && subject) {
+            [search, semester, subject].forEach(el => {
+              el.addEventListener("input", applyFilters);
+              el.addEventListener("change", applyFilters);
+            });
+          }
         }
 
         function applyFilters() {
-            const keyword = document.getElementById("courseSearchInput").value.toLowerCase();
-            const semester = document.getElementById("courseSemesterFilter").value.toLowerCase();
-            const subject = document.getElementById("courseSubjectFilter").value.toLowerCase();
+          const keyword = (document.getElementById("courseSearchInput").value || "").toLowerCase();
+          const semester = (document.getElementById("courseSemesterFilter").value || "").toLowerCase();
+          const subject = (document.getElementById("courseSubjectFilter").value || "").toLowerCase();
 
-            document.querySelectorAll(".class-card").forEach(card => {
-                const matchKeyword = !keyword || card.dataset.keyword.includes(keyword);
-                const matchSemester = !semester || card.dataset.semester.toLowerCase() === semester;
-                const matchSubject = !subject || card.dataset.subject.toLowerCase() === subject;
+          document.querySelectorAll(".class-card").forEach(card => {
+            const matchKeyword = !keyword || card.dataset.keyword.includes(keyword);
+            const matchSemester = !semester || (card.dataset.semester || "").toLowerCase() === semester;
+            const matchSubject = !subject || (card.dataset.subject || "").toLowerCase() === subject;
 
-                card.classList.toggle("d-none",
-                    !(matchKeyword && matchSemester && matchSubject));
-            });
+            card.closest(".col-12").classList.toggle("d-none", !(matchKeyword && matchSemester && matchSubject));
+          });
         }
 
         function leaveCourse(classId) {
-            if (!confirm("Bạn chắc chắn muốn rời khóa học này?")) return;
+          if (!confirm("Bạn chắc chắn muốn rời khóa học này?")) return;
 
-            const token = getToken();
+          const token = getToken();
 
-            fetch(`${API_BASE}/api/course/${classId}/leave`, {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error();
-                alert("Đã rời khóa học.");
-                loadCourses();
-            })
-            .catch(() => {
-                alert("Không thể rời khóa học.");
-            });
+          fetch(`${API_BASE}/api/course/${classId}/leave`, {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + token }
+          })
+          .then(res => {
+            if (!res.ok) throw new Error();
+            alert("Đã rời khóa học.");
+            loadCourses();
+          })
+          .catch(() => {
+            alert("Không thể rời khóa học.");
+          });
         }
 
         function initJoinForm() {
-            const joinForm = document.getElementById("joinClassForm");
+          const joinForm = document.getElementById("joinClassForm");
 
-            if (joinForm) {
-                joinForm.addEventListener("submit", function (e) {
-                    e.preventDefault();
+          if (joinForm) {
+            joinForm.addEventListener("submit", function (e) {
+              e.preventDefault();
 
-                    const code = document
-                        .getElementById("joinClassCodeInput")
-                        .value
-                        .trim();
+              const code = document.getElementById("joinClassCodeInput").value.trim();
+              if (!code) return;
 
-                    if (!code) return;
+              const token = getToken();
 
-                    const token = getToken();
+              fetch(`${API_BASE}/api/course/join`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ invitationCode: code })
+              })
+              .then(res => {
+                if (!res.ok) throw new Error();
+                alert("Tham gia lớp thành công!");
 
-                    fetch(`${API_BASE}/api/course/join`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": "Bearer " + token
-                        },
-                        body: JSON.stringify({ invitationCode: code })
-                    })
-                    .then(res => {
-                        if (!res.ok) throw new Error();
-                        alert("Tham gia lớp thành công!");
+                const modalEl = document.getElementById("joinClassModal");
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal && modal.hide();
 
-                        const modalEl = document.getElementById("joinClassModal");
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        modal.hide();
-
-                        joinForm.reset();
-                        loadCourses();
-                    })
-                    .catch(() => {
-                        alert("Mã mời không hợp lệ hoặc đã xảy ra lỗi.");
-                    });
-                });
-            }
+                joinForm.reset();
+                loadCourses();
+              })
+              .catch(() => {
+                alert("Mã mời không hợp lệ hoặc đã xảy ra lỗi.");
+              });
+            });
+          }
         }
-    </script>
-}
+    </script> *@
+</body>
+</html>
+``
