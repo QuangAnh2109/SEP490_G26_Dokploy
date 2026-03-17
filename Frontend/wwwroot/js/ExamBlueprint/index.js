@@ -152,6 +152,17 @@ $(document).ready(function () {
             });
     }
 
+    function cloneTemplateOrFallback(templateId, fallbackHtml) {
+        const t = document.getElementById(templateId);
+        if (t && t.content) {
+            return t.content.cloneNode(true);
+        }
+        console.warn(`Missing template #${templateId}. Falling back to inline row.`);
+        const container = document.createElement('tbody');
+        container.innerHTML = fallbackHtml;
+        return container.firstElementChild || document.createTextNode('');
+    }
+
     function renderTable(items) {
         console.log('[ExamBlueprint] renderTable called with items:', items.length);
         const $tbody = $('#blueprintTableBody');

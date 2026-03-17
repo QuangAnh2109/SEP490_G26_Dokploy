@@ -1,81 +1,81 @@
 :root {
-  --bp-bg-panel: #f7f8fa;
-  --bp-border: #dde3ea;
-  --bp-text: #1a2230;
-  --bp-muted: #6b7687;
+    --bp-bg-panel: #f7f8fa;
+    --bp-border: #dde3ea;
+    --bp-text: #1a2230;
+    --bp-muted: #6b7687;
 }
 
 .exam-blueprint-page .page-shell {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
 }
 
 .exam-blueprint-page .page-title {
-  margin: 0;
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: var(--bp-text);
+    margin: 0;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--bp-text);
 }
 
 .exam-blueprint-page .page-subtitle {
-  margin: .35rem 0 0;
-  color: var(--bp-muted);
+    margin: .35rem 0 0;
+    color: var(--bp-muted);
 }
 
 .exam-blueprint-page .page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
 }
 
 .exam-blueprint-page .panel-card {
-  border: 1px solid var(--bp-border);
-  border-radius: 1rem;
-  background: var(--bp-bg-panel);
-  padding: 1rem;
-  box-shadow: 0 .25rem .75rem rgba(16, 24, 40, .04);
+    border: 1px solid var(--bp-border);
+    border-radius: 1rem;
+    background: var(--bp-bg-panel);
+    padding: 1rem;
+    box-shadow: 0 .25rem .75rem rgba(16, 24, 40, .04);
 }
 
 .exam-blueprint-page .section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+    font-size: 1.05rem;
+    font-weight: 700;
 }
 
 .exam-blueprint-page .summary-card {
-  border: 1px solid var(--bp-border);
-  border-radius: .75rem;
-  background: #fff;
-  padding: .75rem;
+    border: 1px solid var(--bp-border);
+    border-radius: .75rem;
+    background: #fff;
+    padding: .75rem;
 }
 
 .exam-blueprint-page .summary-label,
 .exam-blueprint-page .form-note {
-  color: var(--bp-muted);
-  font-size: .9rem;
+    color: var(--bp-muted);
+    font-size: .9rem;
 }
 
 .badge-status {
-  color: #fff;
+    color: #fff;
 }
 
 .badge-draft {
-  background: #f0ad00;
+    background: #f0ad00;
 }
 
 .badge-published {
-  background: #198754;
+    background: #198754;
 }
 
 .badge-inuse {
-  background: #0d6efd;
+    background: #0d6efd;
 }
 
 .badge-archived {
-  background: #6c757d;
+    background: #6c757d;
 }
 
 @media (max-width: 991.98px) {
-  .exam-blueprint-page .page-title {
-    font-size: 1.4rem;
-  }
+    .exam-blueprint-page .page-title {
+        font-size: 1.4rem;
+    }
 }
