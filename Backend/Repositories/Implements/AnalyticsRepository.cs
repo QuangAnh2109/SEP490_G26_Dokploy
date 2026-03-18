@@ -15,9 +15,10 @@ public class AnalyticsRepository : IAnalyticsRepository
 
     public async Task<Exam?> GetExamWithFullGraphAsync(int examId)
     {
-        // 1. Tải Exam với thông tin cơ bản
+        // 1. Tải Exam với thông tin cơ bản (kèm Class cho thống kê nộp bài)
         var exam = await _context.Exams
             .Include(e => e.Subject)
+            .Include(e => e.Class)
             .FirstOrDefaultAsync(e => e.ExamId == examId);
         if (exam == null) return null;
 
@@ -63,5 +64,20 @@ public class AnalyticsRepository : IAnalyticsRepository
         exam.Papers = papers;
 
         return exam;
+    }
+
+    public async Task<List<ClassMember>> GetClassMembersWithStudentsAsync(int classId)
+    {
+        return await _context.ClassMembers
+            .Include(cm => cm.Student)
+            .Where(cm => cm.ClassId == classId)
+            .ToListAsync();
+    }
+
+    public async Task<Submission?> GetSubmissionByIdWithPaperAsync(int submissionId)
+    {
+        return await _context.Submissions
+            .Include(s => s.Paper)
+            .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
     }
 }

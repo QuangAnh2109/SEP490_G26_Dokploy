@@ -14,10 +14,12 @@ namespace Backend.Services.Implements;
 public class AnalyticsService : IAnalyticsService
 {
     private readonly IAnalyticsRepository _analyticsRepo;
+    private readonly IStudentExamRepository _studentExamRepo;
 
-    public AnalyticsService(IAnalyticsRepository analyticsRepo)
+    public AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRepository studentExamRepo)
     {
         _analyticsRepo = analyticsRepo;
+        _studentExamRepo = studentExamRepo;
     }
 
     // ════════════════════════════════════════════════════════
@@ -148,7 +150,7 @@ public class AnalyticsService : IAnalyticsService
                 StudentId = s.StudentId,
                 StudentName = s.Student?.FullName ?? s.Student?.Email ?? $"HS #{s.StudentId}",
                 TotalPoints = s.TotalPoints,
-                SubmittedAt = s.UpdatedAtUtc
+                SubmittedAt = DateTime.SpecifyKind(s.UpdatedAtUtc, DateTimeKind.Utc)
             })
             .OrderByDescending(s => s.TotalPoints)
             .ToList();
@@ -189,9 +191,38 @@ public class AnalyticsService : IAnalyticsService
         if (submission == null)
             throw new KeyNotFoundException($"Không tìm thấy bài làm của học sinh {studentId} cho bài thi {examId}.");
 
-        var showScore = exam.ShowScore;
-        var showAnswer = exam.ShowAnswer;
+        return await BuildSubmissionAnalyticsDtoAsync(exam, submission, exam.ShowScore, exam.ShowAnswer);
+    }
 
+    // ════════════════════════════════════════════════════════
+    //  GIÁO VIÊN — Xem chi tiết bài làm theo submissionId
+    // ════════════════════════════════════════════════════════
+    public async Task<StudentSubmissionAnalyticsDto> GetSubmissionBySubmissionIdAsync(int submissionId)
+    {
+        var submission = await _analyticsRepo.GetSubmissionByIdWithPaperAsync(submissionId);
+        if (submission?.Paper == null)
+            throw new KeyNotFoundException($"Không tìm thấy bài làm với ID {submissionId}.");
+
+        var examId = submission.Paper.ExamId;
+        var studentId = submission.StudentId;
+
+        var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
+        if (exam == null)
+            throw new KeyNotFoundException($"Không tìm thấy bài thi.");
+
+        var targetSubmission = exam.Papers
+            .SelectMany(p => p.Submissions)
+            .FirstOrDefault(s => s.SubmissionId == submissionId);
+        if (targetSubmission == null)
+            throw new KeyNotFoundException($"Không tìm thấy bài làm trong dữ liệu bài thi.");
+
+        // Giáo viên luôn xem được điểm và đáp án
+        var dto = await BuildSubmissionAnalyticsDtoAsync(exam, targetSubmission, showScore: true, showAnswer: true);
+        return dto;
+    }
+
+    private async Task<StudentSubmissionAnalyticsDto> BuildSubmissionAnalyticsDtoAsync(Exam exam, Submission submission, bool showScore, bool showAnswer)
+    {
         var dto = new StudentSubmissionAnalyticsDto
         {
             ShowScore = showScore,
@@ -201,12 +232,10 @@ public class AnalyticsService : IAnalyticsService
             SubmissionId = submission.SubmissionId
         };
 
-        // ── Build question lookup ──
         var paper = exam.Papers.FirstOrDefault(p => p.PaperId == submission.PaperId);
         var paperQuestions = paper?.Questions?.ToList() ?? new List<Question>();
         dto.TotalQuestions = paperQuestions.DistinctBy(q => q.QuestionId).Count();
 
-        // ── Xem lại bài làm + tính đúng/sai nội bộ ──
         int questionOrder = 0, correctCount = 0, wrongCount = 0;
         var answerAnalysis = new List<(string ChapterName, int Difficulty, bool IsCorrect)>();
 
@@ -223,11 +252,9 @@ public class AnalyticsService : IAnalyticsService
             };
 
             bool questionCorrect = true;
-
             foreach (var qa in question.QuestionAnswers)
             {
                 var sa = submission.StudentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
-
                 review.Options.Add(new AnswerOptionReviewDto
                 {
                     QuestionAnswerId = qa.QuestionAnswerId,
@@ -237,23 +264,19 @@ public class AnalyticsService : IAnalyticsService
                     IsCorrect = showAnswer ? qa.IsCorrect : null,
                     CorrectAnswer = showAnswer ? qa.CorrectAnswer : null
                 });
-
                 if (sa != null) { if (!AnalyticsHelper.CheckIsCorrect(qa, sa)) questionCorrect = false; }
                 else if (qa.IsCorrect == true) questionCorrect = false;
             }
-
             if (questionCorrect) correctCount++; else wrongCount++;
             answerAnalysis.Add((question.Chapter?.Name ?? "N/A", question.Difficulty, questionCorrect));
             dto.AnswerReview.Add(review);
         }
 
-        // ── Phần chỉ hiện khi ShowScore = true ──
         if (showScore)
         {
             dto.TotalPoints = submission.TotalPoints;
             dto.CorrectCount = correctCount;
             dto.WrongCount = wrongCount;
-
             var classScores = exam.Papers.SelectMany(p => p.Submissions)
                 .Where(s => s.TotalPoints.HasValue).Select(s => s.TotalPoints!.Value).ToList();
             if (classScores.Count > 0)
@@ -261,27 +284,153 @@ public class AnalyticsService : IAnalyticsService
                 dto.ClassAverageScore = Math.Round(classScores.Average(), 2);
                 dto.ClassMaxScore = classScores.Max();
             }
-
             dto.ChapterStats = answerAnalysis.GroupBy(x => x.ChapterName)
                 .Select(g => new ChapterAnalyticsDto { ChapterName = g.Key, TotalAnswers = g.Count(), CorrectAnswers = g.Count(x => x.IsCorrect) })
                 .OrderBy(c => c.AccuracyRate).ToList();
-
             dto.DifficultyStats = answerAnalysis.GroupBy(x => x.Difficulty)
                 .Select(g => new DifficultyAnalyticsDto { DifficultyLevel = g.Key, DifficultyName = DifficultyLevel.GetLabel(g.Key), TotalAnswers = g.Count(), CorrectAnswers = g.Count(x => x.IsCorrect) })
                 .OrderBy(d => d.DifficultyLevel).ToList();
-
             dto.Recommendations = new List<string>();
-            foreach (var stat in dto.ChapterStats)
+            foreach (var stat in dto.ChapterStats!)
             {
                 if (stat.AccuracyRate < 40)
-                    dto.Recommendations.Add($"🚨 Em cần ôn lại chương [{stat.ChapterName}] — tỉ lệ đúng chỉ {stat.AccuracyRate}%. Hãy xem lại lý thuyết cơ bản và làm lại các bài tập mẫu.");
+                    dto.Recommendations.Add($"🚨 Cần ôn lại chương [{stat.ChapterName}] — tỉ lệ đúng chỉ {stat.AccuracyRate}%.");
                 else if (stat.AccuracyRate < 70)
-                    dto.Recommendations.Add($"⚠️ Chương [{stat.ChapterName}] cần luyện thêm ({stat.AccuracyRate}% đúng). Thử làm thêm bài tập để cải thiện.");
+                    dto.Recommendations.Add($"⚠️ Chương [{stat.ChapterName}] cần luyện thêm ({stat.AccuracyRate}% đúng).");
                 else
-                    dto.Recommendations.Add($"🌟 Em làm tốt chương [{stat.ChapterName}] ({stat.AccuracyRate}% đúng). Hãy thử thách với bài tập nâng cao!");
+                    dto.Recommendations.Add($"🌟 Làm tốt chương [{stat.ChapterName}] ({stat.AccuracyRate}% đúng).");
             }
         }
 
-        return dto;
+        return await Task.FromResult(dto);
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  GIÁO VIÊN — Thống kê nộp bài (danh sách học sinh + lịch sử)
+    // ════════════════════════════════════════════════════════
+    public async Task<ExamSubmitResultsDto> GetExamSubmitResultsAsync(int examId)
+    {
+        await _studentExamRepo.ForceSubmitOverdueExamsAsync(examId);
+        var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
+        if (exam == null)
+            throw new KeyNotFoundException($"Không tìm thấy bài thi với ID {examId}.");
+
+        var rawSubmissions = exam.Papers.SelectMany(p => p.Submissions).ToList();
+        var maxAttempts = exam.MaxAttempts > 0 ? exam.MaxAttempts : 999;
+
+        // Lấy danh sách học sinh trong lớp (nếu có)
+        var studentIdsInClass = new HashSet<int>();
+        var studentDict = new Dictionary<int, User>();
+        string? className = null;
+
+        if (exam.ClassId.HasValue)
+        {
+            var members = await _analyticsRepo.GetClassMembersWithStudentsAsync(exam.ClassId.Value);
+            foreach (var m in members)
+            {
+                studentIdsInClass.Add(m.StudentId);
+                if (m.Student != null)
+                    studentDict[m.StudentId] = m.Student;
+            }
+            className = exam.Class?.Name;
+        }
+
+        // Nếu không có lớp, lấy học sinh từ submissions
+        if (studentIdsInClass.Count == 0)
+        {
+            foreach (var s in rawSubmissions)
+            {
+                studentIdsInClass.Add(s.StudentId);
+                if (s.Student != null)
+                    studentDict[s.StudentId] = s.Student;
+            }
+        }
+        else
+        {
+            // Bổ sung thông tin từ submissions cho HS có trong lớp
+            foreach (var s in rawSubmissions.Where(s => s.Student != null))
+                studentDict.TryAdd(s.StudentId, s.Student!);
+        }
+
+        var submissionsByStudent = rawSubmissions
+            .GroupBy(s => s.StudentId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(s => s.CreatedAtUtc).ToList());
+
+        var students = new List<StudentSubmitItemDto>();
+        foreach (var studentId in studentIdsInClass.OrderBy(x => x))
+        {
+            var user = studentDict.GetValueOrDefault(studentId);
+            var subs = submissionsByStudent.GetValueOrDefault(studentId) ?? new List<Submission>();
+
+            var lastSub = subs.OrderByDescending(s => s.UpdatedAtUtc).FirstOrDefault();
+            var submittedCount = subs.Count(s => s.Status == SubmissionStatus.Submitted);
+            var inProgressCount = subs.Count(s => s.Status == SubmissionStatus.InProgress);
+
+            string status;
+            if (submittedCount > 0)
+                status = "Đã nộp";
+            else if (inProgressCount > 0)
+                status = "Đang làm";
+            else
+                status = "Vắng thi";
+
+            var history = new List<SubmissionHistoryDto>();
+            int attemptNum = 0;
+            foreach (var sub in subs.OrderBy(s => s.CreatedAtUtc))
+            {
+                attemptNum++;
+                var duration = sub.Status == SubmissionStatus.Submitted
+                    ? (sub.UpdatedAtUtc - sub.CreatedAtUtc)
+                    : (DateTime.UtcNow - sub.CreatedAtUtc);
+                history.Add(new SubmissionHistoryDto
+                {
+                    SubmissionId = sub.SubmissionId,
+                    AttemptNumber = attemptNum,
+                    SubmittedAt = DateTime.SpecifyKind(sub.UpdatedAtUtc, DateTimeKind.Utc),
+                    DurationFormatted = FormatDuration(duration),
+                    Score = sub.TotalPoints,
+                    IsLast = sub == lastSub
+                });
+            }
+
+            students.Add(new StudentSubmitItemDto
+            {
+                StudentId = studentId,
+                StudentCode = user?.StudentId ?? $"#{studentId}",
+                FullName = user?.FullName ?? user?.Email ?? $"Học sinh #{studentId}",
+                LastSubmitAt = lastSub?.Status == SubmissionStatus.Submitted ? DateTime.SpecifyKind(lastSub.UpdatedAtUtc, DateTimeKind.Utc) : null,
+                DurationFormatted = lastSub != null
+                    ? FormatDuration(lastSub.Status == SubmissionStatus.Submitted
+                        ? (lastSub.UpdatedAtUtc - lastSub.CreatedAtUtc)
+                        : (DateTime.UtcNow - lastSub.CreatedAtUtc))
+                    : null,
+                LastScore = lastSub?.TotalPoints,
+                AttemptCount = subs.Count,
+                Status = status,
+                History = history
+            });
+        }
+
+        var totalSubmitted = students.Count(s => s.Status == "Đã nộp");
+
+        return new ExamSubmitResultsDto
+        {
+            ExamId = exam.ExamId,
+            ExamTitle = exam.Title,
+            ClassName = className,
+            DurationMinutes = exam.Duration,
+            MaxAttempts = maxAttempts,
+            TotalStudents = students.Count,
+            SubmittedCount = totalSubmitted,
+            Students = students.OrderByDescending(s => s.LastSubmitAt ?? DateTime.MinValue).ToList()
+        };
+    }
+
+    private static string FormatDuration(TimeSpan d)
+    {
+        var totalSec = (int)d.TotalSeconds;
+        var min = totalSec / 60;
+        var sec = totalSec % 60;
+        return $"{min}p {sec}s";
     }
 }

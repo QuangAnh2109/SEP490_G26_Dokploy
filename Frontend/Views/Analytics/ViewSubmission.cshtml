@@ -1,0 +1,172 @@
+@{
+    ViewData["Title"] = "Xem bài làm - Giáo viên";
+    var submissionId = ViewBag.SubmissionId ?? 0;
+    var examId = ViewBag.ExamId;
+    var classId = ViewBag.ClassId;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/student_result.css" />
+}
+
+<main class="container-fluid px-3 px-md-4 py-4" id="analyticsRoot" data-submission-id="@submissionId" data-exam-id="@(examId ?? "")" data-class-id="@(classId ?? "")">
+    <div id="analyticsLoading" class="analytics-loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted">Đang tải bài làm...</p>
+    </div>
+
+    <div id="analyticsError" class="analytics-empty" hidden>
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+        <h5>Không thể tải dữ liệu</h5>
+        <p id="errorMessage" class="text-muted"></p>
+    </div>
+
+    <div id="analyticsContent" hidden>
+        <div class="mb-3">
+            <a href="#" id="backToResults" class="text-decoration-none text-secondary" style="font-size: 0.95rem;">
+                <i class="bi bi-arrow-left"></i> Quay lại thống kê nộp bài
+            </a>
+        </div>
+        <header class="d-flex flex-wrap justify-content-between align-items-center mb-5 gap-3">
+            <div>
+                <h1 class="page-title mb-1" id="examTitle">Chi tiết bài làm</h1>
+                <p class="text-muted mb-0"><i class="bi bi-person-badge"></i> Chế độ Giáo viên — Xem bài làm học sinh</p>
+            </div>
+            <div id="quickStats" class="d-flex gap-4">
+                <div class="text-center">
+                    <div class="h3 fw-bold mb-0 text-primary" id="miniScore">—</div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Điểm số</small>
+                </div>
+                <div class="text-center">
+                    <div class="h3 fw-bold mb-0 text-success" id="miniCorrect">0</div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Câu đúng</small>
+                </div>
+            </div>
+        </header>
+
+        <div id="scoreSection">
+            <div class="row g-4 mb-5">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-primary">
+                        <div class="stat-value" id="totalPoints">—</div>
+                        <div class="stat-label">Điểm số đạt được</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-success">
+                        <div class="stat-value" id="correctCount">0</div>
+                        <div class="stat-label">Số câu trả lời đúng</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-danger">
+                        <div class="stat-value" id="wrongCount">0</div>
+                        <div class="stat-label">Số câu trả lời sai</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-info">
+                        <div class="stat-value" id="totalQuestions">0</div>
+                        <div class="stat-label">Tổng số câu hỏi</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-5">
+                <div class="col-12 col-lg-7">
+                    <div class="analytics-card h-100">
+                        <div class="card-header">
+                            <i class="bi bi-bar-chart-line text-primary"></i> So sánh với Lớp học
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-4 align-items-center">
+                                <div class="col-md-5">
+                                    <div class="p-3 rounded-4 bg-light mb-3">
+                                        <div class="small text-muted mb-1">Điểm TB của lớp</div>
+                                        <div class="h4 fw-bold mb-0" id="classAvgLabel">—</div>
+                                    </div>
+                                    <div class="p-3 rounded-4 bg-primary bg-opacity-10">
+                                        <div class="small text-primary mb-1">Điểm cao nhất</div>
+                                        <div class="h4 fw-bold text-primary mb-0" id="classMaxLabel">—</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <canvas id="comparisonChart" height="180"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <div class="analytics-card h-100" id="recSection">
+                        <div class="card-header">
+                            <i class="bi bi-lightbulb-fill text-warning"></i> Phân tích & Gợi ý
+                        </div>
+                        <div class="card-body" id="recommendationsBox"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-5">
+                <div class="col-12 col-md-6">
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <i class="bi bi-diagram-3 text-success"></i> Mức độ theo Chương
+                        </div>
+                        <div class="card-body">
+                            <div class="radar-container">
+                                <canvas id="chapterRadar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <i class="bi bi-cpu text-info"></i> Năng lực theo Độ khó
+                        </div>
+                        <div class="card-body">
+                            <div class="radar-container">
+                                <canvas id="difficultyRadar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section>
+            <div class="d-flex align-items-center mb-4 gap-2">
+                <h4 class="fw-bold mb-0">Nhật ký Bài làm</h4>
+                <hr class="flex-grow-1 opacity-10">
+            </div>
+            <div id="answerReviewBox"></div>
+        </section>
+    </div>
+</main>
+
+<template id="tpl-rec-item"><div class="rec-item"></div></template>
+<template id="tpl-review-question">
+    <div class="answer-review-item">
+        <div class="question-label">
+            <strong>Câu <span data-field="order"></span>:</strong>
+            <math-span data-field="content"></math-span>
+            <small class="text-muted" data-field="chapter"></small>
+        </div>
+        <div data-slot="options"></div>
+    </div>
+</template>
+<template id="tpl-review-option">
+    <div class="option-row">
+        <span class="option-icon" data-field="icon"></span>
+        <math-span data-field="content"></math-span>
+        <em class="text-muted" data-field="response"></em>
+        <small class="text-success" data-field="correct"></small>
+    </div>
+</template>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script src="~/js/Analytics/view_submission.js" asp-append-version="true"></script>
+}

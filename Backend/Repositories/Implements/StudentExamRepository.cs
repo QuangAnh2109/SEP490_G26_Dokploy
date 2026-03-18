@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.StudentExam;
+using Backend.DTOs.StudentExam;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -165,14 +165,16 @@ namespace Backend.Repositories.Implements
             var now = DateTime.UtcNow;
             foreach (var sub in activeSubmissions)
             {
-                if (sub.Paper?.Exam != null)
+                if (sub.Paper?.Exam == null) continue;
+                var exam = sub.Paper.Exam;
+                var durationSeconds = exam.Duration * 60;
+                var elapsedSeconds = (now - sub.CreatedAtUtc).TotalSeconds;
+                var overDuration = elapsedSeconds > durationSeconds;
+                var overCloseAt = exam.CloseAt.HasValue && now > exam.CloseAt.Value;
+                if (overDuration || overCloseAt)
                 {
-                    var durationSeconds = sub.Paper.Exam.Duration * 60;
-                    var elapsedSeconds = (now - sub.CreatedAtUtc).TotalSeconds;
-                    if (elapsedSeconds > durationSeconds)
-                    {
-                        sub.Status = 2; // Submitted
-                    }
+                    sub.Status = 2; // Submitted
+                    sub.UpdatedAtUtc = now;
                 }
             }
             await _context.SaveChangesAsync();

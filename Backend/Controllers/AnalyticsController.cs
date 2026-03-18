@@ -67,4 +67,48 @@ public class AnalyticsController : ControllerBase
             return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích bài làm.", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Thống kê nộp bài — danh sách học sinh + lịch sử nộp (dành cho Giáo viên).
+    /// </summary>
+    [HttpGet("exam/{examId}/submissions")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> GetExamSubmitResults(int examId)
+    {
+        try
+        {
+            var result = await _analyticsService.GetExamSubmitResultsAsync(examId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi tải thống kê nộp bài.", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Xem chi tiết bài làm theo submissionId — dành cho Giáo viên.
+    /// </summary>
+    [HttpGet("submission/{submissionId}")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> GetSubmissionBySubmissionId(int submissionId)
+    {
+        try
+        {
+            var result = await _analyticsService.GetSubmissionBySubmissionIdAsync(submissionId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi tải bài làm.", details = ex.Message });
+        }
+    }
 }

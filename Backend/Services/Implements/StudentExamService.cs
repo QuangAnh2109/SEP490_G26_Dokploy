@@ -24,6 +24,9 @@ namespace Backend.Services.Implements
 
         public async Task<TakeExamDto?> TakeExamInClass(int examId, int studentId)
         {
+            // 0. Tự động nộp bài cho các submission đã quá thời gian
+            await _studentExamRepository.ForceSubmitOverdueExamsAsync(examId);
+
             // 1. Kiểm tra exam tồn tại, student thuộc lớp, thời gian hợp lệ
             var examInfo = await _studentExamRepository.GetExamInfoForStudentAsync(examId, studentId);
             if (examInfo == null)

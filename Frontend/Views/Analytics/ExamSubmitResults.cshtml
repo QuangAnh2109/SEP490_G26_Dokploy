@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Kết quả thi - Giáo viên";
+    var examId = ViewBag.ExamId ?? 0;
+    var classId = ViewBag.ClassId;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; }
+        .table { font-size: 16px; color: #212529; }
+        .table > :not(caption) > * > * { padding: 16px; vertical-align: middle; }
+        .btn-outline-custom { background-color: #fff; }
+        .btn-outline-custom:hover { background-color: #f8f9fa; color: #212529 !important; }
+        .input-group-search:focus-within { border-radius: 0.375rem; }
+        .input-group-search:focus-within .input-group-text,
+        .input-group-search:focus-within .form-control { border-color: #86b7fe; }
+        .sub-table th, .sub-table td { padding: 12px 16px !important; }
+        .bg-primary-subtle { background-color: rgba(13, 110, 253, 0.08); }
+        #paginationList .page-link { border-radius: 0.25rem; margin: 0 2px; }
+    </style>
+}
+
+<main class="container-fluid p-4 text-dark" id="submitResultsRoot" data-exam-id="@examId" data-class-id="@(classId ?? "")">
+    <div id="loadingState" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted">Đang tải thống kê nộp bài...</p>
+    </div>
+
+    <div id="errorState" class="text-center py-5" hidden>
+        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+        <h5 class="mt-3">Không thể tải dữ liệu</h5>
+        <p id="errorMessage" class="text-muted"></p>
+    </div>
+
+    <div id="contentArea" hidden>
+        <div class="mb-4">
+            <a href="#" id="backLink" class="text-decoration-none text-secondary mb-2 d-inline-block" style="font-size: 0.95rem;">
+                <i class="bi bi-arrow-left"></i> Danh sách kỳ thi
+            </a>
+            <h4 class="mb-1 fw-normal text-dark" id="examTitle">Kết quả thi</h4>
+            <div class="text-secondary small d-flex flex-wrap gap-4 mt-2" id="examMeta">
+                <span id="classInfo"></span>
+                <span><strong>Thời gian:</strong> <span id="durationInfo"></span> phút</span>
+                <span><strong>Số lần làm tối đa:</strong> <span id="maxAttemptsInfo"></span> lần</span>
+                <span><strong>Đã nộp:</strong> <span id="submittedInfo"></span></span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 border-top pt-4 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <span class="fw-medium" id="selectedCount">Đã chọn 0 học sinh</span>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="input-group input-group-sm input-group-search" style="width: 250px;">
+                    <span class="input-group-text bg-white text-secondary border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0 shadow-none" placeholder="Tìm MSSV, Họ tên...">
+                </div>
+                <select id="statusFilter" class="form-select form-select-sm shadow-none border text-secondary fw-medium" style="width: 160px;">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="Đã nộp">Đã nộp</option>
+                    <option value="Đang làm">Đang làm</option>
+                    <option value="Vắng thi">Vắng thi</option>
+                </select>
+                <button type="button" class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" id="exportExcelBtn" disabled title="Chức năng sắp ra mắt">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Xuất điểm (Excel)
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white border rounded-3 overflow-hidden">
+            <table class="table table-hover mb-0">
+                <thead class="table-light text-dark fw-bold border-bottom">
+                    <tr>
+                        <th style="width: 40px;"><input class="form-check-input" type="checkbox" id="selectAll"></th>
+                        <th style="width: 110px;">MSSV</th>
+                        <th>Họ và tên</th>
+                        <th style="width: 170px;">Lần nộp cuối</th>
+                        <th style="width: 150px;">Thời gian làm</th>
+                        <th style="width: 130px;">Điểm (Lần cuối)</th>
+                        <th style="width: 110px;">Số lần nộp</th>
+                        <th style="width: 110px;">Trạng thái</th>
+                        <th style="width: 60px;" class="text-center">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2">
+            <span class="text-secondary" style="font-size: 0.95rem;" id="paginationInfo">Hiển thị 0 học sinh</span>
+            <nav id="paginationNav" aria-label="Phân trang">
+                <ul class="pagination mb-0" id="paginationList"></ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    <script src="~/js/Analytics/exam_submit_results.js" asp-append-version="true"></script>
+}
