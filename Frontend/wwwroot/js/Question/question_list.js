@@ -1,20 +1,28 @@
 (() => {
     'use strict';
 
-    const difficultyBadgeClass = {
-        1: 'badge-easy',
-        2: 'badge-medium',
-        3: 'badge-hard',
-        4: 'badge-hard'
-    };
-    const statusBadgeClass = {
-        'Active': 'status-active',
-        'Draft': 'status-draft',
-        'Archived': 'status-archived'
-    };
     const typeLabels = {
-        'FillInBlank': 'Điền vào ô trống',
+        'FillInBlank': 'Điền ô trống',
         'MultipleChoice': 'Trắc nghiệm'
+    };
+
+    const statusLabels = {
+        'Active': 'Đã duyệt',
+        'Draft': 'Bản nháp',
+        'Archived': 'Đã lưu trữ'
+    };
+
+    const statusBadgeClass = {
+        'Active': 'badge-status-active',
+        'Draft': 'badge-status-draft',
+        'Archived': 'badge-status-archived'
+    };
+
+    const difficultyBadgeClass = {
+        1: 'badge-diff-1',
+        2: 'badge-diff-2',
+        3: 'badge-diff-3',
+        4: 'badge-diff-4'
     };
 
     let currentPage = 1;
@@ -23,23 +31,38 @@
     const tbody = document.getElementById('questionTableBody');
     const paginationContainer = document.getElementById('paginationContainer');
     const paginationSummary = document.getElementById('paginationSummary');
-    const applyFilterBtn = document.getElementById('applyFilterBtn');
-    const selectAllBtn = document.getElementById('selectAllQuestionsBtn');
-    const clearAllBtn = document.getElementById('clearAllQuestionsBtn');
-    const masterCheckbox = document.getElementById('questionMasterCheckbox');
+    const selectedCountText = document.getElementById('selectedCountText');
     const filterSubject = document.getElementById('filterSubject');
     const filterChapter = document.getElementById('filterChapter');
+    const masterCheckbox = document.getElementById('questionMasterCheckbox');
 
-    if (!tbody) {
-        return;
-    }
+    if (!tbody) return;
 
-    // ── Load subjects/chapters for filter dropdowns ──
+    const getContentPreview = (q) => {
+        if (!q.contentPreview) return '';
+        try {
+            const parsed = JSON.parse(q.contentPreview);
+            return parsed.stem || parsed.Stem || '';
+        } catch {
+            return q.contentPreview || '';
+        }
+    };
+
+    const setLatexContent = (element, latex) => {
+        if (!element) return;
+        if (!latex || !String(latex).trim()) {
+            element.textContent = '-';
+            return;
+        }
+        element.textContent = '\\(' + latex + '\\)';
+    };
+
     const loadSubjects = async () => {
         try {
             const metadata = await apiClient.get('/api/questions/metadata');
             const subjects = metadata.subjects || [];
             if (filterSubject) {
+                filterSubject.innerHTML = '<option value="">Tất cả</option>';
                 subjects.forEach(s => {
                     filterSubject.add(new Option(s.code || s.name, s.subjectId));
                 });
@@ -47,13 +70,8 @@
             if (filterSubject && filterChapter) {
                 filterSubject.addEventListener('change', () => {
                     const subId = parseInt(filterSubject.value, 10);
-                    while (filterChapter.firstChild) {
-                        filterChapter.removeChild(filterChapter.firstChild);
-                    }
-                    filterChapter.add(new Option('Tất cả chương', ''));
-                    if (!subId) {
-                        return;
-                    }
+                    filterChapter.innerHTML = '<option value="">Tất cả</option>';
+                    if (!subId) return;
                     const sub = subjects.find(s => s.subjectId === subId);
                     if (sub && sub.chapters) {
                         sub.chapters.forEach(c => {
@@ -67,308 +85,315 @@
         }
     };
 
-    // ── Build query string ──
     const buildQuery = (page) => {
         const params = new URLSearchParams();
         params.set('page', page);
         params.set('pageSize', pageSize);
 
         const keyword = document.getElementById('filterKeyword')?.value?.trim();
-        if (keyword) {
-            params.set('keyword', keyword);
-        }
+        if (keyword) params.set('keyword', keyword);
 
         const qType = document.getElementById('filterQuestionType')?.value;
-        if (qType) {
-            params.set('questionType', qType);
-        }
+        if (qType) params.set('questionType', qType);
 
         const diff = document.getElementById('filterDifficulty')?.value;
-        if (diff) {
-            params.set('difficulty', diff);
-        }
+        if (diff) params.set('difficulty', diff);
 
-        const chapter = filterChapter?.value;
-        if (chapter) {
-            params.set('chapterId', chapter);
-        }
-
-        const subject = filterSubject?.value;
-        if (subject) {
-            params.set('subjectId', subject);
-        }
+        if (filterChapter?.value) params.set('chapterId', filterChapter.value);
+        if (filterSubject?.value) params.set('subjectId', filterSubject.value);
 
         const status = document.getElementById('filterStatus')?.value;
-        if (status) {
-            params.set('status', status);
-        }
+        if (status) params.set('status', status);
 
         return params.toString();
     };
 
-    // ── Extract stem for display ──
-    const getContentPreview = (q) => {
-        if (!q.contentPreview) {
-            return '';
-        }
-        try {
-            const parsed = JSON.parse(q.contentPreview);
-            // Handle both lowercase 'stem' and PascalCase 'Stem'
-            return parsed.stem || parsed.Stem || '';
-        } catch {
-            // Fallback for non-JSON content
-            return q.contentPreview || '';
+    const updateSelectedCount = () => {
+        const checked = tbody.querySelectorAll('.question-item-checkbox:checked');
+        const n = checked.length;
+        if (selectedCountText) {
+            selectedCountText.textContent = `Đã chọn ${n} câu hỏi`;
         }
     };
 
-    // ── Render table ──
+    const bindCheckboxes = () => {
+        const itemCbs = tbody.querySelectorAll('.question-item-checkbox');
+        if (masterCheckbox) {
+            masterCheckbox.checked = false;
+            masterCheckbox.onchange = () => {
+                itemCbs.forEach(cb => { cb.checked = masterCheckbox.checked; });
+                updateSelectedCount();
+            };
+        }
+        itemCbs.forEach(cb => {
+            cb.onchange = () => {
+                if (masterCheckbox) {
+                    masterCheckbox.checked = itemCbs.length > 0 && Array.from(itemCbs).every(c => c.checked);
+                }
+                updateSelectedCount();
+            };
+        });
+    };
+
+    const fetchQuestionDetail = async (questionId) => {
+        const data = await apiClient.get(`/api/questions/${questionId}`);
+        return data;
+    };
+
+    const renderDetailRow = (detailRow, qDetail) => {
+        const stemEl = detailRow.querySelector('.detail-stem');
+        const answersEl = detailRow.querySelector('.detail-answers');
+        const explanationEl = detailRow.querySelector('.detail-explanation');
+        const explanationWrap = detailRow.querySelector('.detail-explanation-wrap');
+        const editBtn = detailRow.querySelector('.btn-edit');
+        const archiveBtn = detailRow.querySelector('.btn-archive');
+
+        if (stemEl) setLatexContent(stemEl, qDetail.stem || '');
+
+        if (answersEl) {
+            answersEl.innerHTML = '';
+            const answers = qDetail.answers || [];
+            const letters = 'ABCDEFGHIJ';
+            const isFillBlank = qDetail.questionType === 'FillInBlank';
+            answers.forEach((a, idx) => {
+                const div = document.createElement('div');
+                div.className = 'answer-item' + (a.isCorrect ? ' correct' : '');
+                const displayVal = isFillBlank ? (a.correctAnswer || a.content || '') : (a.content || a.correctAnswer || '');
+                const span = document.createElement('span');
+                span.className = 'answer-content';
+                if (isFillBlank) {
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'answer-label me-2';
+                    labelSpan.textContent = `Ô trống ${idx + 1}: `;
+                    div.appendChild(labelSpan);
+                } else {
+                    const prefixSpan = document.createElement('span');
+                    prefixSpan.className = 'answer-prefix me-2';
+                    prefixSpan.textContent = letters[idx] + '. ';
+                    div.appendChild(prefixSpan);
+                }
+                div.appendChild(span);
+                if (a.isCorrect) {
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-check-circle-fill text-success ms-2';
+                    div.appendChild(icon);
+                }
+                answersEl.appendChild(div);
+                setLatexContent(span, displayVal || '(Đáp án trống)');
+            });
+        }
+
+        if (explanationEl) {
+            setLatexContent(explanationEl, qDetail.explanation || 'Không có giải thích.');
+        }
+        if (explanationWrap) {
+            explanationWrap.style.display = qDetail.explanation ? 'flex' : 'none';
+        }
+
+        if (typeof MathLive !== 'undefined' && MathLive.renderMathInElement) {
+            MathLive.renderMathInElement(detailRow);
+        }
+
+        if (editBtn) {
+            editBtn.onclick = () => { window.location.href = `/Question/Edit/${detailRow.dataset.questionId}`; };
+        }
+        if (archiveBtn) {
+            archiveBtn.onclick = () => {
+                const id = parseInt(detailRow.dataset.questionId, 10);
+                if (id) showArchiveConfirm([id]);
+            };
+        }
+    };
+
+    const toggleExpand = async (row, questionId) => {
+        const nextRow = row.nextElementSibling;
+        const isExpanded = nextRow && nextRow.classList.contains('question-detail-row');
+
+        if (isExpanded) {
+            nextRow.remove();
+            row.querySelector('.expand-btn i').className = 'bi bi-chevron-down';
+            return;
+        }
+
+        const btn = row.querySelector('.expand-btn i');
+        btn.className = 'bi bi-chevron-up';
+
+        const detailTemplate = document.getElementById('questionDetailRowTemplate');
+        const detailRow = detailTemplate.content.cloneNode(true).firstElementChild;
+        detailRow.dataset.questionId = questionId;
+        detailRow.querySelector('.detail-stem').textContent = 'Đang tải...';
+
+        row.after(detailRow);
+
+        try {
+            const qDetail = await fetchQuestionDetail(questionId);
+            renderDetailRow(detailRow, qDetail);
+        } catch (err) {
+            detailRow.querySelector('.detail-stem').textContent = 'Không thể tải chi tiết.';
+        }
+    };
+
+    const showArchiveConfirm = (ids) => {
+        pendingArchiveIds = ids;
+        if (archiveModal) archiveModal.show();
+    };
+
+    const bindRowActions = (rows) => {
+        rows.forEach(row => {
+            const expandBtn = row.querySelector('.expand-btn');
+            const editBtn = row.querySelector('[data-action-edit]');
+            const archiveBtn = row.querySelector('[data-action-archive]');
+            const qId = row.dataset.questionId;
+
+            if (expandBtn && qId) {
+                expandBtn.onclick = () => toggleExpand(row, parseInt(qId, 10));
+            }
+            if (editBtn && qId) {
+                editBtn.onclick = () => { window.location.href = `/Question/Edit/${qId}`; };
+            }
+            if (archiveBtn && qId) {
+                archiveBtn.onclick = () => showArchiveConfirm([parseInt(qId, 10)]);
+            }
+        });
+    };
+
     const renderTable = (data) => {
         const items = data.items || [];
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
-        }
+        tbody.innerHTML = '';
+
         if (items.length === 0) {
-            const t = document.getElementById('tableEmptyTemplate');
-            tbody.appendChild(t.content.cloneNode(true));
-            if (paginationSummary) {
-                paginationSummary.textContent = '';
-            }
-            if (paginationContainer) {
-                paginationContainer.innerHTML = '';
-            }
+            tbody.appendChild(document.getElementById('tableEmptyTemplate').content.cloneNode(true));
+            if (paginationSummary) paginationSummary.textContent = '';
+            if (paginationContainer) paginationContainer.innerHTML = '';
             return;
         }
 
-        const template = document.getElementById('questionRowTemplate');
-        if (!template) {
-            console.error('Template questionRowTemplate not found!');
-            return;
-        }
+        const rowTemplate = document.getElementById('questionRowTemplate');
+
         items.forEach(q => {
-            const row = template.content.cloneNode(true).firstElementChild;
-            const badgeDiff = difficultyBadgeClass[q.difficulty] || 'badge-easy';
-            const badgeStatus = statusBadgeClass[q.status] || 'status-draft';
+            const row = rowTemplate.content.cloneNode(true).firstElementChild;
+            row.dataset.questionId = q.questionId;
+
+            const diffClass = difficultyBadgeClass[q.difficulty] || 'badge-diff-1';
+            const statusClass = statusBadgeClass[q.status] || 'badge-status-draft';
             const typeLabel = typeLabels[q.questionType] || q.questionType;
-            const dateStr = new Date(q.updatedAt).toLocaleDateString('vi-VN');
-            const contentLatex = getContentPreview(q);
+            const statusLabel = statusLabels[q.status] || q.status;
+            const dateStr = q.updatedAt ? new Date(q.updatedAt).toLocaleDateString('vi-VN') : '-';
+            const contentPreview = getContentPreview(q);
 
-            const cb = row.querySelector('.question-item-checkbox');
-            if (cb) {
-                cb.setAttribute('aria-label', `Chọn câu hỏi Q-${q.questionId}`);
-            }
-
-            const idField = row.querySelector('[data-field-id]');
-            if (idField) {
-                idField.textContent = `Q-${q.questionId}`;
-            }
-
-            const mf = row.querySelector('[data-field-content]');
-            if (mf) {
-                mf.setAttribute('value', contentLatex);
-                mf.textContent = contentLatex;
-            }
-
-            const typeField = row.querySelector('[data-field-type]');
-            if (typeField) {
-                typeField.textContent = typeLabel;
-            }
+            row.querySelector('[data-field-id]').textContent = `Q-${q.questionId}`;
+            row.querySelector('[data-field-subject]').textContent = q.subjectCode || '-';
+            row.querySelector('[data-field-chapter]').textContent = q.chapterName || '-';
+            setLatexContent(row.querySelector('[data-field-content]'), contentPreview);
+            row.querySelector('[data-field-type]').textContent = typeLabel;
 
             const diffSpan = row.querySelector('[data-field-difficulty]');
-            if (diffSpan) {
-                diffSpan.className = `badge ${badgeDiff}`;
-                diffSpan.textContent = q.difficultyLabel;
-            }
-
-            const subField = row.querySelector('[data-field-subject]');
-            if (subField) {
-                subField.textContent = q.subjectCode || '';
-            }
-
-            const chapField = row.querySelector('[data-field-chapter]');
-            if (chapField) {
-                chapField.textContent = q.chapterName || '';
-            }
-
-            const updatedField = row.querySelector('[data-field-updated]');
-            if (updatedField) {
-                updatedField.textContent = dateStr;
-            }
+            diffSpan.className = `badge ${diffClass} rounded-1 py-2 px-2 fw-medium`;
+            diffSpan.textContent = q.difficultyLabel || '';
 
             const statusSpan = row.querySelector('[data-field-status]');
-            if (statusSpan) {
-                statusSpan.className = `badge ${badgeStatus}`;
-                statusSpan.textContent = q.status;
-            }
-
-            const editBtn = row.querySelector('[data-action-edit]');
-            if (editBtn) {
-                editBtn.setAttribute('data-id', q.questionId);
-            }
-
-            const archiveBtn = row.querySelector('[data-action-archive]');
-            if (archiveBtn) {
-                archiveBtn.setAttribute('data-id', q.questionId);
-            }
+            statusSpan.className = `badge ${statusClass} rounded-1 py-2 px-2 fw-medium`;
+            statusSpan.innerHTML = `<i class="bi bi-${q.status === 'Active' ? 'check-circle' : q.status === 'Archived' ? 'archive' : 'pencil-square'} me-1"></i>${statusLabel}`;
 
             tbody.appendChild(row);
         });
 
-        // Pagination summary
         const start = (data.currentPage - 1) * pageSize + 1;
         const end = start + items.length - 1;
         if (paginationSummary) {
-            paginationSummary.textContent = `Hiển thị ${start}-${end} trên ${data.totalCount} câu hỏi.`;
+            paginationSummary.textContent = `Hiển thị ${start}-${end} trên ${data.totalCount} câu hỏi`;
         }
 
-        // Pagination buttons
         renderPagination(data.currentPage, data.totalPages);
         bindCheckboxes();
-        bindRowActions();
+        bindRowActions(tbody.querySelectorAll('.question-row'));
+        updateSelectedCount();
+
+        const doRenderMath = () => {
+            if (typeof MathLive !== 'undefined' && MathLive.renderMathInElement) {
+                MathLive.renderMathInElement(tbody);
+            }
+        };
+        doRenderMath();
+        if (typeof MathLive === 'undefined') {
+            window.addEventListener('load', doRenderMath);
+        }
     };
 
-    const bulkArchiveBtn = document.getElementById('bulkArchiveBtn');
+    let pendingArchiveIds = [];
     const archiveConfirmModal = document.getElementById('archiveConfirmModal');
     const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
     let archiveModal = null;
-    let pendingArchiveIds = [];
 
     if (archiveConfirmModal) {
         archiveModal = new bootstrap.Modal(archiveConfirmModal);
     }
 
-    // ── Row Actions (Edit / Archive) ──
-    const bindRowActions = () => {
-        const editBtns = tbody.querySelectorAll('[data-action-edit]');
-        const archiveBtns = tbody.querySelectorAll('[data-action-archive]');
-
-        editBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const qId = e.currentTarget.getAttribute('data-id');
-                if (qId) {
-                    window.location.href = `/Question/Edit/${qId}`;
-                }
-            });
-        });
-
-        archiveBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const qId = e.currentTarget.getAttribute('data-id');
-                if (!qId) {
-                    return;
-                }
-
-                pendingArchiveIds = [parseInt(qId, 10)];
-                if (archiveModal) {
-                    archiveModal.show();
-                }
-            });
-        });
-    };
-
-    if (bulkArchiveBtn) {
-        bulkArchiveBtn.addEventListener('click', () => {
-            const checkedCbs = Array.from(tbody.querySelectorAll('.question-item-checkbox:checked'));
-            const ids = checkedCbs.map(cb => {
-                const row = cb.closest('tr');
-                const archiveBtn = row?.querySelector('[data-action-archive]');
-                return archiveBtn ? parseInt(archiveBtn.getAttribute('data-id'), 10) : null;
-            }).filter(id => id !== null);
-
-            if (ids.length === 0) {
-                showToast('Vui lòng chọn ít nhất một câu hỏi để lưu trữ.', 'info');
-                return;
-            }
-
-            pendingArchiveIds = ids;
-            if (archiveModal) {
-                archiveModal.show();
-            }
-        });
-    }
-
     if (confirmArchiveBtn) {
-        confirmArchiveBtn.addEventListener('click', async () => {
-            if (pendingArchiveIds.length === 0) {
-                return;
-            }
-
+        confirmArchiveBtn.onclick = async () => {
+            if (pendingArchiveIds.length === 0) return;
             confirmArchiveBtn.disabled = true;
             confirmArchiveBtn.textContent = 'Đang xử lý...';
-
             try {
-                const response = await apiClient.patch('/api/questions/status', {
+                await apiClient.patch('/api/questions/status', {
                     questionIds: pendingArchiveIds,
                     status: 'Archived'
                 });
-
-                if (archiveModal) {
-                    archiveModal.hide();
-                }
-                showToast(response.message || 'Đã lưu trữ thành công!');
+                if (archiveModal) archiveModal.hide();
+                showToast('Đã lưu trữ thành công!');
                 loadQuestions(currentPage);
             } catch (err) {
-                console.error('Lỗi khi lưu trữ hàng loạt', err);
-                showToast('Đã xảy ra lỗi khi lưu trữ câu hỏi.', 'error');
+                showToast('Đã xảy ra lỗi khi lưu trữ.', 'error');
             } finally {
                 confirmArchiveBtn.disabled = false;
                 confirmArchiveBtn.textContent = 'Đồng ý lưu trữ';
             }
-        });
+        };
     }
 
-    // ── Pagination ──
+    const bulkArchiveBtn = document.getElementById('bulkArchiveBtn');
+    if (bulkArchiveBtn) {
+        bulkArchiveBtn.onclick = () => {
+            const checked = Array.from(tbody.querySelectorAll('.question-item-checkbox:checked'));
+            const ids = checked.map(cb => {
+                const row = cb.closest('.question-row');
+                return row ? parseInt(row.dataset.questionId, 10) : null;
+            }).filter(id => id != null);
+            if (ids.length === 0) {
+                showToast('Vui lòng chọn ít nhất một câu hỏi.', 'info');
+                return;
+            }
+            showArchiveConfirm(ids);
+        };
+    }
+
     const renderPagination = (current, total) => {
         if (!paginationContainer || total <= 0) {
-            if (paginationContainer) {
-                while (paginationContainer.firstChild) {
-                    paginationContainer.removeChild(paginationContainer.firstChild);
-                }
-            }
+            paginationContainer.innerHTML = '';
             return;
         }
 
-        while (paginationContainer.firstChild) {
-            paginationContainer.removeChild(paginationContainer.firstChild);
-        }
-        const btnTemplate = document.getElementById('paginationButtonTemplate');
-        const prevTemplate = document.getElementById('paginationPrevTemplate');
-        const nextTemplate = document.getElementById('paginationNextTemplate');
-        const ellipsisTemplate = document.getElementById('paginationEllipsisTemplate');
+        paginationContainer.innerHTML = '';
 
-        const addPageBtn = (p, label, active = false, disabled = false) => {
-            let li;
-            if (label === '«') {
-                li = prevTemplate.content.cloneNode(true).firstElementChild;
-            } else if (label === '»') {
-                li = nextTemplate.content.cloneNode(true).firstElementChild;
-            } else {
-                li = btnTemplate.content.cloneNode(true).firstElementChild;
-                const link = li.querySelector('.page-link');
-                if (link) {
-                    link.textContent = label;
-                }
+        const addLink = (page, label, disabled = false, active = false) => {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+            const a = document.createElement('a');
+            a.className = 'page-link border rounded-1 px-3 me-1' + (active ? '' : ' text-secondary');
+            a.href = '#';
+            a.innerHTML = label;
+            if (!disabled && !active) {
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    currentPage = page;
+                    loadQuestions(page);
+                };
             }
-
-            if (active) {
-                li.classList.add('active');
-            }
-            if (disabled) {
-                li.classList.add('disabled');
-            }
-            const linkElem = li.querySelector('.page-link');
-            if (linkElem) {
-                linkElem.setAttribute('data-page', p);
-            }
+            li.appendChild(a);
             paginationContainer.appendChild(li);
         };
 
-        const addEllipsis = () => {
-            const li = ellipsisTemplate.content.cloneNode(true).firstElementChild;
-            paginationContainer.appendChild(li);
-        };
-
-        // Previous button
-        addPageBtn(current - 1, '«', false, current <= 1);
+        addLink(current - 1, '<i class="bi bi-chevron-left"></i>', current <= 1);
 
         const delta = 2;
         const range = [];
@@ -377,135 +402,75 @@
         }
 
         if (range[0] > 1) {
-            addPageBtn(1, '1');
+            addLink(1, '1');
             if (range[0] > 2) {
-                addEllipsis();
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<a class="page-link text-secondary border-0 bg-transparent px-2 me-1">...</a>';
+                paginationContainer.appendChild(li);
             }
         }
 
         range.forEach(i => {
-            addPageBtn(i, String(i), i === current);
+            addLink(i, String(i), false, i === current);
         });
 
         if (range[range.length - 1] < total) {
             if (range[range.length - 1] < total - 1) {
-                addEllipsis();
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<a class="page-link text-secondary border-0 bg-transparent px-2 me-1">...</a>';
+                paginationContainer.appendChild(li);
             }
-            addPageBtn(total, String(total));
+            addLink(total, String(total));
         }
 
-        // Next button
-        addPageBtn(current + 1, '»', false, current >= total);
-
-        // Single event listener for pagination container (event delegation)
-        if (!paginationContainer._bound) {
-            paginationContainer._bound = true;
-            paginationContainer.addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-page]');
-                const li = btn?.closest('.page-item');
-                if (!btn || li?.classList.contains('disabled') || li?.classList.contains('active')) {
-                    return;
-                }
-                const page = parseInt(btn.getAttribute('data-page'), 10);
-                if (page >= 1 && page <= total) {
-                    currentPage = page;
-                    loadQuestions(page);
-                    window.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        }
+        addLink(current + 1, '<i class="bi bi-chevron-right"></i>', current >= total);
     };
 
-    // ── Checkbox logic ──
-    const bindCheckboxes = () => {
-        const itemCbs = Array.from(document.querySelectorAll('.question-item-checkbox'));
-        if (masterCheckbox) {
-            masterCheckbox.checked = false;
-            masterCheckbox.addEventListener('change', () => {
-                itemCbs.forEach(cb => {
-                    cb.checked = masterCheckbox.checked;
-                });
-            });
-        }
-        itemCbs.forEach(cb => {
-            cb.addEventListener('change', () => {
-                if (masterCheckbox) {
-                    masterCheckbox.checked = itemCbs.every(c => c.checked);
-                }
-            });
-        });
-    };
-
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.question-item-checkbox').forEach(cb => {
-                cb.checked = true;
-            });
-            if (masterCheckbox) {
-                masterCheckbox.checked = true;
-            }
-        });
-    }
-    if (clearAllBtn) {
-        clearAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.question-item-checkbox').forEach(cb => {
-                cb.checked = false;
-            });
-            if (masterCheckbox) {
-                masterCheckbox.checked = false;
-            }
-        });
-    }
-
-    // ── Load data ──
     const loadQuestions = async (page) => {
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
-        }
-        const tLoad = document.getElementById('tableLoadingTemplate');
-        if (tLoad) {
-            tbody.appendChild(tLoad.content.cloneNode(true));
-        }
+        tbody.innerHTML = '';
+        tbody.appendChild(document.getElementById('tableLoadingTemplate').content.cloneNode(true));
+
         try {
             const qs = buildQuery(page);
             const data = await apiClient.get(`/api/questions?${qs}`);
-            console.log('Successfully loaded questions:', data);
             renderTable(data);
         } catch (err) {
             console.error('Failed to load questions', err);
-            while (tbody.firstChild) {
-                tbody.removeChild(tbody.firstChild);
-            }
-            const tErr = document.getElementById('tableErrorTemplate');
-            if (tErr) {
-                tbody.appendChild(tErr.content.cloneNode(true));
-            }
+            tbody.innerHTML = '';
+            tbody.appendChild(document.getElementById('tableErrorTemplate').content.cloneNode(true));
         }
     };
 
-    if (applyFilterBtn) {
-        applyFilterBtn.addEventListener('click', () => {
-            currentPage = 1;
-            loadQuestions(1);
-        });
-    }
-
-
-    // ── Escape HTML (DOM Pure) ──
-    const escapeHtml = (str) => {
-        if (!str) {
-            return '';
+    const applyFilter = () => {
+        currentPage = 1;
+        loadQuestions(1);
+        const dropdown = document.querySelector('.filter-dropdown');
+        if (dropdown && bootstrap.Dropdown) {
+            const instance = bootstrap.Dropdown.getInstance(document.getElementById('filterDropdownBtn'));
+            if (instance) instance.hide();
         }
-        const textNode = document.createTextNode(str);
-        const div = document.createElement('div');
-        div.appendChild(textNode);
-        return div.innerHTML;
     };
 
-    // ── Init ──
+    const clearFilter = () => {
+        document.getElementById('filterKeyword').value = '';
+        document.getElementById('filterQuestionType').value = '';
+        document.getElementById('filterDifficulty').value = '';
+        document.getElementById('filterStatus').value = '';
+        if (filterSubject) filterSubject.value = '';
+        if (filterChapter) filterChapter.value = '';
+        currentPage = 1;
+        loadQuestions(1);
+    };
+
+    document.getElementById('applyFilterBtn')?.addEventListener('click', applyFilter);
+    document.getElementById('clearFilterBtn')?.addEventListener('click', clearFilter);
+
+    document.getElementById('filterKeyword')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') applyFilter();
+    });
+
     loadSubjects();
     loadQuestions(1);
 })();

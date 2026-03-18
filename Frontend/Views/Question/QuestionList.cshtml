@@ -3,207 +3,174 @@
 }
 
 @section Styles {
-	<link rel="stylesheet" href="/css/Exam_preview.css">
-	<link rel="stylesheet" href="/css/question_list.css">
-
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="/css/Question/question_list.css">
 	<script defer src="https://unpkg.com/mathlive"></script>
-	<style>
-		.math-preview {
-			border: none;
-			background: transparent;
-			font-size: 0.9rem;
-			min-height: auto;
-			padding: 0;
-			outline: none;
-			display: inline-block;
-			max-width: 400px;
-			overflow: hidden;
-		}
-	</style>
 }
 
-<div class="container-fluid px-3 px-md-4 py-4">
-	<section class="page-header d-flex flex-column flex-lg-row justify-content-between gap-3">
-		<div>
-			<h1 class="page-title">Danh sách câu hỏi</h1>
-			<p class="page-subtitle">Quản lý câu hỏi trong ngân hàng câu hỏi.</p>
-		</div>
-		<div class="page-actions">
-			<button class="btn btn-outline-secondary">Nhập</button>
-			<a class="btn btn-primary" href="/Question/Create">Thêm câu hỏi</a>
-		</div>
-	</section>
+<div class="container-fluid px-4 py-4 question-list-page">
+	<div class="mb-3">
+		<h4 class="mb-1 fw-normal text-dark">Ngân Hàng Câu Hỏi</h4>
+	</div>
 
-	<section class="question-list-filter-card">
-		<div class="row g-3">
-			<!-- Search Group -->
-			<div class="col-12 col-xl-4">
-				<div class="filter-item">
-					<label class="form-label">Tìm kiếm</label>
-					<div class="search-group">
-						<input class="form-control" id="filterKeyword" placeholder="Tìm theo từ khóa (ID, nội dung...)">
+	<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+		<div class="d-flex align-items-center gap-3">
+			<span class="fw-medium" id="selectedCountText">Đã chọn 0 câu hỏi</span>
+			<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" id="bulkArchiveBtn" type="button">
+				<i class="bi bi-archive me-1"></i> Lưu trữ hàng loạt
+			</button>
+		</div>
+		<div class="d-flex gap-2">
+			<div class="dropdown">
+				<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="filterDropdownBtn">
+					<i class="bi bi-filter"></i> Bộ lọc
+				</button>
+				<div class="dropdown-menu dropdown-menu-end p-4 filter-dropdown" style="width: 380px; border-radius: 0.75rem;">
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<h6 class="mb-0 fw-bold fs-6">Bộ lọc tìm kiếm</h6>
+						<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="dropdown" aria-label="Close"></button>
+					</div>
+					<div class="mb-3">
+						<label class="form-label text-secondary small fw-medium">Nội dung câu hỏi</label>
+						<div class="input-group input-group-sm input-group-search">
+							<span class="input-group-text bg-white text-secondary border-end-0"><i class="bi bi-search"></i></span>
+							<input type="text" class="form-control border-start-0 ps-0 shadow-none" id="filterKeyword" placeholder="Nhập từ khóa...">
+						</div>
+					</div>
+					<div class="row g-2 mb-3">
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Môn học</label>
+							<select class="form-select form-select-sm shadow-none" id="filterSubject">
+								<option value="">Tất cả</option>
+							</select>
+						</div>
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Chương</label>
+							<select class="form-select form-select-sm shadow-none" id="filterChapter">
+								<option value="">Tất cả</option>
+							</select>
+						</div>
+					</div>
+					<div class="row g-2 mb-3">
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Loại</label>
+							<select class="form-select form-select-sm shadow-none" id="filterQuestionType">
+								<option value="">Tất cả</option>
+								<option value="MultipleChoice">Trắc nghiệm</option>
+								<option value="FillInBlank">Điền ô trống</option>
+							</select>
+						</div>
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Mức độ</label>
+							<select class="form-select form-select-sm shadow-none" id="filterDifficulty">
+								<option value="">Tất cả</option>
+								<option value="1">Nhận biết</option>
+								<option value="2">Thông hiểu</option>
+								<option value="3">Vận dụng</option>
+								<option value="4">Vận dụng cao</option>
+							</select>
+						</div>
+					</div>
+					<div class="mb-4">
+						<label class="form-label text-secondary small fw-medium">Trạng thái</label>
+						<select class="form-select form-select-sm shadow-none" id="filterStatus">
+							<option value="">Tất cả</option>
+							<option value="Draft">Bản nháp</option>
+							<option value="Active">Đã duyệt</option>
+							<option value="Archived">Đã lưu trữ</option>
+						</select>
+					</div>
+					<div class="d-flex justify-content-end gap-2 border-top pt-3">
+						<button type="button" class="btn btn-light btn-sm px-3 fw-medium" id="clearFilterBtn">Xóa lọc</button>
+						<button type="button" class="btn btn-primary btn-sm px-4 fw-medium" id="applyFilterBtn">Áp dụng</button>
 					</div>
 				</div>
 			</div>
-
-			<!-- Filter Grid -->
-			<div class="col-12 col-xl-8">
-				<div class="filter-grid">
-					<div class="filter-item">
-						<label class="form-label">Loại câu hỏi</label>
-						<select class="form-select" id="filterQuestionType">
-							<option value="">Tất cả loại</option>
-							<option value="FillInBlank">Điền vào ô trống</option>
-							<option value="MultipleChoice">Trắc nghiệm</option>
-						</select>
-					</div>
-					<div class="filter-item">
-						<label class="form-label">Mức độ</label>
-						<select class="form-select" id="filterDifficulty">
-							<option value="">Tất cả mức độ</option>
-							<option value="1">Nhận biết</option>
-							<option value="2">Thông hiểu</option>
-							<option value="3">Vận dụng</option>
-							<option value="4">Vận dụng cao</option>
-						</select>
-					</div>
-					<div class="filter-item">
-						<label class="form-label">Môn học</label>
-						<select class="form-select" id="filterSubject"><option value="">Tất cả môn học</option></select>
-					</div>
-					<div class="filter-item">
-						<label class="form-label">Chương</label>
-						<select class="form-select" id="filterChapter"><option value="">Tất cả chương</option></select>
-					</div>
-					<div class="filter-item">
-						<label class="form-label">Trạng thái</label>
-						<select class="form-select" id="filterStatus">
-							<option value="">Tất cả trạng thái</option>
-							<option value="Draft">Draft</option>
-							<option value="Active">Active</option>
-							<option value="Archived">Archived</option>
-						</select>
-					</div>
-					<div class="filter-item">
-						<button class="btn btn-primary apply-filter-btn" id="applyFilterBtn">
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-								<path d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3h9.05zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8h2.05zm9.45 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM9.05 14a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1h9.05z" />
-							</svg>
-							Lọc kết quả
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<div class="bulk-actions-toolbar">
-		<div class="bulk-actions-group">
-			<button class="btn bulk-btn bulk-btn-select" id="selectAllQuestionsBtn">
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-					<path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
-					<path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" />
-				</svg>
-				Chọn tất cả
-			</button>
-			<button class="btn bulk-btn bulk-btn-select" id="clearAllQuestionsBtn">
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-					<path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
-				</svg>
-				Bỏ chọn
-			</button>
-		</div>
-		<div class="bulk-actions-group">
-			<button class="btn bulk-btn bulk-btn-export">
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-					<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-					<path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
-				</svg>
-				Xuất CSV
-			</button>
-			<button class="btn bulk-btn bulk-btn-archive" id="bulkArchiveBtn">
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-					<path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm12 1v2H4V3h8zM4 6v7h8V6H4zm3 3h2v2H7V9z" />
-				</svg>
-				Lưu trữ
-			</button>
+			<a class="btn btn-primary fw-medium btn-sm py-2 px-3" href="/Question/Create">
+				<i class="bi bi-plus-lg"></i> Thêm câu hỏi
+			</a>
 		</div>
 	</div>
 
-
-	<section class="panel-card">
+	<div class="bg-white border rounded-3 question-table-wrapper">
 		<div class="table-responsive">
-			<table class="table table-soft mb-0">
-				<thead>
-					<tr>
-						<th style="width:40px;"><input class="form-check-input" id="questionMasterCheckbox" type="checkbox" aria-label="Chọn tất cả câu hỏi"></th>
-						<th>ID</th>
-						<th>Nội dung</th>
-						<th>Loại</th>
-						<th>Mức độ</th>
-						<th>Môn học</th>
-						<th>Chương</th>
-						<th>Cập nhật</th>
-						<th>Trạng thái</th>
-						<th>Thao tác</th>
-					</tr>
-				</thead>
-				<tbody id="questionTableBody">
-					<tr id="initialLoadingRow"><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
-				</tbody>
-			</table>
+		<table class="table table-hover mb-0 question-table">
+			<thead class="table-light text-dark fw-bold border-bottom">
+				<tr>
+					<th style="width: 40px;"><input class="form-check-input" type="checkbox" id="questionMasterCheckbox" aria-label="Chọn tất cả"></th>
+					<th style="width: 90px;">ID</th>
+					<th style="width: 150px;">Môn học</th>
+					<th style="width: 110px;">Chương</th>
+					<th style="width: 35%;">Nội dung</th>
+					<th style="width: 140px;">Loại</th>
+					<th style="width: 130px;">Mức độ</th>
+					<th style="width: 130px;">Trạng thái</th>
+					<th style="width: 60px;" class="text-center">Hành động</th>
+				</tr>
+			</thead>
+			<tbody id="questionTableBody">
+				<tr><td colspan="9" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+			</tbody>
+		</table>
 		</div>
-	</section>
+	</div>
 
-	<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mt-4">
-		<div class="d-flex align-items-center gap-3">
-			<p class="form-note mb-0" id="paginationSummary"></p>
-		</div>
-		<nav aria-label="Phân trang câu hỏi">
-			<template id="paginationButtonTemplate">
-				<li class="page-item"><button class="page-link" data-page></button></li>
-			</template>
-			<template id="paginationPrevTemplate">
-				<li class="page-item"><button class="page-link" data-page aria-label="Trang trước"><span aria-hidden="true">&laquo;</span></button></li>
-			</template>
-			<template id="paginationNextTemplate">
-				<li class="page-item"><button class="page-link" data-page aria-label="Trang sau"><span aria-hidden="true">&raquo;</span></button></li>
-			</template>
-			<template id="paginationEllipsisTemplate">
-				<li class="page-item disabled"><span class="page-link">...</span></li>
-			</template>
+	<div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
+		<span class="text-secondary" style="font-size: 0.95rem;" id="paginationSummary"></span>
+		<nav>
 			<ul class="pagination mb-0" id="paginationContainer"></ul>
 		</nav>
 	</div>
 </div>
-<!-- Table Templates -->
+
+<!-- Row template (hidden) -->
 <template id="questionRowTemplate">
-	<tr class="interactive-row">
-		<td><input class="form-check-input question-item-checkbox" type="checkbox"></td>
+	<tr class="question-row" data-question-id>
+		<td><input class="form-check-input question-item-checkbox" type="checkbox" aria-label="Chọn câu hỏi"></td>
 		<td data-field-id></td>
-		<td><math-field read-only class="math-preview" data-field-content></math-field></td>
-		<td data-field-type></td>
-		<td><span class="badge" data-field-difficulty></span></td>
 		<td data-field-subject></td>
 		<td data-field-chapter></td>
-		<td data-field-updated></td>
+		<td><span class="content-preview" data-field-content></span></td>
+		<td data-field-type></td>
+		<td><span class="badge" data-field-difficulty></span></td>
 		<td><span class="badge" data-field-status></span></td>
-		<td>
-			<div class="toolbar">
-				<button class="btn btn-sm btn-outline-secondary" data-action-edit>Sửa</button>
-				<button class="btn btn-sm btn-outline-danger" data-action-archive>Lưu trữ</button>
+		<td class="text-center">
+			<button class="btn btn-link text-dark p-0 expand-btn" type="button" aria-label="Mở rộng"><i class="bi bi-chevron-down"></i></button>
+		</td>
+	</tr>
+</template>
+<template id="questionDetailRowTemplate">
+	<tr class="table-light question-detail-row" data-question-id>
+		<td colspan="9" class="border-top-0 pt-0 pb-4 px-0 detail-cell">
+			<div class="question-detail-content px-4">
+				<div class="mb-3 detail-row">
+					<span class="fw-bold me-2 text-nowrap detail-label">Đề bài:</span>
+					<span class="detail-stem"></span>
+				</div>
+				<div class="mb-3 detail-row">
+					<span class="fw-bold me-2 text-nowrap detail-label">Đáp án:</span>
+					<div class="detail-answers" style="max-width: 450px;"></div>
+				</div>
+				<div class="mb-4 detail-row detail-explanation-wrap">
+					<span class="fw-bold me-2 text-nowrap detail-label">Giải thích:</span>
+					<span class="detail-explanation"></span>
+				</div>
+				<div class="d-flex justify-content-end gap-4 border-top pt-3 border-secondary-subtle">
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-edit" type="button"><i class="bi bi-pencil"></i> Sửa</button>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-danger" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+				</div>
 			</div>
 		</td>
 	</tr>
 </template>
 <template id="tableLoadingTemplate">
-	<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+	<tr><td colspan="9" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
 </template>
 <template id="tableEmptyTemplate">
-	<tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
+	<tr><td colspan="9" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
 </template>
 <template id="tableErrorTemplate">
-	<tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
+	<tr><td colspan="9" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
 </template>
 
 <!-- Archive Confirmation Modal -->
@@ -211,22 +178,20 @@
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content border-0 shadow-lg">
 			<div class="modal-header bg-danger text-white border-0">
-				<h5 class="modal-title" id="archiveConfirmModalLabel font-weight-bold">Xác nhận lưu trữ</h5>
+				<h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">Xác nhận lưu trữ</h5>
 				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body p-4">
 				<div class="d-flex align-items-center mb-3">
 					<div class="text-danger me-3">
-						<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-							<path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-						</svg>
+						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
 					</div>
 					<div>
 						<h6 class="mb-1 text-dark fw-bold">Cảnh báo quan trọng!</h6>
 						<p class="mb-0 text-muted small">Bạn đang thực hiện lưu trữ câu hỏi.</p>
 					</div>
 				</div>
-				<div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis mb-0 small">
+				<div class="alert alert-warning border-0 mb-0 small">
 					<ul class="mb-0 ps-3">
 						<li>Các câu hỏi khi sang trạng thái <strong>Lưu trữ</strong> sẽ <strong>không sửa được nữa</strong>.</li>
 						<li>Không thể sử dụng để <strong>giao đề thi</strong> nữa.</li>
