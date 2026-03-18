@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -33,6 +33,7 @@
 @section Scripts {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            setBreadcrumb([]);
             // Check if user is logged in
             const token = sessionStorage.getItem("jwtToken") || localStorage.getItem("jwtToken");
             

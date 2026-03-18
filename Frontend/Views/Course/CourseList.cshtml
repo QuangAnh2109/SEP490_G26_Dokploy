@@ -91,6 +91,7 @@
         const API_BASE = "https://localhost:7167";
 
         document.addEventListener("DOMContentLoaded", function () {
+            setBreadcrumb([{ text: "Khóa học", url: null }]);
             initRoleUI();
             loadCourses();
             initJoinForm();
@@ -192,7 +193,7 @@
                     </div>
                     <div class="mt-2">
                         <a class="btn btn-sm ${isTeacher ? "btn-primary" : "btn-outline-primary"}"
-                           href="/Course/ExamListInCourse/${c.classId}">
+                           href="/Course/ExamListInCourse/${c.classId}?className=${encodeURIComponent(c.className || '')}">
                            Vào khóa học
                         </a>
                         ${!isTeacher ? `

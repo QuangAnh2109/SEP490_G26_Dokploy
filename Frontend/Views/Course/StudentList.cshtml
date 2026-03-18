@@ -1,6 +1,8 @@
 @{
     ViewData["Title"] = "Danh sách học sinh";
     var classId = ViewBag.ClassId ?? 0;
+    var className = ViewBag.ClassName as string;
+    var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
 }
 
 @section Styles {
@@ -15,13 +17,13 @@
             <h5 class="mb-0">Quản lý lớp học</h5>
         </div>
         <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action">
+            <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action">
                 <i class="fas fa-list me-2"></i> Danh sách đề
             </a>
-            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action active">
+            <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action active">
                 <i class="fas fa-users me-2"></i> Danh sách học sinh
             </a>
-            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
+            <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action">
                 <i class="fas fa-cog me-2"></i> Cài đặt
             </a>
         </div>
@@ -62,7 +64,36 @@
 @section Scripts {
     <script>
         const classId = @classId;
+        const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
         const API_BASE = "https://localhost:7167";
+
+        function initBreadcrumb(name) {
+            setBreadcrumb([
+                { text: "Khóa học", url: "/Course/CourseList" },
+                { text: name, url: "/Course/ExamListInCourse/" + classId + (name ? "?className=" + encodeURIComponent(name) : "") },
+                { text: "Danh sách học sinh", url: null }
+            ]);
+        }
+
+        async function ensureClassNameAndBreadcrumb() {
+            if (classNameFromServer) {
+                initBreadcrumb(classNameFromServer);
+                return;
+            }
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
+                if (res.ok) {
+                    const data = await res.json();
+                    initBreadcrumb(data.className || "Lớp " + classId);
+                } else {
+                    initBreadcrumb("Lớp " + classId);
+                }
+            } catch {
+                initBreadcrumb("Lớp " + classId);
+            }
+        }
 
         async function loadStudents() {
             const token = getToken();
@@ -142,6 +173,9 @@
             });
         }
 
-        document.addEventListener("DOMContentLoaded", loadStudents);
+        document.addEventListener("DOMContentLoaded", function () {
+            ensureClassNameAndBreadcrumb();
+            loadStudents();
+        });
     </script>
 }

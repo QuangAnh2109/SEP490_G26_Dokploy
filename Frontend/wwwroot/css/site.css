@@ -117,6 +117,36 @@ body {
     color: #111827;
 }
 
+/* Breadcrumb (Classroom-style) */
+.app-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.app-breadcrumb a {
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.app-breadcrumb a:hover {
+    color: #111827;
+    text-decoration: underline;
+}
+
+.app-breadcrumb .breadcrumb-current {
+    color: #111827;
+    font-weight: 500;
+}
+
+.app-breadcrumb .breadcrumb-sep {
+    color: #9ca3af;
+    user-select: none;
+}
+
 .app-header .nav-link {
     color: #374151 !important;
     font-weight: 500;

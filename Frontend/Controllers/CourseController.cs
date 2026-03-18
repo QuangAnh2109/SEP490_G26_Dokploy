@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Frontend.Controllers
 {
@@ -8,6 +8,7 @@ namespace Frontend.Controllers
         public IActionResult ExamListInCourse(int id)
         {
             ViewBag.ClassId = id;
+            ViewBag.ClassName = (string)Request.Query["className"];
             return View();
         }
 
@@ -15,6 +16,7 @@ namespace Frontend.Controllers
         public IActionResult StudentList(int id)
         {
             ViewBag.ClassId = id;
+            ViewBag.ClassName = (string)Request.Query["className"];
             return View();
         }
 
@@ -22,6 +24,7 @@ namespace Frontend.Controllers
         public IActionResult Settings(int id)
         {
             ViewBag.ClassId = id;
+            ViewBag.ClassName = (string)Request.Query["className"];
             return View();
         }
 
