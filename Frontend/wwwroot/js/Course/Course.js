@@ -87,10 +87,32 @@ function initAuthUI() {
 function initRoleUI() {
     const role = getUserRole();
 
-    const roleText = document.getElementById("roleText");
+    const title = document.getElementById("pageTitle");
+    const subtitle = document.getElementById("pageSubtitle");
+    const btnContainer = document.getElementById("actionButtonContainer");
 
-    if (roleText) { // 🔥 tránh null
-        roleText.textContent = role;
+    if (!btnContainer) return;
+
+    if (role === "Teacher") {
+        title.innerText = "Danh sách lớp giảng dạy";
+        subtitle.innerText = "Tìm kiếm và quản lý lớp học";
+
+        btnContainer.innerHTML = `
+            <a href="/Course/Create" class="btn btn-primary">
+                + Tạo lớp
+            </a>
+        `;
+    } else {
+        title.innerText = "Lớp học của tôi";
+        subtitle.innerText = "Danh sách lớp đã tham gia";
+
+        btnContainer.innerHTML = `
+            <button class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#joinClassModal">
+                + Tham gia lớp
+            </button>
+        `;
     }
 }
 

@@ -1,11 +1,14 @@
-using Backend.DTOs.Course;
-using Backend.Models;
-using Backend.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Backend.DTOs.Course;
+using Backend.DTOs.Subject;
+using Backend.Models;
+using Backend.Repositories.Interfaces;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Repositories.Implements
 {
@@ -260,6 +263,17 @@ namespace Backend.Repositories.Implements
             
             await _context.SaveChangesAsync();
             return true;
+        }
+        public async Task<List<SubjectDTO>> GetSubjectsAsync()
+        {
+            return await _context.Subjects
+                .Select(s => new SubjectDTO
+                {
+                    SubjectId = s.SubjectId,
+                    Name = s.Name,
+                    Code = s.Code
+                })
+                .ToListAsync();
         }
     }
 }

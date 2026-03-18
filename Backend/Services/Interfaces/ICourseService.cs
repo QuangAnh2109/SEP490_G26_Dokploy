@@ -1,7 +1,9 @@
-﻿using Backend.DTOs.Course;
-using Backend.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using Backend.DTOs.Course;
+using Backend.DTOs.Subject;
+using Backend.Models;
 
 namespace Backend.Services.Interfaces
 {
@@ -20,5 +22,6 @@ namespace Backend.Services.Interfaces
 
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
+        Task<List<SubjectDTO>> GetSubjectsAsync();
     }
 }

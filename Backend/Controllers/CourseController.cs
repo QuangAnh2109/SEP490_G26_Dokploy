@@ -1,12 +1,15 @@
 using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
 using Backend.DTOs;
 using Backend.DTOs.Course;
 using Backend.Models;
+using Backend.Services.Implements;
 using Backend.Services.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -182,6 +185,12 @@ namespace Backend.Controllers
 
             return Ok();
         }
-
+        [HttpGet("subjects")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetSubjects()
+        {
+            var subjects = await _service.GetSubjectsAsync();
+            return Ok(subjects);
+        }
     }
 }

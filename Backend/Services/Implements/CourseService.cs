@@ -1,10 +1,13 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 using Backend.DTOs.Course;
+using Backend.DTOs.Subject;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Backend.Services.Implements
 {
@@ -90,6 +93,10 @@ namespace Backend.Services.Implements
         public async Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
         {
             return await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
+        }
+        public async Task<List<SubjectDTO>> GetSubjectsAsync()
+        {
+            return await _repo.GetSubjectsAsync();
         }
     }
 }

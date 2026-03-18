@@ -7,7 +7,47 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Frontend.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @await RenderSectionAsync("Styles", required: false)
+    <style>
+            #profileModal .modal-dialog {
+                max-width: 420px;
+            }
+
+            #profileTabs .nav-link {
+                border-radius: 20px;
+                padding: 6px 16px;
+                font-size: 14px;
+            }
+
+                #profileTabs .nav-link.active {
+                    background-color: #0d6efd;
+                }
+
+            #profileModal input {
+                border-radius: 10px;
+            }
+
+            #profileModal button.btn {
+                border-radius: 10px;
+            }
+            .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.form-row label {
+    width: 130px;
+    font-size: 14px;
+    color: #555;
+}
+
+.form-row input {
+    flex: 1;
+    border-radius: 10px;
+}
+    </style>
 </head>
 <body>
     <header>
@@ -42,7 +82,11 @@
                                 Tài khoản
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                                <li><a class="dropdown-item" href="/Profile">Thông tin cá nhân</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                        Thông tin cá nhân
+                                    </a>
+                                </li>
                                 <li><a class="dropdown-item" href="/Auth/ChangePassword">Đổi mật khẩu</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
@@ -90,32 +134,117 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
 
+                <!-- HEADER -->
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Tài khoản</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body pt-2">
+
+                    <!-- TAB -->
+                    <ul class="nav nav-pills mb-3 justify-content-center" id="profileTabs">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabProfileBtn">Thông tin</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabPasswordBtn">Mật khẩu</button>
+                        </li>
+                    </ul>
+
+                    <!-- PROFILE -->
+                    <div id="profileTab">
+                        <form id="profileForm">
+
+                            <div class="form-row">
+                                <label>Họ và tên</label>
+                                <input id="fullName" class="form-control">
+                            </div>
+
+                            <div class="form-row">
+                                <label>Email</label>
+                                <input id="email" class="form-control bg-light" readonly>
+                            </div>
+
+                            <div class="form-row">
+                                <label>SĐT</label>
+                                <input id="phoneNumber" class="form-control">
+                            </div>
+
+                            <div class="form-row" id="studentIdGroup" hidden>
+                                <label>MSSV</label>
+                                <input id="studentId" class="form-control">
+                            </div>
+
+                            <button id="saveProfileBtn" class="btn btn-primary w-100 mt-3">
+                                Lưu
+                            </button>
+
+                        </form>
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div id="passwordTab" style="display:none">
+
+                        <form id="changePasswordForm">
+
+                            <div class="form-row">
+                                <label>Mật khẩu hiện tại</label>
+                                <input id="currentPassword" type="password" class="form-control">
+                            </div>
+
+                            <div class="form-row">
+                                <label>Mật khẩu mới</label>
+                                <input id="newPassword" type="password" class="form-control">
+                            </div>
+
+                            <div class="form-row">
+                                <label>Xác nhận</label>
+                                <input id="confirmPassword" type="password" class="form-control">
+                            </div>
+
+                            <button id="changePasswordBtn" class="btn btn-primary w-100 mt-3">
+                                Cập nhật mật khẩu
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/Profile/Profile.js"></script>
     <script>
-        $(document).ready(function() {
-            if (isAuthenticated()) {
-                $('.auth-guest').addClass('d-none');
-                $('.auth-user').removeClass('d-none');
+            $(document).ready(function() {
+                if (isAuthenticated()) {
+                    $('.auth-guest').addClass('d-none');
+                    $('.auth-user').removeClass('d-none');
                 
-                const email = getUserEmail();
-                if (email) {
-                    $('#navbarUserDropdown').text(email);
-                }
+                    const email = getUserEmail();
+                    if (email) {
+                        $('#navbarUserDropdown').text(email);
+                    }
                 
-                const role = getUserRole();
-                if (role === 'Student' || role === 'Học sinh') {
-                    $('.role-student').removeClass('d-none');
-                } else if (role === 'Teacher' || role === 'Giáo viên') {
-                    $('.role-teacher').removeClass('d-none');
+                    const role = getUserRole();
+                    if (role === 'Student' || role === 'Học sinh') {
+                        $('.role-student').removeClass('d-none');
+                    } else if (role === 'Teacher' || role === 'Giáo viên') {
+                        $('.role-teacher').removeClass('d-none');
+                    }
+                } else {
+                    $('.auth-guest').removeClass('d-none');
+                    $('.auth-user').addClass('d-none');
                 }
-            } else {
-                $('.auth-guest').removeClass('d-none');
-                $('.auth-user').addClass('d-none');
-            }
-        });
+            });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
