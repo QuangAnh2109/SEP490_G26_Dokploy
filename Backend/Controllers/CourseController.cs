@@ -1,6 +1,5 @@
-using System;
-using Backend.DTOs;
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -17,14 +16,12 @@ namespace Backend.Controllers
         private readonly ICourseService _service;
         private readonly IChapterService _chapterService;
         private readonly ILogger<CourseController> _logger;
-        private readonly MtcaSep490G26Context _context;
 
-        public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger, MtcaSep490G26Context context)
+        public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger)
         {
             _service = service;
             _chapterService = chapterService;
             _logger = logger;
-            _context = context;
         }
 
 
@@ -172,11 +169,9 @@ namespace Backend.Controllers
 
         [HttpGet("subjects")]
         [Authorize(Roles = "Teacher,Giáo viên")]
-        public IActionResult GetSubjects()
+        public async Task<IActionResult> GetSubjects()
         {
-            var subjects = _context.Subjects
-                .Select(s => new { s.SubjectId, s.Name, s.Code })
-                .ToList();
+            var subjects = await _service.GetSubjectsAsync();
             return Ok(subjects);
         }
     }

@@ -1,4 +1,5 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
@@ -95,6 +96,11 @@ namespace Backend.Services.Implements
         public async Task LeaveCourseAsync(int classId, int userId)
         {
             await _repo.LeaveClassAsync(classId, userId);
+        }
+
+        public Task<List<SubjectOptionDto>> GetSubjectsAsync()
+        {
+            return _repo.GetSubjectsAsync();
         }
     }
 }

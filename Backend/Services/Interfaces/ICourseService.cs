@@ -1,4 +1,5 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,5 +22,6 @@ namespace Backend.Services.Interfaces
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
         Task LeaveCourseAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
+        Task<List<SubjectOptionDto>> GetSubjectsAsync();
     }
 }

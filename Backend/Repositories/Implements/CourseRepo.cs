@@ -1,4 +1,5 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -76,15 +77,17 @@ namespace Backend.Repositories.Implements
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
-                    Chapters = c.Subject.Chapters
-                        .Select(ch => new ChapterDTO
-                        {
-                            ChapterId = ch.ChapterId,
-                            SubjectId = ch.SubjectId,
-                            Name = ch.Name
-                        })
-                        .OrderBy(ch => ch.Name)
-                        .ToList()
+                    Chapters = c.Subject != null 
+                        ? c.Subject.Chapters
+                            .Select(ch => new ChapterDTO
+                            {
+                                ChapterId = ch.ChapterId,
+                                SubjectId = ch.SubjectId,
+                                Name = ch.Name
+                            })
+                            .OrderBy(ch => ch.Name)
+                            .ToList()
+                        : new List<ChapterDTO>()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -264,6 +267,19 @@ namespace Backend.Repositories.Implements
             
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<SubjectOptionDto>> GetSubjectsAsync()
+        {
+            return await _context.Subjects
+                .AsNoTracking()
+                .Select(s => new SubjectOptionDto
+                {
+                    SubjectId = s.SubjectId,
+                    Name = s.Name,
+                    Code = s.Code
+                })
+                .ToListAsync();
         }
     }
 }

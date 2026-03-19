@@ -269,7 +269,7 @@ public class AssignExamRepository : IAssignExamRepository
             .Include(x => x.Subject)
             .Include(x => x.Teacher)
             .Include(x => x.ExamBlueprint)
-                .ThenInclude(b => b.ExamBlueprintChapters)
+                .ThenInclude(b => b!.ExamBlueprintChapters)
                     .ThenInclude(bc => bc.Chapter)
             .Include(x => x.Papers)
                 .ThenInclude(p => p.Questions)
