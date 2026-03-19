@@ -82,16 +82,22 @@
                         "Content-Type": "application/json",
                         "Authorization": "Bearer " + token
                     },
-                    body: JSON.stringify({ invitationCode: inviteCode }) // Match exactly the property expected by existing backend body dto (or update the property name based on previous implementations)
+                    body: JSON.stringify({ invitationCode: inviteCode })
                 });
 
                 if (res.ok) {
-                    showToast("Tham gia lớp thành công!", "success");
+                    document.getElementById("processingStatus").innerHTML = `
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h3 class="mb-4 text-success">Thành công!</h3>
+                        <p class="text-muted mt-3"><strong>Bạn đã gửi yêu cầu tham gia lớp. Vui lòng chờ giáo viên phê duyệt.</strong></p>
+                        <p>Đang chuyển hướng về trang chủ...</p>
+                    `;
+                    
                     setTimeout(() => {
                         window.location.href = "/Course/CourseList";
-                    }, 1500);
+                    }, 3000);
                 }
- else if (res.status === 400 || res.status === 404) {
+                else if (res.status === 400 || res.status === 404) {
                     const text = await res.text();
                     showError("Mã mời không hợp lệ, đã hết hạn, hoặc bạn đã ở sẵn trong lớp này. (" + text + ")");
                 } else {

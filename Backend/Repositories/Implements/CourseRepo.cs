@@ -21,7 +21,7 @@ namespace Backend.Repositories.Implements
         public async Task<List<CourseDTO>> GetCoursesForUserAsync(int userId)
         {
             return await _context.Classes
-                .Where(c => c.TeacherId == userId || c.ClassMembers.Any(m => m.StudentId == userId))
+                .Where(c => c.TeacherId == userId || c.ClassMembers.Any(m => m.StudentId == userId && (m.MemberStatus == Backend.Constants.MemberStatus.Active || m.MemberStatus == Backend.Constants.MemberStatus.Pending)))
                 .Select(c => new CourseDTO
                 {
                     ClassId = c.ClassId,
@@ -36,7 +36,7 @@ namespace Backend.Repositories.Implements
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
-                    Role = c.TeacherId == userId ? "Teacher" : "Student"
+                    Role = c.TeacherId == userId ? "Teacher" : (c.ClassMembers.Any(m => m.StudentId == userId && m.MemberStatus == Backend.Constants.MemberStatus.Pending) ? "Pending" : "Student")
                 })
                 .ToListAsync();
         }
@@ -213,14 +213,97 @@ namespace Backend.Repositories.Implements
 
         public async Task JoinClassAsync(int classId, int userId)
         {
-            var membership = new ClassMember
+            var membership = await _context.ClassMembers
+                .FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == userId);
+
+            if (membership == null)
             {
-                ClassId = classId,
-                StudentId = userId,
-                MemberStatus = 1 // Default active status
-            };
-            _context.ClassMembers.Add(membership);
+                membership = new ClassMember
+                {
+                    ClassId = classId,
+                    StudentId = userId,
+                    MemberStatus = Backend.Constants.MemberStatus.Pending 
+                };
+                _context.ClassMembers.Add(membership);
+            }
+            else
+            {
+                if (membership.MemberStatus != Backend.Constants.MemberStatus.Active)
+                {
+                    membership.MemberStatus = Backend.Constants.MemberStatus.Pending;
+                }
+            }
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<ClassMember?> InviteStudentAsync(int classId, int studentId)
+        {
+            var membership = await _context.ClassMembers
+                .FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == studentId);
+
+            if (membership == null)
+            {
+                membership = new ClassMember
+                {
+                    ClassId = classId,
+                    StudentId = studentId,
+                    MemberStatus = Backend.Constants.MemberStatus.Invited
+                };
+                _context.ClassMembers.Add(membership);
+            }
+            else
+            {
+                if (membership.MemberStatus == Backend.Constants.MemberStatus.Active)
+                    return membership; // already active
+                
+                membership.MemberStatus = Backend.Constants.MemberStatus.Invited;
+            }
+            await _context.SaveChangesAsync();
+            return membership;
+        }
+
+        public async Task<int> AcceptEmailInvitationAsync(int classId, int studentId, byte[] concurrencyStamp)
+        {
+            return await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId 
+                             && cm.StudentId == studentId 
+                             && cm.ConcurrencyStamp == concurrencyStamp)
+                .ExecuteUpdateAsync(s => s.SetProperty(cm => cm.MemberStatus, Backend.Constants.MemberStatus.Active));
+        }
+
+        public async Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId)
+        {
+            return await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId && cm.MemberStatus == Backend.Constants.MemberStatus.Pending)
+                .Select(cm => new StudentInClassDTO
+                {
+                    StudentId = cm.StudentId,
+                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    Email = cm.Student != null ? cm.Student.Email : string.Empty,
+                    StudentCode = cm.Student != null ? cm.Student.StudentId : string.Empty,
+                    JoinedAtUtc = DateTime.UtcNow
+                })
+                .ToListAsync();
+        }
+
+        public async Task<bool> ApproveStudentAsync(int classId, int studentId)
+        {
+            var rows = await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId 
+                             && cm.StudentId == studentId 
+                             && cm.MemberStatus == Backend.Constants.MemberStatus.Pending)
+                .ExecuteUpdateAsync(s => s.SetProperty(cm => cm.MemberStatus, Backend.Constants.MemberStatus.Active));
+            return rows > 0;
+        }
+
+        public async Task<bool> RejectStudentAsync(int classId, int studentId)
+        {
+            var rows = await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId 
+                             && cm.StudentId == studentId 
+                             && cm.MemberStatus == Backend.Constants.MemberStatus.Pending)
+                .ExecuteDeleteAsync();
+            return rows > 0;
         }
 
         public async Task LeaveClassAsync(int classId, int userId)
@@ -238,7 +321,7 @@ namespace Backend.Repositories.Implements
         public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
         {
             return await _context.ClassMembers
-                .Where(cm => cm.ClassId == classId)
+                .Where(cm => cm.ClassId == classId && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
                 .Select(cm => new StudentInClassDTO
                 {
                     StudentId = cm.StudentId,

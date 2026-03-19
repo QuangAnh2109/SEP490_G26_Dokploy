@@ -184,7 +184,7 @@
                     `${c.className} ${c.teacherName} ${subjectDisplay}`.toLowerCase();
 
                 article.innerHTML = `
-                    <h2>${c.className}</h2>
+                    <h2>${c.className} ${c.role === "Pending" ? '<span class="badge bg-warning fs-6 align-middle ms-2">Chờ duyệt</span>' : ''}</h2>
                     <p>${c.teacherName}</p>
                     <small>Môn học: ${subjectDisplay}</small><br>
                     <small>Học kỳ: ${c.semester || ""}</small>
@@ -192,14 +192,18 @@
                         Exams: ${c.examCount} • Sĩ số: ${c.studentCount}
                     </div>
                     <div class="mt-2">
-                        <a class="btn btn-sm ${isTeacher ? "btn-primary" : "btn-outline-primary"}"
-                           href="/Course/ExamListInCourse/${c.classId}?className=${encodeURIComponent(c.className || '')}">
-                           Vào khóa học
-                        </a>
+                        ${c.role === "Pending" ? `
+                            <button class="btn btn-sm btn-secondary me-2" disabled>Chờ duyệt</button>
+                        ` : `
+                            <a class="btn btn-sm ${isTeacher ? "btn-primary" : "btn-outline-primary"} me-2"
+                               href="/Course/ExamListInCourse/${c.classId}?className=${encodeURIComponent(c.className || '')}">
+                               Vào khóa học
+                            </a>
+                        `}
                         ${!isTeacher ? `
                             <button class="btn btn-sm btn-danger"
                                     onclick="leaveCourse(${c.classId})">
-                                Rời khóa học
+                                Rời lớp
                             </button>
                         ` : ""}
                     </div>
@@ -299,7 +303,7 @@
                     })
                     .then(res => {
                         if (!res.ok) throw new Error();
-                        showToast("Tham gia lớp thành công!", "success");
+                        showToast("Bạn đã gửi yêu cầu tham gia lớp, vui lòng chờ duyệt.", "success");
 
                         const modalEl = document.getElementById("joinClassModal");
                         const modal = bootstrap.Modal.getInstance(modalEl);

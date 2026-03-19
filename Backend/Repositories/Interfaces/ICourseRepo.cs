@@ -19,6 +19,12 @@ namespace Backend.Repositories.Interfaces
         Task<bool> IsUserInClassAsync(int classId, int userId);
         Task JoinClassAsync(int classId, int userId);
 
+        Task<ClassMember?> InviteStudentAsync(int classId, int studentId);
+        Task<int> AcceptEmailInvitationAsync(int classId, int studentId, byte[] concurrencyStamp);
+        Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
+        Task<bool> ApproveStudentAsync(int classId, int studentId);
+        Task<bool> RejectStudentAsync(int classId, int studentId);
+
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
         Task LeaveClassAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);

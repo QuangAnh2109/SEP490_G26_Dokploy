@@ -45,6 +45,20 @@ namespace Frontend.Controllers
         }
 
         [HttpGet]
+        public IActionResult AcceptInvite(string token)
+        {
+            ViewBag.Token = token;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult PendingStudents(int id)
+        {
+            ViewBag.ClassId = id;
+            return View();
+        }
+
+        [HttpGet]
         public async Task<IActionResult> ExamAnalytics(int examId)
         {
             // Do Frontend call trực tiếp từ Browser qua JS fetch

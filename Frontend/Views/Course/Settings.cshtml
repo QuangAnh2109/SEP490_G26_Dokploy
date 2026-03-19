@@ -29,6 +29,9 @@
             <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action">
                 <i class="fas fa-users me-2"></i> Danh sách học sinh
             </a>
+            <a href="/Course/PendingStudents/@classId@classNameParam" class="list-group-item list-group-item-action">
+                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
+            </a>
             <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action active">
                 <i class="fas fa-cog me-2"></i> Cài đặt
             </a>
@@ -70,28 +73,35 @@
                         <label class="form-label fw-bold mb-0">Mã mời vào lớp</label>
                         <div class="form-check form-switch ps-0 m-0 d-flex align-items-center">
                             <label class="form-check-label me-5" for="invitationStatusSwitch">Cho phép dùng mã mời</label>
-                            <input class="form-check-input m-0 ms-2" type="checkbox" role="switch" id="invitationStatusSwitch" checked>
+                            <input class="form-check-input m-0 ms-2" type="checkbox" role="switch" id="invitationStatusSwitch" checked onchange="toggleInviteVisibility()">
                         </div>
                     </div>
 
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">Code</span>
-                        <input type="text" class="form-control bg-light fs-5 font-monospace text-primary" id="inviteCodeInput" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('inviteCodeInput')" title="Sao chép Code">
-                            <i class="fas fa-copy"></i>
-                        </button>
+                    <div id="inviteContentArea">
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">Code</span>
+                            <input type="text" class="form-control bg-light fs-5 font-monospace text-primary" id="inviteCodeInput" readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="showInviteDetails()" title="Xem chi tiết">
+                                <i class="fas fa-eye me-1"></i> Xem chi tiết
+                            </button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            Học sinh có thể tham gia lớp học bằng cách nhập mã code này, hoặc truy cập trực tiếp bằng đường link mời.
+                        </small>
                     </div>
+                </div>
 
+                <hr class="my-4">
+
+                <!-- Mời qua Email -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Mời trực tiếp qua Email</label>
                     <div class="input-group">
-                        <span class="input-group-text">Link</span>
-                        <input type="text" class="form-control bg-light text-primary" id="inviteLinkInput" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('inviteLinkInput')" title="Sao chép Link">
-                            <i class="fas fa-copy"></i>
+                        <input type="email" class="form-control" id="inviteEmailInput" placeholder="Nhập địa chỉ email học sinh...">
+                        <button class="btn btn-success" type="button" onclick="inviteStudentByEmail()" id="btnInviteEmail">
+                            Gửi lời mời <i class="fas fa-paper-plane ms-1"></i>
                         </button>
                     </div>
-                    <small class="text-muted mt-2 d-block">
-                        Học sinh có thể tham gia lớp học bằng cách nhập mã code này, hoặc truy cập trực tiếp bằng đường link phía trên.
-                    </small>
                 </div>
 
                 <hr class="my-4">
@@ -108,12 +118,60 @@
     </main>
 </div>
 
+<!-- Modal Chi tiết mã mời -->
+<div class="modal fade" id="inviteDetailsModal" tabindex="-1" aria-labelledby="inviteDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="inviteDetailsModalLabel">Chi tiết mã mời</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-start w-100">Mã code</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-light fs-4 font-monospace text-primary text-center" id="modalCodeInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('modalCodeInput')" title="Sao chép Code">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-start w-100">Link mời</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-light text-primary" id="modalLinkInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('modalLinkInput')" title="Sao chép Link">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-start w-100">Mã QR</label>
+                    <div class="border rounded p-3 bg-light d-inline-block">
+                        <img id="qrCodeImage" src="" alt="QR Code" style="width: 150px; height: 150px; display: none;" />
+                        <div id="qrLoading" class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
+    <script src="~/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
     <script>
         const classId = @classId;
         const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
         const API_BASE = "https://localhost:7167";
+        let currentInviteLink = "";
 
         function initBreadcrumb(name) {
             setBreadcrumb([
@@ -165,10 +223,13 @@
                 
                 // Generate link
                 const baseUrl = window.location.origin;
-                document.getElementById("inviteLinkInput").value = `${baseUrl}/Course/Join?code=${data.invitationCode}`;
+                currentInviteLink = `${baseUrl}/Course/Join?code=${data.invitationCode}`;
 
                 const statusSwitch = document.getElementById("invitationStatusSwitch");
-                if (statusSwitch) statusSwitch.checked = data.invitationCodeStatus !== 0;
+                if (statusSwitch) {
+                    statusSwitch.checked = data.invitationCodeStatus !== 0;
+                    toggleInviteVisibility();
+                }
 
             } catch (error) {
                 console.error(error);
@@ -221,6 +282,88 @@
             document.execCommand("copy");
             
             showToast("Đã sao chép vào clipboard!", "info");
+        }
+
+        function toggleInviteVisibility() {
+            const isChecked = document.getElementById("invitationStatusSwitch").checked;
+            const contentArea = document.getElementById("inviteContentArea");
+            if (contentArea) {
+                contentArea.style.display = isChecked ? "block" : "none";
+            }
+        }
+
+        function showInviteDetails() {
+            const code = document.getElementById("inviteCodeInput").value;
+            if (!code || !currentInviteLink) return;
+
+            document.getElementById("modalCodeInput").value = code;
+            document.getElementById("modalLinkInput").value = currentInviteLink;
+            
+            // Generate QR Code via API
+            const qrImg = document.getElementById("qrCodeImage");
+            const qrLoading = document.getElementById("qrLoading");
+            
+            qrImg.style.display = "none";
+            qrLoading.style.display = "inline-block";
+            
+            qrImg.onload = function() {
+                qrLoading.style.display = "none";
+                qrImg.style.display = "block";
+            };
+            
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentInviteLink)}`;
+            
+            // Initialize and show modal
+            const modalElement = document.getElementById("inviteDetailsModal");
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                // Fallback config
+                const myModal = new bootstrap.Modal(document.getElementById('inviteDetailsModal'));
+                myModal.show();
+            }
+        }
+
+        async function inviteStudentByEmail() {
+            const emailInput = document.getElementById("inviteEmailInput");
+            const btn = document.getElementById("btnInviteEmail");
+            const email = emailInput.value.trim();
+
+            if (!email) {
+                showToast("Vui lòng nhập địa chỉ email.", "warning");
+                return;
+            }
+
+            const token = getToken();
+            btn.disabled = true;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang gửi...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/invite`, {
+                    method: 'POST',
+                    headers: { 
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast(data.message || "Đã gửi lời mời thành công!", "success");
+                    emailInput.value = "";
+                } else {
+                    const err = await response.text();
+                    showToast(err || "Lỗi khi gửi lời mời", "error");
+                }
+            } catch (error) {
+                showToast("Đã xảy ra lỗi mạng.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
 
 
