@@ -1,39 +1,76 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+﻿// ================= GLOBAL =================
+let originalProfile = {};
 
-    const path = window.location.pathname;
+// ================= INIT =================
+$(function () {
 
-    if (path === "/Profile" || path === "/Profile/Index") {
+    $('#profileModal').on('shown.bs.modal', function () {
 
+        console.log("Profile modal opened");
 
+        // reset tab về mặc định
+        resetTabs();
+
+        // disable button password
+        $("#changePasswordBtn").prop("disabled", true);
+
+        // ẩn tab password nếu login Google
         if (isGoogleUser()) {
-            document.getElementById("tabPasswordBtn").style.display = "none";
-            document.getElementById("passwordTab").style.display = "none";
+            $("#tabPasswordBtn").hide();
+            $("#passwordTab").hide();
+        } else {
+            $("#tabPasswordBtn").show();
         }
 
         loadProfile();
-        initUpdateProfile();
-        initChangePassword();
-    }
+    });
+
+    $('#profileModal').on('hidden.bs.modal', function () {
+
+        $("#changePasswordForm")[0].reset();
+        $("#changePasswordBtn").prop("disabled", true).text("Cập nhật mật khẩu");
+
+        clearFieldError();
+    });
 
 });
 
+// ================= TAB =================
+function resetTabs() {
+    $("#profileTab").show();
+    $("#passwordTab").hide();
 
-let originalProfile = {};
+    $("#tabProfileBtn").addClass("active");
+    $("#tabPasswordBtn").removeClass("active");
+}
 
+$(document).on("click", "#tabProfileBtn", function () {
+    resetTabs();
+});
+
+$(document).on("click", "#tabPasswordBtn", function () {
+    $("#profileTab").hide();
+    $("#passwordTab").show();
+
+    $(this).addClass("active");
+    $("#tabProfileBtn").removeClass("active");
+});
+
+// ================= LOAD PROFILE =================
 async function loadProfile() {
-
     try {
 
         const data = await apiClient.get("/api/profile");
 
-        $("#fullName").val(data.fullName);
-        $("#email").val(data.email);
-        $("#phoneNumber").val(data.phoneNumber);
-        $("#studentId").val(data.studentId);
+        $("#fullName").val(data.fullName || "");
+        $("#email").val(data.email || "");
+        $("#phoneNumber").val(data.phoneNumber || "");
+        $("#studentId").val(data.studentId || "");
 
-        // roleId = 2 thì hiện mã sinh viên
         if (data.roleId === 2) {
             $("#studentIdGroup").removeAttr("hidden");
+        } else {
+            $("#studentIdGroup").attr("hidden", true);
         }
 
         originalProfile = {
@@ -44,116 +81,148 @@ async function loadProfile() {
 
         $("#saveProfileBtn").prop("disabled", true);
 
+    } catch (err) {
+        console.error(err);
+        showToast("Không tải được thông tin", "error");
     }
-    catch (err) {
-        showToast("Không tải được thông tin người dùng", "error");
-    }
-
 }
 
+// ================= ENABLE SAVE =================
+$(document).on("input", "#profileForm input", function () {
 
-function initUpdateProfile() {
+    const changed =
+        $("#fullName").val() !== originalProfile.fullName ||
+        $("#phoneNumber").val() !== originalProfile.phoneNumber ||
+        $("#studentId").val() !== originalProfile.studentId;
 
-    $("#profileForm").on("submit", async function (e) {
+    $("#saveProfileBtn").prop("disabled", !changed);
+});
 
-        e.preventDefault();
+// ================= UPDATE PROFILE =================
+$("#profileForm").on("submit", async function (e) {
 
-        const payload = {
-            fullName: $("#fullName").val(),
-            studentId: $("#studentId").val(),
-            phoneNumber: $("#phoneNumber").val()
-        };
+    e.preventDefault();
 
-        try {
+    const payload = {
+        fullName: $("#fullName").val(),
+        phoneNumber: $("#phoneNumber").val()
+    };
 
-            await apiClient.put("/api/profile", payload);
+    // chỉ gửi studentId nếu có
+    if (!$("#studentIdGroup").attr("hidden")) {
+        payload.studentId = $("#studentId").val();
+    }
 
-            showToast("Cập nhật thành công", "success");
+    try {
 
-            // cập nhật lại dữ liệu gốc
-            originalProfile = {
-                fullName: payload.fullName || "",
-                phoneNumber: payload.phoneNumber || "",
-                studentId: payload.studentId || ""
-            };
+        await apiClient.put("/api/profile", payload);
 
-            $("#saveProfileBtn").prop("disabled", true);
+        showToast("Cập nhật thành công", "success");
 
-        }
-        catch (err) {
+        originalProfile = { ...payload };
+        $("#saveProfileBtn").prop("disabled", true);
 
-            showToast(err.message || "Cập nhật thất bại", "error");
+    } catch (err) {
+        showToast(err.message || "Cập nhật thất bại", "error");
+    }
+});
 
-        }
+// ================= PASSWORD VALIDATION =================
+function validateChangePassword(oldPassword, newPassword, confirmPassword) {
 
-    });
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        return "Vui lòng nhập đầy đủ thông tin";
+    }
 
+    if (newPassword !== confirmPassword) {
+        return "Mật khẩu xác nhận không khớp";
+    }
+
+    const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,72}$/;
+
+    if (!pattern.test(newPassword)) {
+        return "Mật khẩu phải 8-72 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt";
+    }
+
+    return null;
 }
 
+// ================= FIELD ERROR =================
+function showFieldError(selector) {
+    $(selector).addClass("is-invalid");
+}
 
-function initChangePassword() {
-    console.log("initChangePassword loaded");
-    $("#currentPassword, #newPassword, #confirmPassword").on("input", function () {
+function clearFieldError() {
+    $("#currentPassword, #newPassword, #confirmPassword").removeClass("is-invalid");
+}
 
-        const current = $("#currentPassword").val().trim();
-        const newPass = $("#newPassword").val().trim();
-        const confirm = $("#confirmPassword").val().trim();
+// ================= ENABLE PASSWORD BUTTON =================
+$(document).on("input", "#currentPassword, #newPassword, #confirmPassword", function () {
 
-        const enable = current !== "" && newPass !== "" && confirm !== "";
+    const enable =
+        $("#currentPassword").val() &&
+        $("#newPassword").val() &&
+        $("#confirmPassword").val();
 
-        $("#changePasswordBtn").prop("disabled", !enable);
+    $("#changePasswordBtn").prop("disabled", !enable);
+});
 
-    });
+// ================= CHANGE PASSWORD =================
+$("#changePasswordForm").on("submit", function (e) {
 
-    $("#changePasswordForm").on("submit", function (e) {
+    e.preventDefault();
 
-        e.preventDefault();
+    clearFieldError();
 
-        const oldPassword = $("#currentPassword").val();
-        const newPassword = $("#newPassword").val();
-        const confirmPassword = $("#confirmPassword").val();
+    const oldPassword = $("#currentPassword").val();
+    const newPassword = $("#newPassword").val();
+    const confirmPassword = $("#confirmPassword").val();
 
-        if (!oldPassword || !newPassword || !confirmPassword) {
-            showToast("Vui lòng điền đầy đủ thông tin", "error");
-            return;
-        }
+    const error = validateChangePassword(oldPassword, newPassword, confirmPassword);
+
+    if (error) {
+
+        if (!oldPassword) showFieldError("#currentPassword");
+        if (!newPassword) showFieldError("#newPassword");
+        if (!confirmPassword) showFieldError("#confirmPassword");
 
         if (newPassword !== confirmPassword) {
-            showToast("Mật khẩu xác nhận không khớp", "error");
-            return;
+            showFieldError("#confirmPassword");
         }
 
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,72}$/;
+        showToast(error, "error");
+        return;
+    }
 
-        if (!passwordPattern.test(newPassword)) {
-            showToast("Mật khẩu phải từ 8-72 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt", "error");
-            return;
-        }
+    $("#changePasswordBtn")
+        .prop("disabled", true)
+        .html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
 
-        const payload = {
-            oldPassword: oldPassword,
-            newPassword: newPassword
-        };
+    apiClient.post("/api/auth/change-password", {
+        oldPassword,
+        newPassword
+    })
+        .then(() => {
 
-        $("#changePasswordBtn").prop("disabled", true).text("Đang cập nhật...");
+            showToast("Đổi mật khẩu thành công", "success");
 
-        apiClient.post("/api/auth/change-password", payload)
-            .then(function () {
+            $("#changePasswordForm")[0].reset();
 
-                showToast("Đổi mật khẩu thành công", "success");
+            // đóng modal cho UX tốt hơn
+            $("#profileModal").modal("hide");
 
-                $("#changePasswordForm")[0].reset();
-                $("#changePasswordBtn").prop("disabled", true).text("Cập nhật mật khẩu");
+        })
+        .catch(err => {
 
-            })
-            .catch(function (err) {
+            showToast(err.responseJSON?.message || "Mật khẩu hiện tại không đúng", "error");
+            showFieldError("#currentPassword");
 
-                showToast(err.responseJSON?.message || "Đổi mật khẩu thất bại", "error");
+        })
+        .finally(() => {
 
-                $("#changePasswordBtn").prop("disabled", false).text("Cập nhật mật khẩu");
+            $("#changePasswordBtn")
+                .prop("disabled", true)
+                .text("Cập nhật mật khẩu");
 
-            });
-
-    });
-
-}
+        });
+});

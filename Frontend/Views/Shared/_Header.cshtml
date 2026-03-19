@@ -25,8 +25,11 @@
                         Tài khoản
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                        <li><a class="dropdown-item" href="/Profile">Thông tin cá nhân</a></li>
-                        <li><a class="dropdown-item" href="/Auth/ChangePassword">Đổi mật khẩu</a></li>
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                Thông tin cá nhân
+                            </a>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
                     </ul>
@@ -35,3 +38,90 @@
         </div>
     </nav>
 </header>
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+
+            <!-- HEADER -->
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thông tin cá nhân</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body pt-2">
+
+                <!-- TAB -->
+                <ul class="nav nav-pills mb-3 justify-content-center" id="profileTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tabProfileBtn">Thông tin</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tabPasswordBtn">Mật khẩu</button>
+                    </li>
+                </ul>
+
+                <!-- PROFILE -->
+                <div id="profileTab">
+                    <form id="profileForm">
+
+                        <div class="form-row">
+                            <label>Họ và tên</label>
+                            <input id="fullName" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Email</label>
+                            <input id="email" class="form-control bg-light" readonly>
+                        </div>
+
+                        <div class="form-row">
+                            <label>SĐT</label>
+                            <input id="phoneNumber" class="form-control">
+                        </div>
+
+                        <div class="form-row" id="studentIdGroup" hidden>
+                            <label>MSSV</label>
+                            <input id="studentId" class="form-control">
+                        </div>
+
+                        <button type="submit" id="saveProfileBtn" class="btn btn-primary w-100 mt-3">
+                            Lưu
+                        </button>
+
+                    </form>
+                </div>
+
+                <!-- PASSWORD -->
+                <div id="passwordTab" style="display:none">
+
+                    <form id="changePasswordForm">
+
+                        <div class="form-row">
+                            <label>Mật khẩu hiện tại</label>
+                            <input id="currentPassword" type="password" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Mật khẩu mới</label>
+                            <input id="newPassword" type="password" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Xác nhận</label>
+                            <input id="confirmPassword" type="password" class="form-control">
+                        </div>
+                                               
+                        <button type="submit" id="changePasswordBtn" class="btn btn-primary w-100 mt-3" disabled>
+                            Cập nhật mật khẩu
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/Profile/Profile.js"></script>
