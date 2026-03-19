@@ -44,8 +44,9 @@ namespace Backend.Repositories.Interfaces
         public int TotalQuestions { get; set; }
         public int MaxAttempts { get; set; }
         public int PaperCount { get; set; }
-        public bool ShowScore { get; set; }
-        public bool ShowAnswer { get; set; }
+        public int ShowScore { get; set; }
+        public int ShowAnswer { get; set; }
+        public int AnswerTimingMode { get; set; }
         public List<BlueprintChapterRaw> BlueprintChapters { get; set; } = new();
     }
 

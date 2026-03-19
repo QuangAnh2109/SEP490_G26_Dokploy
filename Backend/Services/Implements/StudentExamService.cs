@@ -7,18 +7,21 @@ using Backend.Helpers;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Backend.Services.Implements
 {
     public class StudentExamService : IStudentExamService
     {
         private readonly IStudentExamRepository _studentExamRepository;
-
+        private readonly IMemoryCache _cache;
         private readonly ILogger<StudentExamService> _logger;
 
-        public StudentExamService(IStudentExamRepository studentExamRepository, ILogger<StudentExamService> logger)
+        public StudentExamService(IStudentExamRepository studentExamRepository, IMemoryCache cache, ILogger<StudentExamService> logger)
         {
             _studentExamRepository = studentExamRepository;
+            _cache = cache;
             _logger = logger;
         }
 
@@ -81,56 +84,70 @@ namespace Backend.Services.Implements
                 activeSubmission = await _studentExamRepository.CreateSubmissionAsync(newSubmission);
             }
 
-            // 4. Lấy paper với questions, answers, input types
-            var paper = await _studentExamRepository.GetPaperWithQuestionsAsync(examId, activeSubmission.PaperId);
-            if (paper == null || paper.Exam == null)
+            // 4. Lấy nội dung câu hỏi (Cache theo PaperId)
+            string cacheKey = $"ExamContent_Paper_{activeSubmission.PaperId}";
+            if (!_cache.TryGetValue(cacheKey, out List<TakeExamQuestionDto>? questions) || questions == null)
             {
-                return null;
-            }
+                var paper = await _studentExamRepository.GetPaperWithQuestionsAsync(examId, activeSubmission.PaperId);
+                if (paper == null) return null;
 
-            // 5. Map sang TakeExamQuestionDto
-            var questions = paper.Questions.Select(q =>
-            {
-                // Map answers
-                var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
+                // Map sang TakeExamQuestionDto
+                questions = paper.Questions.Select(q =>
                 {
-                    QuestionAnswerId = qa.QuestionAnswerId.ToString(),
-                    Content = qa.Content,
-                    GroupAnswerId = qa.GroupAnswerId.HasValue
-                        ? qa.GroupAnswerId.Value.ToString()
-                        : null,
-                    InputTypes = qa.BlankInputs.Select(bi => new TakeExamInputTypeDto
+                    var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
                     {
-                        InputTypeId = bi.InputTypeId.ToString(),
-                        Name = bi.InputType.Name,
-                        GroupType = bi.InputType.GroupType
-                    }).ToList()
+                        QuestionAnswerId = qa.QuestionAnswerId.ToString(),
+                        Content = qa.Content,
+                        GroupAnswerId = qa.GroupAnswerId?.ToString(),
+                        InputTypes = qa.BlankInputs.Select(bi => new TakeExamInputTypeDto
+                        {
+                            InputTypeId = bi.InputTypeId.ToString(),
+                            Name = bi.InputType.Name,
+                            GroupType = bi.InputType.GroupType
+                        }).ToList()
+                    }).ToList();
+
+                    return new TakeExamQuestionDto
+                    {
+                        QuestionId = q.QuestionId.ToString(),
+                        QuestionType = q.QuestionType,
+                        QuestionContent = q.QuestionContent,
+                        Difficulty = q.Difficulty,
+                        Answers = answers
+                    };
                 }).ToList();
 
-                return new TakeExamQuestionDto
-                {
-                    QuestionId = q.QuestionId.ToString(),
-                    QuestionType = q.QuestionType,
-                    QuestionContent = q.QuestionContent,
-                    Difficulty = q.Difficulty,
-                    Answers = answers
-                };
-            }).ToList();
+                // Cache trong 5 phút
+                _cache.Set(cacheKey, questions, TimeSpan.FromMinutes(5));
+            }
+
+            // Clone list để shuffle độc lập cho mỗi sinh viên (nếu cần)
+            var questionsForStudent = questions.ToList();
+
+            // 5. Lấy thông tin Exam (Cache theo PaperId hoặc ExamId)
+            string examCacheKey = $"ExamMeta_Paper_{activeSubmission.PaperId}";
+            if (!_cache.TryGetValue(examCacheKey, out (int ExamId, int Duration, int Code, bool ShuffleQuestion) meta))
+            {
+                var paperMeta = await _studentExamRepository.GetPaperWithExamAsync(activeSubmission.PaperId);
+                if (paperMeta?.Exam == null) return null;
+                meta = (paperMeta.Exam.ExamId, paperMeta.Exam.Duration, paperMeta.Code, paperMeta.Exam.ShuffleQuestion);
+                _cache.Set(examCacheKey, meta, TimeSpan.FromMinutes(5));
+            }
 
             // 6. Shuffle questions
-            if (paper.Exam.ShuffleQuestion)
+            if (meta.ShuffleQuestion)
             {
-                questions.Shuffle();
+                questionsForStudent.Shuffle();
             }
 
             // 7. Trả về TakeExamDto
             return new TakeExamDto
             {
-                ExamId = paper.Exam.ExamId.ToString(),
+                ExamId = meta.ExamId.ToString(),
                 SubmissionId = activeSubmission.SubmissionId.ToString(),
-                Duration = paper.Exam.Duration,
-                Code = paper.Code,
-                Questions = questions
+                Duration = meta.Duration,
+                Code = meta.Code,
+                Questions = questionsForStudent
             };
         }
 
@@ -192,6 +209,7 @@ namespace Backend.Services.Implements
                 RemainingAttempts = remainingAttempts,
                 ShowScore = data.ShowScore,
                 ShowAnswer = data.ShowAnswer,
+                AnswerTimingMode = data.AnswerTimingMode,
                 PaperCount = data.PaperCount,
                 BlueprintMatrix = matrixRows
             };

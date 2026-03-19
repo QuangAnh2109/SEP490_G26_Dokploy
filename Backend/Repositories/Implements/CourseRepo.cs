@@ -29,7 +29,7 @@ namespace Backend.Repositories.Implements
                     // Use the Subject navigation for subject name
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     // Map Semester from DB
@@ -50,7 +50,7 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
@@ -72,7 +72,7 @@ namespace Backend.Repositories.Implements
                     SubjectId = c.SubjectId,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
@@ -131,7 +131,7 @@ namespace Backend.Repositories.Implements
                         : e.Status,
                     ShowScore = e.ShowScore,
                     ShowAnswer = e.ShowAnswer,
-                    AllowLateSubmission = e.AllowLateSubmission
+                    AnswerTimingMode = e.AnswerTimingMode
                 })
                 .ToListAsync();
         }
@@ -242,7 +242,7 @@ namespace Backend.Repositories.Implements
                 .Select(cm => new StudentInClassDTO
                 {
                     StudentId = cm.StudentId,
-                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    FullName = cm.Student != null ? cm.Student.FullName ?? string.Empty : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
                     StudentCode = cm.Student != null ? cm.Student.StudentId : string.Empty,
                     JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this

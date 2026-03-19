@@ -153,7 +153,20 @@ window.QuestionEditorFITB = (() => {
                     card = t.content.cloneNode(true).firstElementChild;
                     card.setAttribute('data-segment-index', sIdx);
                     card.addEventListener('click', () => {
+                        const willSelect = !card.classList.contains('selected');
+                        if (willSelect) {
+                            // Deselect this segment from all OTHER groups
+                            const allGroups = item.querySelectorAll('[data-blank-group-item]');
+                            const myGroup = card.closest('[data-blank-group-item]');
+                            UTILS.toArray(allGroups).forEach(otherG => {
+                                if (otherG !== myGroup) {
+                                    const same = otherG.querySelector(`.blank-group-segment[data-segment-index="${sIdx}"]`);
+                                    same?.classList.remove('selected');
+                                }
+                            });
+                        }
                         card.classList.toggle('selected');
+                        updateGroupScores(item);
                     });
                 }
                 
@@ -188,6 +201,83 @@ window.QuestionEditorFITB = (() => {
             // Build new list (moves existing elements to correct position)
             container.appendChild(fragment);
         });
+        updateGroupScores(item);
+    };
+
+    const updateGroupScores = (item) => {
+        const latex = UTILS.getFrameLatex(item);
+        const segments = UTILS.parseLatexSegments(latex);
+        const groups = item.querySelectorAll('[data-blank-group-item]');
+
+        // Determine point per blank
+        const scoringToggle = item.querySelector('[data-scoring-toggle]');
+        const scoring = !!scoringToggle?.checked;
+        const totalBlanks = item.querySelectorAll('[data-blank-answer-item]').length;
+        const equalPoint = totalBlanks > 0 ? Math.floor(100 / totalBlanks) : 0;
+        const equalRemainder = totalBlanks > 0 ? 100 - equalPoint * totalBlanks : 0;
+
+        // Build a map: blankNum -> point
+        const blankPoints = new Map();
+        const allRows = item.querySelectorAll('[data-blank-answer-item]');
+        UTILS.toArray(allRows).forEach((row, i) => {
+            const num = row.getAttribute('data-blank-num');
+            if (scoring) {
+                const scoreInp = row.querySelector('[data-blank-score]');
+                blankPoints.set(num, parseInt(scoreInp?.value) || 0);
+            } else {
+                blankPoints.set(num, equalPoint + (i === 0 ? equalRemainder : 0));
+            }
+        });
+
+        UTILS.toArray(groups).forEach(g => {
+            const selectedCards = g.querySelectorAll('.blank-group-segment.selected');
+            const selectedSegIdxs = UTILS.toArray(selectedCards).map(c => parseInt(c.getAttribute('data-segment-index')));
+            let total = 0;
+
+            selectedSegIdxs.forEach(si => {
+                const seg = segments.find(s => s.index === si);
+                if (seg) {
+                    UTILS.getNumberedPlaceholders(seg.content).forEach(n => {
+                        total += blankPoints.get(String(n)) || 0;
+                    });
+                }
+            });
+
+            const badge = g.querySelector('[data-group-score-value]');
+            if (badge) badge.textContent = total;
+        });
+    };
+
+    const refreshDependencyDropdowns = (item) => {
+        const allGroups = item.querySelectorAll('[data-blank-group-item]');
+        const groupList = UTILS.toArray(allGroups);
+
+        groupList.forEach((g, idx) => {
+            const select = g.querySelector('[data-blank-group-depends]');
+            if (!select) return;
+
+            const currentVal = select.value;
+            // Clear options
+            select.innerHTML = '<option value="">Không phụ thuộc</option>';
+
+            // Add other groups as options
+            groupList.forEach((otherG, otherIdx) => {
+                if (otherIdx === idx) return;
+                const nameInp = otherG.querySelector('[data-blank-group-name]');
+                const gId = otherG.getAttribute('data-group-id');
+                const label = nameInp?.value || `Hình thức ${otherIdx + 1}`;
+                const optVal = gId || `__idx_${otherIdx}`;
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = label;
+                select.appendChild(opt);
+            });
+
+            // Restore selection if possible
+            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                select.value = currentVal;
+            }
+        });
     };
 
     const createBlankGroupItem = (item, list, initialData = null) => {
@@ -220,6 +310,7 @@ window.QuestionEditorFITB = (() => {
 
         removeBtn?.addEventListener('click', () => {
             r.remove();
+            refreshDependencyDropdowns(item);
         });
 
         return r;
@@ -398,12 +489,20 @@ window.QuestionEditorFITB = (() => {
 
         const scoringToggle = item.querySelector('[data-scoring-toggle]');
         scoringToggle?.addEventListener('change', () => {
-            syncPlaceholderState(item, item._inputTypesData);
+            const scoring = scoringToggle.checked;
+            const list = item.querySelector('[data-blank-answer-list]');
+            if (list) {
+                UTILS.toArray(list.querySelectorAll('[data-blank-answer-item]')).forEach(r => {
+                    r.querySelector('[data-blank-score-field]')?.classList.toggle('d-none', !scoring);
+                });
+            }
+            updateScoreSummary(item);
         });
 
         item.addEventListener('input', (e) => {
             if (e.target.matches('[data-blank-score]')) {
                 updateScoreSummary(item);
+                updateGroupScores(item);
             }
         });
 
@@ -414,6 +513,7 @@ window.QuestionEditorFITB = (() => {
             if (gEl) {
                 list.appendChild(gEl);
                 syncBlankGroupSegments(item);
+                refreshDependencyDropdowns(item);
             }
         });
     };
@@ -468,9 +568,12 @@ window.QuestionEditorFITB = (() => {
 
             if (blanks.length > 0) {
                 const nameElem = g.querySelector('[data-blank-group-name]');
+                const dependsSelect = g.querySelector('[data-blank-group-depends]');
+                const dependsVal = dependsSelect?.value || null;
                 groups.push({
                     groupAnswerId: parseInt(g.getAttribute('data-group-id')) || null,
                     name: nameElem?.value || 'Nhóm',
+                    dependsOnGroupId: dependsVal ? (parseInt(dependsVal) || null) : null,
                     segmentIndices: selectedSegIdxs,
                     blankIndices: [...new Set(blanks)]
                 });
@@ -564,6 +667,18 @@ window.QuestionEditorFITB = (() => {
                             });
                         }
                     });
+
+                    // Refresh dependency dropdowns and restore selections
+                    refreshDependencyDropdowns(item);
+                    data.blankGroups?.forEach((g, i) => {
+                        const gEl = gEls[i];
+                        if (gEl && g.dependsOnGroupId) {
+                            const select = gEl.querySelector('[data-blank-group-depends]');
+                            if (select) select.value = String(g.dependsOnGroupId);
+                        }
+                    });
+
+                    updateGroupScores(item);
                 }, 50);
             }, 100);
         }, 300);

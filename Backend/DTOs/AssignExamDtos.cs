@@ -57,14 +57,17 @@ public class CreateAssignExamRequest
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int Duration { get; set; }
-    public bool ShowScore { get; set; } = true;
-    public bool ShowAnswer { get; set; }
+    /// <summary>0 = none, 1 = immediate, 2 = after_exam</summary>
+    public int ShowScore { get; set; }
+    /// <summary>0 = none, 1 = student_only, 2 = with_correct</summary>
+    public int ShowAnswer { get; set; }
+    /// <summary>0 = after_submit, 1 = after_exam</summary>
+    public int AnswerTimingMode { get; set; }
     public int MaxAttempts { get; set; } = 1;
     public DateTime? VisibleFrom { get; set; }
     public DateTime? OpenAt { get; set; }
     public DateTime? CloseAt { get; set; }
     public bool ShuffleQuestion { get; set; }
-    public bool AllowLateSubmission { get; set; }
     public bool IsPublic { get; set; }
     public int? ClassId { get; set; }
 
@@ -89,12 +92,20 @@ public record CreateAssignExamResponse(
     IReadOnlyList<CreatedPaperDto> Papers
 );
 
+public record QuestionReviewAnswerDto(
+    int AnswerId,
+    string Content,
+    string CorrectAnswer,
+    bool IsCorrect
+);
+
 public record QuestionReviewDto(
     int QuestionId,
     string QuestionType,
     string ContentLatex,
     int Difficulty,
-    string ChapterName
+    string ChapterName,
+    IReadOnlyList<QuestionReviewAnswerDto> Answers
 );
 
 public record PaperReviewDto(

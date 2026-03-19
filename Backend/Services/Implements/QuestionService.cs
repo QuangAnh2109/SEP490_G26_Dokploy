@@ -101,7 +101,7 @@ namespace Backend.Services.Implements
             if (q == null || q.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xem.");
 
             var (stem, frame) = ParseContent(q.QuestionContent);
-            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem, Frame = frame };
+            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem ?? string.Empty, Frame = frame };
 
             dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
@@ -117,6 +117,7 @@ namespace Backend.Services.Implements
                     .GroupBy(a => a.GroupAnswerId!.Value)
                     .Select(g => new GroupAnswerDto {
                         GroupAnswerId = g.Key, Name = g.First().GroupAnswer!.Name,
+                        DependsOnGroupId = g.First().GroupAnswer!.DependsOnGroupId,
                         BlankIndices = g.Select(a => GetBlankIndex(a.Content) ?? 0).Where(idx => idx > 0).ToList()
                     }).ToList();
             }
@@ -244,8 +245,8 @@ namespace Backend.Services.Implements
             foreach (var gDto in item.BlankGroups)
             {
                 var group = gDto.GroupAnswerId.HasValue ? existingGroups.FirstOrDefault(g => g.GroupAnswerId == gDto.GroupAnswerId) : null;
-                if (group == null) group = new GroupAnswer { Name = gDto.Name };
-                else group.Name = gDto.Name;
+                if (group == null) group = new GroupAnswer { Name = gDto.Name, DependsOnGroupId = gDto.DependsOnGroupId };
+                else { group.Name = gDto.Name; group.DependsOnGroupId = gDto.DependsOnGroupId; }
 
                 foreach (var idx in gDto.BlankIndices)
                 {

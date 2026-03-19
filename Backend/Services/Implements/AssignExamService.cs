@@ -109,27 +109,119 @@ public class AssignExamService : IAssignExamService
         string generationMode = Clean(r.GenerationMode).ToLower();
         var mode = generationMode == "manual" ? "manual" : "blueprint";
 
+        ThrowIf(!r.IsPublic && !r.ClassId.HasValue, "ClassId required for non-public.");
+        ThrowIf(r.IsPublic && r.ClassId.HasValue, "Public exam must not include ClassId.");
+
+        var papersQuestions = new List<List<int>>();
+        for (int i = 0; i < r.PaperCount; i++) papersQuestions.Add([]);
+
         int subjectId;
         int? blueprintId;
-        List<int> questionIds;
 
         if (mode == "blueprint")
         {
-            var result = await BuildFromBlueprintAsync(r.ExamBlueprintId, ct);
-            subjectId = result.SubjId;
-            blueprintId = result.BpId;
-            questionIds = result.QIds;
+            var bp = await _repo.GetBlueprintWithChaptersAsync(r.ExamBlueprintId ?? 0, ct);
+            if (bp == null) throw new KeyNotFoundException("Blueprint not found.");
+            
+            subjectId = bp.SubjectId;
+            blueprintId = bp.ExamBlueprintId;
+
+            foreach (var row in bp.ExamBlueprintChapters)
+            {
+                // Note: The pool is already filtered by Chapter and Difficulty (Blueprint Row),
+                // so we are not shuffling the entire question bank.
+                var pool = await _repo.GetAllQuestionIdsForBlueprintRowAsync(row.ChapterId, row.Difficulty, ActiveStatus, ct);
+                if (pool.Count < row.TotalOfQuestions)
+                {
+                    throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}.");
+                }
+
+                if (r.ShuffleQuestion)
+                {
+                    // Step 1: Create the total pool of T questions (PaperCount * k)
+                    var totalPool = new List<int>();
+                    int totalNeeded = r.PaperCount * row.TotalOfQuestions;
+
+                    var tempBank = pool.OrderBy(_ => Guid.NewGuid()).ToList();
+                    while (totalPool.Count < totalNeeded)
+                    {
+                        var pass = tempBank.OrderBy(_ => Guid.NewGuid()).ToList();
+                        int remaining = totalNeeded - totalPool.Count;
+                        totalPool.AddRange(pass.Take(Math.Min(pass.Count, remaining)));
+                    }
+
+                    // Step 2-4: Distribute to papers with repeated shuffling
+                    for (int i = 0; i < r.PaperCount; i++)
+                    {
+                        // Shuffle the remaining pool
+                        totalPool = totalPool.OrderBy(_ => Guid.NewGuid()).ToList();
+
+                        // Pick k questions for this paper
+                        var paperSet = totalPool.Take(row.TotalOfQuestions).ToList();
+
+                        // Remove from total pool
+                        foreach (var qid in paperSet) totalPool.Remove(qid);
+
+                        // Shuffle the paper set (though effectively redundant, user requested it)
+                        paperSet = paperSet.OrderBy(_ => Guid.NewGuid()).ToList();
+
+                        papersQuestions[i].AddRange(paperSet);
+                    }
+                }
+                else
+                {
+                    var rowQuestions = pool.Take(row.TotalOfQuestions).ToList();
+                    for (int i = 0; i < r.PaperCount; i++)
+                    {
+                        papersQuestions[i].AddRange(rowQuestions);
+                    }
+                }
+            }
         }
         else
         {
-            var result = await BuildFromManualAsync(r.SubjectId, r.QuestionIds, ct);
-            subjectId = result.SubjId;
-            blueprintId = result.BpId;
-            questionIds = result.QIds;
+            var res = await BuildFromManualAsync(r.SubjectId, r.QuestionIds, ct);
+            subjectId = res.SubjId;
+            blueprintId = res.BpId;
+            var pool = res.QIds;
+
+            if (r.ShuffleQuestion)
+            {
+                var shuffledPool = pool.OrderBy(_ => Guid.NewGuid()).ToList();
+                int poolIdx = 0;
+
+                for (int i = 0; i < r.PaperCount; i++)
+                {
+                    // For manual mode, pool size N usually equals questions-per-paper K,
+                    // so we refill and shuffle for every paper.
+                    if (poolIdx + pool.Count > shuffledPool.Count)
+                    {
+                        shuffledPool = pool.OrderBy(_ => Guid.NewGuid()).ToList();
+                        poolIdx = 0;
+                    }
+
+                    papersQuestions[i].AddRange(shuffledPool.GetRange(poolIdx, pool.Count));
+                    poolIdx += pool.Count;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < r.PaperCount; i++)
+                {
+                    papersQuestions[i].AddRange(pool);
+                }
+            }
         }
 
-        ThrowIf(!r.IsPublic && !r.ClassId.HasValue, "ClassId required for non-public.");
-        ThrowIf(r.IsPublic && r.ClassId.HasValue, "Public exam must not include ClassId.");
+        // Extra Step: If ShuffleQuestion is enabled, shuffle the final question list for each paper.
+        // This ensures the order is random even if questions came from different blueprint rows.
+        if (r.ShuffleQuestion)
+        {
+            for (int i = 0; i < r.PaperCount; i++)
+            {
+                papersQuestions[i] = papersQuestions[i].OrderBy(_ => Guid.NewGuid()).ToList();
+            }
+        }
 
         if (r.ClassId.HasValue)
         {
@@ -143,7 +235,7 @@ public class AssignExamService : IAssignExamService
             ThrowIf(cls.SubjectId != subjectId, "Subject mismatch.");
         }
 
-        ThrowIf(questionIds.Count == 0, "No questions selected.");
+        ThrowIf(papersQuestions[0].Count == 0, "No questions selected.");
 
         using var tx = await _repo.BeginTransactionAsync(ct);
         try
@@ -159,12 +251,12 @@ public class AssignExamService : IAssignExamService
                 Duration = r.Duration,
                 ShowScore = r.ShowScore,
                 ShowAnswer = r.ShowAnswer,
+                AnswerTimingMode = r.AnswerTimingMode,
                 MaxAttempts = r.MaxAttempts,
                 VisibleFrom = r.VisibleFrom,
                 OpenAt = r.OpenAt,
                 CloseAt = r.CloseAt,
                 ShuffleQuestion = r.ShuffleQuestion,
-                AllowLateSubmission = r.AllowLateSubmission,
                 Status = ExamStatus.Ready,
                 UpdatedAtUtc = DateTime.UtcNow
             };
@@ -184,9 +276,7 @@ public class AssignExamService : IAssignExamService
 
                 await _repo.SavePaperAsync(paper, ct);
 
-                var orderedQuestionIds = r.ShuffleQuestion
-                    ? ShuffleQuestionIds(questionIds)
-                    : [.. questionIds];
+                var orderedQuestionIds = papersQuestions[i];
 
                 await _repo.AddPaperQuestionsAsync(paper.PaperId, orderedQuestionIds, ct);
 
@@ -198,7 +288,7 @@ public class AssignExamService : IAssignExamService
             return new CreateAssignExamResponse(
                 exam.ExamId,
                 createdPapers[0].PaperId,
-                questionIds.Count,
+                papersQuestions[0].Count,
                 createdPapers
             );
         }
@@ -238,7 +328,13 @@ public class AssignExamService : IAssignExamService
                 q.QuestionType,
                 q.QuestionContent,
                 q.Difficulty,
-                q.Chapter?.Name ?? "N/A"
+                q.Chapter?.Name ?? "N/A",
+                q.QuestionAnswers.Select(a => new QuestionReviewAnswerDto(
+                    a.QuestionAnswerId,
+                    a.Content,
+                    a.CorrectAnswer,
+                    a.IsCorrect ?? false
+                )).ToList()
             )).ToList()
         )).ToList();
 
@@ -299,33 +395,6 @@ public class AssignExamService : IAssignExamService
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
     }
 
-    private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromBlueprintAsync(int? id, CancellationToken ct)
-    {
-        if (!id.HasValue)
-        {
-            throw new ArgumentException("ExamBlueprintId required.");
-        }
-
-        var bp = await _repo.GetBlueprintWithChaptersAsync(id.Value, ct);
-        if (bp == null)
-        {
-            throw new KeyNotFoundException("Blueprint not found.");
-        }
-
-        var questionIds = new List<int>();
-
-        foreach (var r in bp.ExamBlueprintChapters)
-        {
-            var p = await _repo.GetQuestionIdsForBlueprintRowAsync(r.ChapterId, r.Difficulty, r.TotalOfQuestions, ActiveStatus, ct);
-            if (p.Count < r.TotalOfQuestions)
-            {
-                throw new InvalidOperationException($"Not enough questions for chapter {r.ChapterId} with difficulty {r.Difficulty}.");
-            }
-            questionIds.AddRange(p);
-        }
-
-        return (bp.SubjectId, bp.ExamBlueprintId, questionIds);
-    }
 
     private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
     {
@@ -354,10 +423,6 @@ public class AssignExamService : IAssignExamService
         return (subjectIds[0], null, sel.Select(x => x.QuestionId).ToList());
     }
 
-    private static List<int> ShuffleQuestionIds(IReadOnlyList<int> s)
-    {
-        return s.OrderBy(_ => Guid.NewGuid()).ToList();
-    }
 
     private static void ValidateTimeWindow(DateTime? v, DateTime? o, DateTime? c)
     {

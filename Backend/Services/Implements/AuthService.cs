@@ -156,7 +156,8 @@ namespace Backend.Services.Implements
                 throw new UnauthorizedAccessException(ErrorMessages.OtpExpiredOrNotExists);
             }
 
-            var regRequest = (RegisterRequest)cacheData.Request;
+            var regRequest = (RegisterRequest?)cacheData!.Request
+                ?? throw new UnauthorizedAccessException(ErrorMessages.OtpExpiredOrNotExists);
             var newOtp = new Random().Next(100000, 999999).ToString();
             var newCacheData = new { Request = regRequest, Otp = newOtp };
             _cache.Set(cacheKey, newCacheData, TimeSpan.FromMinutes(10));

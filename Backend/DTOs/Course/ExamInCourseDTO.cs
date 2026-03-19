@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Backend.DTOs.Course
 {
@@ -32,8 +32,8 @@ namespace Backend.DTOs.Course
         public int Status { get; set; }
 
         // Flags for UI behaviour
-        public bool ShowScore { get; set; }
-        public bool ShowAnswer { get; set; }
-        public bool AllowLateSubmission { get; set; }
+        public int ShowScore { get; set; }
+        public int ShowAnswer { get; set; }
+        public int AnswerTimingMode { get; set; }
     }
 }

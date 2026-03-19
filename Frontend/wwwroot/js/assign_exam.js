@@ -52,8 +52,8 @@
     btnSaveTop: get('saveConfigTop'), btnSaveBottom: get('saveConfigBottom'), btnCloseTop: get('closeConfigTop'),
     title: get('examTitleInput'), desc: get('examDescriptionInput'), maxAtt: get('examMaxAttemptsInput'),
     paperCount: get('examPaperCountInput'), visFrom: get('examVisibleFromInput'), openAt: get('examOpenAtInput'),
-    closeAt: get('examCloseAtInput'), dur: get('examDurationInput'), showScr: get('showScore'),
-    shuffle: get('rule1'), lateSub: get('rule3'), next1: get('btnNext1'), next2: get('btnNext2'),
+    closeAt: get('examCloseAtInput'), dur: get('examDurationInput'),
+    shuffle: get('rule1'), next1: get('btnNext1'), next2: get('btnNext2'),
     back2: get('btnBack2'), back3: get('btnBack3'),
     displayClassName: get('displayClassName'), displaySubjectCode: get('displaySubjectCode')
   };
@@ -212,25 +212,42 @@
       const man = ui.genManual.checked; const ok = man ? state.selManIds.size > 0 : !!state.selBpId;
       (man ? ui.manualMode : ui.bpMode).classList.toggle('is-invalid', !ok); return ok;
     }
-    const fields = [ui.visFrom, ui.openAt, ui.closeAt, ui.dur, ui.maxAtt, ui.paperCount];
-    let ok = true;
-    fields.forEach(f => {
-      if (!f) return;
-      const v = !!f.value?.trim();
-      f.parentElement.classList.toggle('is-invalid', !v);
-      if (!v) ok = false;
+    // Step 3: sử dụng AssignExamValidator đầy đủ
+    const visVal = ui.visFrom?.value ? new Date(ui.visFrom.value) : null;
+    const openVal = ui.openAt?.value ? new Date(ui.openAt.value) : null;
+    const closeVal = ui.closeAt?.value ? new Date(ui.closeAt.value) : null;
+    const errs = window.AssignExamValidator.validate({
+      title: ui.title?.value?.trim(),
+      duration: Number(ui.dur?.value),
+      maxAttempts: Number(ui.maxAtt?.value),
+      paperCount: ui.paperCount?.value,
+      visibleFromDate: visVal,
+      openAtDate: openVal,
+      closeAtDate: closeVal,
+      isPublic: false,
+      publicSubjectValue: null,
+      resolvedClassId: state.selClassId,
+      generationMode: ui.genManual?.checked ? 'manual' : 'blueprint',
+      selectedBlueprintId: state.selBpId,
+      manualQuestionCount: state.selManIds?.size || 0,
+      fields: { title: ui.title, duration: ui.dur, maxAttempts: ui.maxAtt, paperCount: ui.paperCount, visibleFrom: ui.visFrom, openAt: ui.openAt, closeAt: ui.closeAt }
     });
-    return ok;
+    if (errs.length) { errs.forEach(e => showToast(e, 'error')); return false; }
+    return true;
   };
 
   const saveAssignExam = async () => {
     if (!teacherId || !validate(3)) return !teacherId && showToast('Thiếu teacherId.', 'error');
     const isMan = ui.genManual.checked;
+    const showScore = Number(document.querySelector('input[name="showScore"]:checked')?.value || 0);
+    const showAnswer = Number(document.querySelector('input[name="showAnswer"]:checked')?.value || 0);
+    const answerTimingMode = Number(document.querySelector('input[name="answerTimingMode"]:checked')?.value || 0);
     const payload = {
       teacherId, title: ui.title.value.trim(), description: ui.desc.value.trim(), duration: Number(ui.dur.value),
-      showScore: ui.showScr.checked, showAnswer: false, maxAttempts: Number(ui.maxAtt.value),
+      showScore, showAnswer, answerTimingMode,
+      maxAttempts: Number(ui.maxAtt.value),
       visibleFrom: toApiDateTime(ui.visFrom.value), openAt: toApiDateTime(ui.openAt.value), closeAt: toApiDateTime(ui.closeAt.value),
-      shuffleQuestion: ui.shuffle.checked, allowLateSubmission: ui.lateSub.checked, isPublic: false,
+      shuffleQuestion: ui.shuffle.checked, isPublic: false,
       classId: state.selClassId, generationMode: isMan ? 'manual' : 'blueprint',
       examBlueprintId: isMan ? null : state.selBpId, questionIds: isMan ? Array.from(state.selManIds).map(Number) : [],
       paperCount: Number(ui.paperCount.value), paperCode: 1

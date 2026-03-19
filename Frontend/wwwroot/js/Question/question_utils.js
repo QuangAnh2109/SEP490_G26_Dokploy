@@ -156,12 +156,12 @@ window.QuestionEditorUtils = (() => {
                     while ((match = mathRegex.exec(s)) !== null) {
                         let before = s.substring(lastIdx, match.index);
                         processed += before.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
-                            .replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                            .replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
                                 return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
                             });
 
                         let mathBlock = match[0];
-                        processed += mathBlock.replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                        processed += mathBlock.replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
                             return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
                         });
                         lastIdx = mathRegex.lastIndex;
@@ -169,7 +169,7 @@ window.QuestionEditorUtils = (() => {
 
                     let remaining = s.substring(lastIdx);
                     processed += remaining.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
-                        .replace(/\\placeholder\[(\d+)\]\{\}/g, (m, id) => {
+                        .replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
                             return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
                         });
 
@@ -190,7 +190,7 @@ window.QuestionEditorUtils = (() => {
                     }
                 } else {
                     // Pure math mode or no delimiters (typical for old DB content)
-                    let processed = s.replace(/\\placeholder\[(\d+)\]\{\}/g, (match, id) => {
+                    let processed = s.replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (match, id) => {
                         return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
                     });
 

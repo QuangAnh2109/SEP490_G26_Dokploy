@@ -40,3 +40,35 @@ public class ExamAnalyticsDetailDto
     // ── Debug Info (Chỉ xem trong F12) ──
     public object? DebugInfo { get; set; }
 }
+
+public class StudentSubmissionSummaryDto
+{
+    public int StudentId { get; set; }
+    public string? StudentName { get; set; }
+    public decimal? TotalPoints { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+}
+
+public class ChapterStatsSummaryDto
+{
+    public string ChapterName { get; set; } = null!;
+    public int TotalAnswers { get; set; }
+    public int CorrectAnswers { get; set; }
+}
+
+public class DifficultyStatsSummaryDto
+{
+    public int Difficulty { get; set; }
+    public int TotalAnswers { get; set; }
+    public int CorrectAnswers { get; set; }
+}
+
+public class QuestionStatsSummaryDto
+{
+    public int QuestionId { get; set; }
+    public string QuestionContent { get; set; } = null!;
+    public string ChapterName { get; set; } = null!;
+    public int Difficulty { get; set; }
+    public int TotalAttempts { get; set; }
+    public int CorrectCount { get; set; }
+}

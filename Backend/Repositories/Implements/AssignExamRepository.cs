@@ -201,8 +201,16 @@ public class AssignExamRepository : IAssignExamRepository
     {
         return await _db.Questions
             .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
-            .OrderBy(q => q.QuestionId)
+            .OrderBy(q => Guid.NewGuid())
             .Take(count)
+            .Select(q => q.QuestionId)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<int>> GetAllQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, string[] activeStatus, CancellationToken ct)
+    {
+        return await _db.Questions
+            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
             .Select(q => q.QuestionId)
             .ToListAsync(ct);
     }
@@ -237,20 +245,17 @@ public class AssignExamRepository : IAssignExamRepository
 
     public async Task AddPaperQuestionsAsync(int paperId, List<int> questionIds, CancellationToken ct)
     {
-        if (questionIds.Count == 0)
+        if (questionIds == null || questionIds.Count == 0)
         {
             return;
         }
 
-        foreach (var chunk in questionIds.Chunk(100))
-        {
-            foreach (var qid in chunk)
-            {
-                await _db.Database.ExecuteSqlRawAsync(
-                    "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
-                    paperId, qid);
-            }
-        }
+        // Optimized Batch Insert: Combine all questions into a single INSERT statement
+        // to minimize database roundtrips.
+        var values = string.Join(",", questionIds.Select(qid => $"({paperId}, {qid})"));
+        var sql = $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {values}";
+
+        await _db.Database.ExecuteSqlRawAsync(sql, ct);
     }
 
     public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct)
@@ -269,6 +274,9 @@ public class AssignExamRepository : IAssignExamRepository
             .Include(x => x.Papers)
                 .ThenInclude(p => p.Questions)
                     .ThenInclude(q => q.Chapter)
+            .Include(x => x.Papers)
+                .ThenInclude(p => p.Questions)
+                    .ThenInclude(q => q.QuestionAnswers)
             .FirstOrDefaultAsync(x => x.ExamId == id, ct);
     }
 

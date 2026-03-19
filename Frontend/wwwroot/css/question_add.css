@@ -249,7 +249,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: .4rem;
     margin-bottom: .45rem;
+}
+
+.blank-group-depends {
+    max-width: 170px;
+    font-size: .78rem;
+    padding: .2rem .4rem;
+    border-color: var(--line);
 }
 
 .blank-group-name {

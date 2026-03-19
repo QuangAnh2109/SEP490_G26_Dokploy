@@ -15,12 +15,12 @@
     <div class="container-fluid px-3 px-md-4">
       <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
         <div>
-          <h1 class="page-title">📝 Giao đề thi</h1>
+          <h1 class="page-title">Giao đề thi</h1>
           <p class="page-subtitle">Thiết lập cấu hình bài tập, đề thi và gán cho sinh viên một cách chuyên nghiệp.</p>
         </div>
         <div class="page-actions">
           <button class="btn btn-outline-secondary" type="button" id="closeConfigTop">Hủy bỏ</button>
-          <button class="btn btn-primary px-4" type="button" id="saveConfigTop">🚀 Lưu cấu hình</button>
+          <button class="btn btn-primary px-4" type="button" id="saveConfigTop">Lưu cấu hình</button>
         </div>
       </section>
 
@@ -43,7 +43,7 @@
 
       <div id="step1Content" class="step-content">
         <section class="panel-card mb-4">
-          <h2 class="section-title mb-4">📍 Thông tin cơ bản</h2>
+          <h2 class="section-title mb-4">Thông tin cơ bản</h2>
           <div class="row g-2">
             <div class="col-12 col-md-8">
               <label class="form-label">Tiêu đề đề thi *</label>
@@ -61,11 +61,11 @@
             </div>
           </div>
           <div id="preSelectedClassInfo" class="mt-4">
-            <h2 class="section-title mb-3">👥 Giao đề cho lớp học</h2>
+            <h2 class="section-title mb-3">Giao đề cho lớp học</h2>
             <div class="summary-card py-3 px-3 bg-light border-0 rounded shadow-sm">
               <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                  <i class="fas fa-users"></i>
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px; font-size: 1.25rem;">
+                  L
                 </div>
                 <div>
                   <h3 class="h5 mb-1" id="displayClassName">Đang tải...</h3>
@@ -90,7 +90,7 @@
 
       <div id="step2Content" class="step-content d-none">
         <section class="panel-card mb-4 shadow-lg">
-          <h2 class="section-title mb-4">🧩 Kiểu tạo đề *</h2>
+          <h2 class="section-title mb-4">Kiểu tạo đề *</h2>
           <div class="row g-2 mb-3">
             <div class="col-12">
               <div class="d-flex flex-column flex-md-row gap-3">
@@ -273,7 +273,7 @@
 
       <div id="step3Content" class="step-content d-none">
         <section class="panel-card mb-4 shadow-lg border-0">
-          <h2 class="section-title mb-4">📅 Lịch thi & Thời gian *</h2>
+          <h2 class="section-title mb-4">Lịch thi & Thời gian *</h2>
           <div class="row g-2">
             <div class="col-12 col-md-3">
               <label class="form-label">Thời điểm học sinh thấy đề *</label>
@@ -311,20 +311,79 @@
             </div>
           </div>
 
-          <hr class="section-divider">
+          <div class="rules-compact-header d-flex align-items-center justify-content-between mb-3">
+            <h2 class="section-title mb-0">Quy tắc thi</h2>
+            <div class="form-check form-switch ms-3">
+              <input class="form-check-input" type="checkbox" id="rule1" checked>
+              <label class="form-check-label" for="rule1">Trộn câu hỏi</label>
+            </div>
+          </div>
 
-          <h2 class="section-title">Quy tắc & Bảo mật</h2>
           <div class="row g-3">
-            <div class="col-12 d-flex flex-column gap-2">
-              <div class="form-check"><input class="form-check-input" type="checkbox" id="rule1" checked><label class="form-check-label" for="rule1">Trộn câu hỏi</label></div>
-              <div class="form-check"><input class="form-check-input" type="checkbox" id="rule3"><label class="form-check-label" for="rule3">Cho phép nộp trễ</label></div>
-              <div class="form-check"><input class="form-check-input" type="checkbox" id="showScore"><label class="form-check-label" for="showScore">Hiển thị điểm ngay khi nộp</label></div>
+            <!-- Cột 1: Hiển thị điểm -->
+            <div class="col-md-4">
+              <div class="rule-card p-3 rounded-3 border h-100">
+                <h6 class="rule-card-title fw-semibold mb-1">Hiển thị điểm số</h6>
+                <p class="text-muted small mb-2">SV có xem được điểm không?</p>
+                <div class="d-flex flex-column gap-1">
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showScore" id="scoreDisplayNone" value="0" checked>
+                    <label class="form-check-label small" for="scoreDisplayNone">Không hiển thị</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showScore" id="scoreDisplayImmediate" value="1">
+                    <label class="form-check-label small" for="scoreDisplayImmediate">Ngay khi nộp bài</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showScore" id="scoreDisplayAfterExam" value="2">
+                    <label class="form-check-label small" for="scoreDisplayAfterExam">Khi kết thúc kỳ thi</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Cột 2: Xem lại bài làm -->
+            <div class="col-md-4">
+              <div class="rule-card p-3 rounded-3 border h-100">
+                <h6 class="rule-card-title fw-semibold mb-1">Xem lại bài làm</h6>
+                <p class="text-muted small mb-2">SV có xem lại đáp án không?</p>
+                <div class="d-flex flex-column gap-1">
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showAnswer" id="answerDisplayNone" value="0" checked>
+                    <label class="form-check-label small" for="answerDisplayNone">Không cho xem</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showAnswer" id="answerDisplayStudentOnly" value="1">
+                    <label class="form-check-label small" for="answerDisplayStudentOnly">Chỉ bài làm của SV</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="showAnswer" id="answerDisplayWithCorrect" value="2">
+                    <label class="form-check-label small" for="answerDisplayWithCorrect">Cả đáp án đúng</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Cột 3: Thời điểm áp dụng -->
+            <div class="col-md-4">
+              <div class="rule-card p-3 rounded-3 border h-100">
+                <h6 class="rule-card-title fw-semibold mb-1">Thời điểm áp dụng</h6>
+                <p class="text-muted small mb-2">Khi nào SV được xem?</p>
+                <div class="d-flex flex-column gap-1">
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="answerTimingMode" id="answerTimingAfterSubmit" value="0" checked>
+                    <label class="form-check-label small" for="answerTimingAfterSubmit">Sau khi nộp bài</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="radio" name="answerTimingMode" id="answerTimingAfterExam" value="1">
+                    <label class="form-check-label small" for="answerTimingAfterExam">Sau khi kết thúc thi</label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="d-flex justify-content-between mt-5 pt-3 border-top">
             <button class="btn btn-outline-secondary px-4" type="button" id="btnBack3">← Quay lại bước 2</button>
-            <button class="btn btn-primary px-5 py-3" type="button" id="saveConfigBottom">🚀 Hoàn tất & Lưu cấu hình</button>
+            <button class="btn btn-primary px-5 py-3" type="button" id="saveConfigBottom">Hoàn tất & Lưu cấu hình</button>
           </div>
         </section>
       </div>

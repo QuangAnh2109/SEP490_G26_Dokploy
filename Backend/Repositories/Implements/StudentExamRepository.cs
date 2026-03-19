@@ -203,6 +203,7 @@ namespace Backend.Repositories.Implements
                 MaxAttempts = exam.MaxAttempts,
                 ShowScore = exam.ShowScore,
                 ShowAnswer = exam.ShowAnswer,
+                AnswerTimingMode = exam.AnswerTimingMode,
                 PaperCount = _context.Papers.Count(p => p.ExamId == examId)
             };
 

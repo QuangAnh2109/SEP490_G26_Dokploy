@@ -207,7 +207,9 @@
                     <div class="blank-group-item d-none" data-blank-group-template>
                         <div class="blank-group-header">
                             <input type="text" class="blank-group-name" value="Hình thức" data-blank-group-name>
-
+                            <select class="form-select form-select-sm blank-group-depends" data-blank-group-depends>
+                                <option value="">Không phụ thuộc</option>
+                            </select>
                             <button type="button" class="blank-group-remove" data-remove-blank-group>&times;</button>
                         </div>
                         <div class="blank-group-segments" data-blank-group-segments>
@@ -221,6 +223,9 @@
                             </template>
                             <p class="form-note mb-0 d-none" data-blank-group-empty-note><em>Khung trả lời trống</em></p>
                             <div class="segments-container" data-segments-container></div>
+                        </div>
+                        <div class="blank-group-score mt-1" data-blank-group-score>
+                            <span class="badge bg-secondary">Tổng hệ số: <strong data-group-score-value>0</strong>%</span>
                         </div>
                     </div>
                 </div>

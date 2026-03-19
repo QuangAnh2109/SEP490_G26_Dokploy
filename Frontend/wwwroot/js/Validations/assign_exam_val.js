@@ -58,10 +58,48 @@ window.AssignExamValidator = (() => {
             markFieldInvalid(f.paperCount, true);
         }
 
-        if (data.openAtDate && data.closeAtDate && data.openAtDate >= data.closeAtDate) {
-            errors.push('Thời điểm mở phải < thời điểm đóng.');
+        // ── Validate thời gian ──
+
+        // 1. Bắt buộc nhập cả 3 mốc thời gian
+        if (!data.visibleFromDate) {
+            errors.push('Vui lòng nhập thời điểm học sinh thấy đề.');
+            markFieldInvalid(f.visibleFrom, true);
+        }
+        if (!data.openAtDate) {
+            errors.push('Vui lòng nhập thời điểm mở.');
             markFieldInvalid(f.openAt, true);
+        }
+        if (!data.closeAtDate) {
+            errors.push('Vui lòng nhập thời điểm đóng.');
             markFieldInvalid(f.closeAt, true);
+        }
+
+        // Chỉ check quan hệ khi đã có đủ giá trị
+        if (data.visibleFromDate && data.openAtDate && data.closeAtDate) {
+
+            // 2. openAt < closeAt (bắt buộc, không cho bằng)
+            if (data.openAtDate >= data.closeAtDate) {
+                errors.push('Thời điểm mở phải nhỏ hơn thời điểm đóng.');
+                markFieldInvalid(f.openAt, true);
+                markFieldInvalid(f.closeAt, true);
+            }
+
+            // 3. visibleFrom < closeAt (phải thấy đề trước khi đóng)
+            if (data.visibleFromDate >= data.closeAtDate) {
+                errors.push('Thời điểm thấy đề phải trước thời điểm đóng.');
+                markFieldInvalid(f.visibleFrom, true);
+                markFieldInvalid(f.closeAt, true);
+            }
+
+            // 4. Khoảng mở-đóng phải đủ cho thời lượng làm bài
+            if (data.openAtDate < data.closeAtDate && data.duration > 0) {
+                const windowMinutes = (data.closeAtDate - data.openAtDate) / 60000;
+                if (windowMinutes < data.duration) {
+                    errors.push(`Khoảng cách mở-đóng (${Math.round(windowMinutes)} phút) phải >= thời lượng làm bài (${data.duration} phút).`);
+                    markFieldInvalid(f.openAt, true);
+                    markFieldInvalid(f.closeAt, true);
+                }
+            }
         }
 
         if (data.isPublic && !data.publicSubjectValue) {

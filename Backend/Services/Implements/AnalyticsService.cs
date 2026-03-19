@@ -25,25 +25,22 @@ public class AnalyticsService : IAnalyticsService
     // ════════════════════════════════════════════════════════
     public async Task<ExamAnalyticsDetailDto> GetExamAnalyticsDetailAsync(int examId)
     {
-        var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
+        // 1. Fetch Exam Info (Basic)
+        var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId); // Actually just need basic info now
         if (exam == null)
             throw new KeyNotFoundException($"Không tìm thấy bài thi với ID {examId}.");
 
-        var rawSubmissions = exam.Papers.SelectMany(p => p.Submissions).ToList();
-        
-        // Lọc lấy lượt nộp mới nhất MÀ CÓ câu trả lời của mỗi học sinh
-        // Tránh trường hợp nộp bài trống làm rỗng biểu đồ
-        var allSubmissions = rawSubmissions
-            .Where(s => s.StudentAnswers != null && s.StudentAnswers.Any())
-            .GroupBy(s => s.StudentId)
-            .Select(g => g.OrderByDescending(s => s.UpdatedAtUtc).First())
-            .ToList();
+        // 2. Fetch Aggregated stats from SQL
+        var studentSummaries = await _analyticsRepo.GetExamSubmissionsSummaryAsync(examId);
+        var chapterStatsQueries = await _analyticsRepo.GetChapterStatsAsync(examId);
+        var difficultyStatsQueries = await _analyticsRepo.GetDifficultyStatsAsync(examId);
+        var hardestQuestionsQueries = await _analyticsRepo.GetHardestQuestionsAsync(examId, 10);
 
         var dto = new ExamAnalyticsDetailDto
         {
             ExamId = exam.ExamId,
             ExamTitle = exam.Title,
-            TotalSubmissions = rawSubmissions.Count // Vẫn giữ tổng số lượt nộp thực tế
+            TotalSubmissions = studentSummaries.Count
         };
 
         if (dto.TotalSubmissions == 0)
@@ -52,8 +49,8 @@ public class AnalyticsService : IAnalyticsService
             return dto;
         }
 
-        // ── 1. Thống kê điểm ──
-        var scores = allSubmissions
+        // 3. Score Stats
+        var scores = studentSummaries
             .Where(s => s.TotalPoints.HasValue)
             .Select(s => s.TotalPoints!.Value)
             .OrderBy(s => s)
@@ -65,107 +62,46 @@ public class AnalyticsService : IAnalyticsService
             dto.MaxScore = scores.Max();
             dto.MinScore = scores.Min();
             dto.MedianScore = AnalyticsHelper.GetMedian(scores);
+            dto.ScoreDistribution = AnalyticsHelper.BuildScoreDistribution(scores);
         }
 
-        // ── 2. Phân bố điểm ──
-        dto.ScoreDistribution = AnalyticsHelper.BuildScoreDistribution(scores);
-
-        // ── 3. Build question lookup (Exhaustive) ──
-        // Lấy tất cả câu hỏi từ các Paper
-        var paperQuestions = exam.Papers.SelectMany(p => p.Questions).DistinctBy(q => q.QuestionId).ToList();
-        
-        // Bổ sung các câu hỏi từ các câu trả lời học sinh nộp (trong trường hợp quan hệ Paper-Question bị gãy/không load đủ)
-        var submissionQuestions = allSubmissions
-            .SelectMany(s => s.StudentAnswers)
-            .Select(sa => sa.QuestionAnswer?.Question)
-            .Where(q => q != null)
-            .DistinctBy(q => q!.QuestionId)
-            .Select(q => q!)
-            .ToList();
-
-        var allQuestions = paperQuestions.UnionBy(submissionQuestions, q => q.QuestionId).ToList();
-        var questionDict = allQuestions.ToDictionary(q => q.QuestionId, q => q);
-
-        // ── 4. Tính tỉ lệ đúng ──
-        var allAnswerResults = allSubmissions
-            .SelectMany(s => s.StudentAnswers)
-            .Select(ans => AnalyticsHelper.MapStudentAnswer(ans, questionDict))
-            .Where(x => x != null)
-            .ToList();
-
-        // ── 5. Thống kê theo Chương ──
-        dto.ChapterStats = allAnswerResults
-            .Where(x => x != null)
-            .GroupBy(x => x!.ChapterName) // Nhóm theo tên chương cho trực quan
-            .Select(g => new ChapterAnalyticsDto
-            {
-                ChapterName = g.Key,
-                TotalAnswers = g.Count(),
-                CorrectAnswers = g.Count(x => x!.IsCorrect)
-            })
-            .OrderBy(c => c.AccuracyRate)
-            .ToList();
-
-        // ── 6. Thống kê theo Độ khó ──
-        dto.DifficultyStats = allAnswerResults
-            .Where(x => x != null)
-            .GroupBy(x => x!.Difficulty)
-            .Select(g => new DifficultyAnalyticsDto
-            {
-                DifficultyLevel = g.Key,
-                DifficultyName = DifficultyLevel.GetLabel(g.Key),
-                TotalAnswers = g.Count(),
-                CorrectAnswers = g.Count(x => x!.IsCorrect)
-            })
-            .OrderBy(d => d.DifficultyLevel)
-            .ToList();
-
-        // ── 7. Top câu hỏi khó nhất ──
-        dto.HardestQuestions = allAnswerResults
-            .GroupBy(x => x!.QuestionId)
-            .Select(g =>
-            {
-                var first = g.First()!;
-                return new HardestQuestionDto
-                {
-                    QuestionId = g.Key,
-                    QuestionContent = first.QuestionContent,
-                    ChapterName = first.ChapterName,
-                    Difficulty = first.Difficulty,
-                    DifficultyName = DifficultyLevel.GetLabel(first.Difficulty),
-                    TotalAttempts = g.Count(),
-                    CorrectCount = g.Count(x => x!.IsCorrect)
-                };
-            })
-            .OrderBy(x => x.AccuracyRate)
-            .Take(10)
-            .ToList();
-
-        // ── 8. Danh sách sinh viên ──
-        dto.StudentResults = allSubmissions
-            .Select(s => new StudentResultDto
-            {
-                StudentId = s.StudentId,
-                StudentName = s.Student?.FullName ?? s.Student?.Email ?? $"HS #{s.StudentId}",
-                TotalPoints = s.TotalPoints,
-                SubmittedAt = s.UpdatedAtUtc
-            })
-            .OrderByDescending(s => s.TotalPoints)
-            .ToList();
-
-        // ── 9. Đề xuất cải thiện ──
-        AnalyticsHelper.GenerateTeacherRecommendations(dto);
-
-        // ── 10. Debug Info ──
-        dto.DebugInfo = new
+        // 4. Map SQL Stats to DTO
+        dto.ChapterStats = chapterStatsQueries.Select(c => new ChapterAnalyticsDto
         {
-            PaperCount = exam.Papers.Count,
-            RawSubmissionsCount = rawSubmissions.Count,
-            ValidSubmissionsCount = allSubmissions.Count,
-            TotalAnswersFound = allSubmissions.SelectMany(s => s.StudentAnswers).Count(),
-            AllAnswerResultsCount = allAnswerResults.Count,
-            QuestionDictCount = questionDict.Count
-        };
+            ChapterName = c.ChapterName,
+            TotalAnswers = c.TotalAnswers,
+            CorrectAnswers = c.CorrectAnswers
+        }).ToList();
+
+        dto.DifficultyStats = difficultyStatsQueries.Select(d => new DifficultyAnalyticsDto
+        {
+            DifficultyLevel = d.Difficulty,
+            DifficultyName = DifficultyLevel.GetLabel(d.Difficulty),
+            TotalAnswers = d.TotalAnswers,
+            CorrectAnswers = d.CorrectAnswers
+        }).ToList();
+
+        dto.HardestQuestions = hardestQuestionsQueries.Select(q => new HardestQuestionDto
+        {
+            QuestionId = q.QuestionId,
+            QuestionContent = q.QuestionContent,
+            ChapterName = q.ChapterName,
+            Difficulty = q.Difficulty,
+            DifficultyName = DifficultyLevel.GetLabel(q.Difficulty),
+            TotalAttempts = q.TotalAttempts,
+            CorrectCount = q.CorrectCount
+        }).ToList();
+
+        dto.StudentResults = studentSummaries.Select(s => new StudentResultDto
+        {
+            StudentId = s.StudentId,
+            StudentName = s.StudentName ?? $"HS #{s.StudentId}",
+            TotalPoints = s.TotalPoints,
+            SubmittedAt = s.UpdatedAtUtc
+        }).ToList();
+
+        // 5. Recommendations
+        AnalyticsHelper.GenerateTeacherRecommendations(dto);
 
         return dto;
     }
@@ -189,13 +125,17 @@ public class AnalyticsService : IAnalyticsService
         if (submission == null)
             throw new KeyNotFoundException($"Không tìm thấy bài làm của học sinh {studentId} cho bài thi {examId}.");
 
-        var showScore = exam.ShowScore;
-        var showAnswer = exam.ShowAnswer;
+        var scoreMode = exam.ShowScore;
+        var answerMode = exam.ShowAnswer;
+        var answerTiming = exam.AnswerTimingMode;
+        var showScore = scoreMode != 0;  // 0 = none
+        var showAnswer = answerMode != 0; // 0 = none
 
         var dto = new StudentSubmissionAnalyticsDto
         {
-            ShowScore = showScore,
-            ShowAnswer = showAnswer,
+            ShowScore = scoreMode,
+            ShowAnswer = answerMode,
+            AnswerTimingMode = answerTiming,
             ExamId = exam.ExamId,
             ExamTitle = exam.Title,
             SubmissionId = submission.SubmissionId
@@ -234,8 +174,8 @@ public class AnalyticsService : IAnalyticsService
                     Content = qa.Content,
                     StudentResponse = sa?.Response,
                     IsSelected = sa != null,
-                    IsCorrect = showAnswer ? qa.IsCorrect : null,
-                    CorrectAnswer = showAnswer ? qa.CorrectAnswer : null
+                    IsCorrect = answerMode == 2 ? qa.IsCorrect : null,  // 2 = with_correct
+                    CorrectAnswer = answerMode == 2 ? qa.CorrectAnswer : null
                 });
 
                 if (sa != null) { if (!AnalyticsHelper.CheckIsCorrect(qa, sa)) questionCorrect = false; }

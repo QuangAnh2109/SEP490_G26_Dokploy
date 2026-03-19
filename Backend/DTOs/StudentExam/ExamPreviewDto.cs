@@ -18,8 +18,9 @@ namespace Backend.DTOs.StudentExam
 
         public int MaxAttempts { get; set; }
         public int RemainingAttempts { get; set; }
-        public bool ShowScore { get; set; }
-        public bool ShowAnswer { get; set; }
+        public int ShowScore { get; set; }
+        public int ShowAnswer { get; set; }
+        public int AnswerTimingMode { get; set; }
         public int PaperCount { get; set; }
 
         public List<BlueprintRowDto> BlueprintMatrix { get; set; } = new();

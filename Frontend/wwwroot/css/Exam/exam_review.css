@@ -5,7 +5,10 @@
 }
 
 /* Page Shell Override */
-body { background-color: #f1f5f9; }
+body { 
+    background-color: #f1f5f9; 
+    overflow: hidden; /* Prevent double scrollbar with review-content */
+}
 
 .review-wrapper {
     display: flex;
@@ -121,3 +124,40 @@ body { background-color: #f1f5f9; }
 .alternative-item { cursor: pointer; padding: 1rem; border-radius: 10px; border: 2px solid #f1f5f9; margin-bottom: 0.75rem; transition: all 0.2s; }
 .alternative-item:hover { background: #f8fafc; border-color: #e2e8f0; }
 .alternative-item.selected { background: #eff6ff; border-color: #0d6efd; }
+
+/* KaTeX Input Styling inside Preview */
+.katex-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    width: 60px;
+    text-align: center;
+    padding: 2px;
+    margin: 0 5px;
+    font-size: 1.05rem;
+    outline: none;
+    background: #fff;
+    color: #334155;
+    transition: all 0.2s;
+}
+
+.katex-input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+/* Force KaTeX display blocks to align left instead of center */
+.latex-content .katex-display {
+    text-align: left !important;
+    margin: 0.5em 0 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+}
+
+/* Fix Answer Row Alignment */
+.answer-row .latex-content {
+    margin: 0 !important;
+}
+.answer-row .latex-content .katex-display {
+    margin: 0 !important;
+    display: inline-block !important;
+}

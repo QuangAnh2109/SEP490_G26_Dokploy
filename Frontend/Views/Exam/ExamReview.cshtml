@@ -143,14 +143,166 @@
     </div>
 </div>
 
+<!-- Templates cho JS -->
+<template id="blueprintMatrixRowTemplate">
+    <tr>
+        <th class="fw-semibold" data-field-chapter></th>
+        <td class="text-center" data-field-recognize></td>
+        <td class="text-center" data-field-understand></td>
+        <td class="text-center" data-field-apply></td>
+        <td class="text-center" data-field-advanced></td>
+        <td class="text-center fw-bold" data-field-total></td>
+    </tr>
+</template>
+
+<template id="blueprintMatrixFooterTemplate">
+    <tr class="table-light fw-bold">
+        <th>Tổng cộng</th>
+        <td class="text-center" data-field-recognize></td>
+        <td class="text-center" data-field-understand></td>
+        <td class="text-center" data-field-apply></td>
+        <td class="text-center" data-field-advanced></td>
+        <td class="text-center text-primary" data-field-total></td>
+    </tr>
+</template>
+
+<template id="overviewQuestionTemplate">
+    <div class="question-item">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold text-primary" data-question-label></span>
+            <div>
+                <span data-paper-tags-container></span>
+                <span class="difficulty-badge" data-difficulty-badge></span>
+            </div>
+        </div>
+        <div class="render-content-target"></div>
+        <div class="text-muted small mt-2" data-chapter-name></div>
+        <div class="mt-3">
+            <button class="btn btn-sm btn-light border text-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-collapse-button>
+                <span class="fw-bold">Xem đáp án & giải thích</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="collapse mt-2" data-collapse-target>
+                <div class="card card-body bg-light border-0 p-3">
+                    <div class="answers-container mb-3"></div>
+                    <div class="explanation-container mb-2 text-dark">
+                        <strong>Giải thích:</strong> <span class="explanation-content d-block mt-1"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="paperQuestionTemplate">
+    <div class="question-item">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold" data-question-label></span>
+            <div class="d-flex align-items-center">
+                <span class="difficulty-badge me-2" data-difficulty-badge></span>
+            </div>
+        </div>
+        <div class="render-content-target"></div>
+        <div class="mt-3">
+            <button class="btn btn-sm btn-light border text-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-collapse-button>
+                <span class="fw-bold">Xem đáp án & giải thích</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="collapse mt-2" data-collapse-target>
+                <div class="card card-body bg-light border-0 p-3">
+                    <div class="answers-container mb-3"></div>
+                    <div class="explanation-container mb-2 text-dark">
+                        <strong>Giải thích:</strong> <span class="explanation-content d-block mt-1"></span>
+                    </div>
+                    <div class="text-end border-top pt-3 mt-2 swap-button-container d-none">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm" data-btn-swap>
+                            <i class="fas fa-exchange-alt me-1"></i> Đổi câu hỏi này
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="answerRowTemplate">
+    <div class="p-2 mb-2 border rounded">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-baseline answer-row">
+                <span class="fw-bold me-2" data-answer-label></span>
+                <div class="latex-content render-target mb-0"></div>
+            </div>
+            <i class="fas fa-check-circle text-success ms-2 d-none" data-correct-icon></i>
+        </div>
+    </div>
+</template>
+
+<template id="alternativeItemTemplate">
+    <div class="alternative-item">
+        <div class="d-flex justify-content-between small text-muted mb-1">
+            <span data-item-info></span>
+            <span class="difficulty-badge" data-difficulty-badge></span>
+        </div>
+        <div class="render-content-target-alt" style="font-size:0.95rem"></div>
+    </div>
+</template>
+
+<template id="matrixEmptyTemplate">
+    <tr><td colspan="6" class="text-center py-3 text-muted">Đề thi không sử dụng ma trận blueprint.</td></tr>
+</template>
+
+<template id="emptyOverviewQuestionsTemplate">
+    <div class="text-center py-5 text-muted">Không có câu hỏi nào.</div>
+</template>
+
+<template id="paperTagTemplate">
+    <span class="paper-tag"></span>
+</template>
+
+<template id="questionContentJsonTemplate">
+    <div>
+        <div class="mb-2 stem-container latex-content"></div>
+        <div class="frame-container latex-content"></div>
+    </div>
+</template>
+
+<template id="questionContentFallbackJsonTemplate">
+    <div class="latex-content">
+        <span class="stem-content"></span><br/>
+        <span class="frame-content"></span>
+    </div>
+</template>
+
+<template id="questionContentStandardTemplate">
+    <div class="latex-content"></div>
+</template>
+
+<template id="questionContentErrorTemplate">
+    <div class="latex-content text-danger"></div>
+</template>
+
+<template id="emptyAnswersTemplate">
+    <em class="text-muted">Không có đáp án (hoặc câu hỏi tự luận)</em>
+</template>
+
+<template id="alternativesLoadingTemplate">
+    <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Đang tìm câu hỏi thay thế...</div>
+</template>
+
+<template id="alternativesErrorTemplate">
+    <div class="alert alert-danger"></div>
+</template>
+
+<template id="alternativesEmptyTemplate">
+    <div class="text-center py-4 text-muted">Không tìm thấy câu hỏi phù hợp.</div>
+</template>
+
 @section Scripts {
-    <script defer src="https://unpkg.com/mathlive"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     <script src="~/js/Question/question_utils.js"></script>
     <script src="~/js/exam_review.js"></script>
     <script>
-        const EXAM_ID = @examId;
-        const CLASS_ID = @(classId ?? "null");
         document.addEventListener('DOMContentLoaded', () => {
             // Force full width for the review wrapper by bypassing Bootstrap container
             const wrapper = document.querySelector('.review-wrapper');
@@ -170,8 +322,12 @@
                 }
             }
 
-            if (EXAM_ID > 0) {
-                initReviewPage(EXAM_ID);
+            if (@examId > 0) {
+                initReviewPage({
+                    examId: @examId,
+                    classId: @(classId ?? "null"),
+                    apiBase: "/api/assign-exam"
+                });
             }
         });
     </script>

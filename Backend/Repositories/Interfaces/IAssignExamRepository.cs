@@ -24,6 +24,8 @@ public interface IAssignExamRepository
     
     Task<List<int>> GetQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, int count, string[] activeStatus, CancellationToken ct);
     
+    Task<List<int>> GetAllQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, string[] activeStatus, CancellationToken ct);
+    
     Task<List<QuestionSubjectDto>> GetQuestionsWithSubjectByIdsAsync(IEnumerable<int> ids, string[] activeStatus, CancellationToken ct);
     
     Task<Class?> GetClassByIdAsync(int id, CancellationToken ct);

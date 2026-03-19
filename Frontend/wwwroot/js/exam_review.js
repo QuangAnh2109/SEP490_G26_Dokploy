@@ -3,8 +3,8 @@
  * Redesigned logic for Exam Review with Sidebar navigation.
  */
 
-// Use global API_BASE_URL from site.js if available, else fallback
-const API_BASE = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : "https://localhost:7167") + "/api/assign-exam";
+let API_BASE = "";
+let CLASS_ID = null;
 let currentReviewData = null;
 let selectedAlternativeId = null;
 let swapContext = {
@@ -12,9 +12,17 @@ let swapContext = {
     oldQuestionId: null
 };
 
-async function initReviewPage(examId) {
+async function initReviewPage(config) {
+    if (!config || !config.examId) {
+        showToast("Thiếu cấu hình ExamID", "error");
+        return;
+    }
+    
+    API_BASE = config.apiBase || "/api/assign-exam";
+    CLASS_ID = config.classId || null;
+
     try {
-        await loadReviewData(examId);
+        await loadReviewData(config.examId);
     } catch (error) {
         console.error("Failed to initialize review page:", error);
         showToast("Không thể tải thông tin đề thi.", "error");
@@ -22,16 +30,11 @@ async function initReviewPage(examId) {
 }
 
 async function loadReviewData(examId) {
-    const response = await apiGet(`${API_BASE}/review/${examId}`);
-    if (response.ok) {
-        currentReviewData = await response.json();
-        renderInfoView();
-        renderPaperSidebar();
-        renderOverview(); // Background render for All Questions view
-        setupSidebarNavigation(); // Call after rendering to ensure items exist
-    } else {
-        throw new Error("API call failed");
-    }
+    currentReviewData = await apiClient.get(`${API_BASE}/review/${examId}`);
+    renderInfoView();
+    renderPaperSidebar();
+    renderOverview();
+    setupSidebarNavigation();
 }
 
 function setupSidebarNavigation() {
@@ -114,32 +117,26 @@ function renderInfoView() {
             totals.vdc += row.advancedApply;
             totals.total += row.total;
 
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <th class="fw-semibold">${row.chapterName}</th>
-                <td>${row.recognize}</td>
-                <td>${row.understand}</td>
-                <td>${row.apply}</td>
-                <td>${row.advancedApply}</td>
-                <td class="fw-bold">${row.total}</td>
-            `;
+            const tr = getTemplateContent('blueprintMatrixRowTemplate');
+            tr.querySelector('[data-field-chapter]').textContent = row.chapterName;
+            tr.querySelector('[data-field-recognize]').textContent = row.recognize;
+            tr.querySelector('[data-field-understand]').textContent = row.understand;
+            tr.querySelector('[data-field-apply]').textContent = row.apply;
+            tr.querySelector('[data-field-advanced]').textContent = row.advancedApply;
+            tr.querySelector('[data-field-total]').textContent = row.total;
             matrixBody.appendChild(tr);
         });
 
         // Totals row
-        const footer = document.createElement("tr");
-        footer.className = "table-light fw-bold";
-        footer.innerHTML = `
-            <th>Tổng cộng</th>
-            <td>${totals.nb}</td>
-            <td>${totals.th}</td>
-            <td>${totals.vd}</td>
-            <td>${totals.vdc}</td>
-            <td class="text-primary">${totals.total}</td>
-        `;
+        const footer = getTemplateContent('blueprintMatrixFooterTemplate');
+        footer.querySelector('[data-field-recognize]').textContent = totals.nb;
+        footer.querySelector('[data-field-understand]').textContent = totals.th;
+        footer.querySelector('[data-field-apply]').textContent = totals.vd;
+        footer.querySelector('[data-field-advanced]').textContent = totals.vdc;
+        footer.querySelector('[data-field-total]').textContent = totals.total;
         matrixBody.appendChild(footer);
     } else {
-        matrixBody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">Đề thi không sử dụng ma trận blueprint.</td></tr>`;
+        matrixBody.appendChild(getTemplateContent('matrixEmptyTemplate'));
     }
 }
 
@@ -151,7 +148,12 @@ function renderPaperSidebar() {
     currentReviewData.papers.forEach(p => {
         const btn = document.createElement("button");
         btn.className = "nav-item-custom sidebar-nav paper-item";
-        btn.innerHTML = `<i class="far fa-file-alt"></i> Mã đề ${p.code}`;
+        
+        const icon = document.createElement("i");
+        icon.className = "far fa-file-alt";
+        btn.appendChild(icon);
+        btn.appendChild(document.createTextNode(` Mã đề ${p.code}`));
+        
         btn.onclick = () => {
             renderPaperQuestions(p);
             switchView("view-paper-detail", btn);
@@ -177,28 +179,41 @@ function renderOverview() {
 
     const uniqueQuestions = Array.from(questionsMap.values());
     if (uniqueQuestions.length === 0) {
-        container.innerHTML = `<div class="text-center py-5 text-muted">Không có câu hỏi nào.</div>`;
+        container.appendChild(getTemplateContent('emptyOverviewQuestionsTemplate'));
         return;
     }
 
     uniqueQuestions.forEach((q, idx) => {
-        const item = document.createElement("div");
-        item.className = "question-item";
-        item.innerHTML = `
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="fw-bold text-primary">Câu hỏi ${idx + 1}</span>
-                <div>
-                    ${q.papers.map(p => `<span class="paper-tag">Mã đề ${p}</span>`).join('')}
-                    <span class="difficulty-badge ${getDifficultyClass(q.difficulty)}">
-                        ${getDifficultyText(q.difficulty)}
-                    </span>
-                </div>
-            </div>
-            <div class="render-content-target" id="overview-q-${q.questionId}"></div>
-            <div class="text-muted small mt-2">Chương: ${q.chapterName}</div>
-        `;
+        const item = getTemplateContent('overviewQuestionTemplate');
+        item.querySelector('[data-question-label]').textContent = `Câu hỏi ${idx + 1}`;
+        
+        const tagsContainer = item.querySelector('[data-paper-tags-container]');
+        tagsContainer.innerHTML = '';
+        q.papers.forEach(p => {
+            const tag = getTemplateContent('paperTagTemplate');
+            tag.textContent = `Mã đề ${p}`;
+            tagsContainer.appendChild(tag);
+        });
+        
+        const badge = item.querySelector('[data-difficulty-badge]');
+        badge.className = `difficulty-badge ${getDifficultyClass(q.difficulty)}`;
+        badge.textContent = getDifficultyText(q.difficulty);
+        
+        item.querySelector('.render-content-target').id = `overview-q-${q.questionId}`;
+        item.querySelector('[data-chapter-name]').textContent = `Chương: ${q.chapterName}`;
+        
+        const collapseBtn = item.querySelector('[data-collapse-button]');
+        collapseBtn.setAttribute('data-bs-target', `#collapse-overview-${idx}`);
+        item.querySelector('[data-collapse-target]').id = `collapse-overview-${idx}`;
+        
+        const ansContainer = item.querySelector('.answers-container');
+        ansContainer.id = `answers-overview-${idx}`;
+        const expContainer = item.querySelector('.explanation-container');
+        expContainer.id = `exp-overview-${idx}`;
+
         container.appendChild(item);
         renderQuestionItemContent(item.querySelector('.render-content-target'), q.contentLatex, q.questionType);
+        renderAnswersAndExplanation(`answers-overview-${idx}`, `exp-overview-${idx}`, q);
     });
 }
 
@@ -210,42 +225,135 @@ function renderPaperQuestions(paper) {
     container.innerHTML = "";
 
     paper.questions.forEach((q, idx) => {
-        const item = document.createElement("div");
-        item.className = "question-item";
-        item.innerHTML = `
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="fw-bold">Câu ${idx + 1}</span>
-                <div class="d-flex align-items-center">
-                    <span class="difficulty-badge ${getDifficultyClass(q.difficulty)} me-2">
-                        ${getDifficultyText(q.difficulty)}
-                    </span>
-                    ${currentReviewData.status === 0 ? `
-                    <button class="btn btn-sm btn-outline-primary" onclick="openSwapModal(${paper.paperId}, ${q.questionId})">
-                        <i class="fas fa-exchange-alt me-1"></i> Đổi câu hỏi
-                    </button>` : ''}
-                </div>
-            </div>
-            <div class="render-content-target" id="paper-q-${q.questionId}"></div>
-        `;
+        const item = getTemplateContent('paperQuestionTemplate');
+        item.querySelector('[data-question-label]').textContent = `Câu ${idx + 1}`;
+        
+        const badge = item.querySelector('[data-difficulty-badge]');
+        badge.className = `difficulty-badge ${getDifficultyClass(q.difficulty)} me-2`;
+        badge.textContent = getDifficultyText(q.difficulty);
+        
+        item.querySelector('.render-content-target').id = `paper-q-${q.questionId}`;
+        
+        const collapseBtn = item.querySelector('[data-collapse-button]');
+        collapseBtn.setAttribute('data-bs-target', `#collapse-paper-${q.questionId}`);
+        item.querySelector('[data-collapse-target]').id = `collapse-paper-${q.questionId}`;
+        
+        const ansContainer = item.querySelector('.answers-container');
+        ansContainer.id = `answers-paper-${q.questionId}`;
+        const expContainer = item.querySelector('.explanation-container');
+        expContainer.id = `exp-paper-${q.questionId}`;
+
+        if (currentReviewData.status === 0) {
+            const swapBtnContainer = item.querySelector('.swap-button-container');
+            swapBtnContainer.classList.remove('d-none');
+            item.querySelector('[data-btn-swap]').onclick = () => openSwapModal(paper.paperId, q.questionId);
+        }
+
         container.appendChild(item);
         renderQuestionItemContent(item.querySelector('.render-content-target'), q.contentLatex, q.questionType);
+        renderAnswersAndExplanation(`answers-paper-${q.questionId}`, `exp-paper-${q.questionId}`, q);
     });
 }
 
 function renderQuestionItemContent(container, content, type) {
     try {
         const isJson = content.trim().startsWith('{') && content.trim().endsWith('}');
+        container.innerHTML = "";
         if (isJson || type === 'FillInBlank') {
             const data = JSON.parse(content);
-            container.innerHTML = `
-                <div class="mb-2"><math-span class="latex-content">${data.stem || ''}</math-span></div>
-                <div><math-field read-only class="w-100">${data.frame || ''}</math-field></div>
-            `;
+            if (window.QuestionEditorUtils) {
+                const tpl = getTemplateContent('questionContentJsonTemplate');
+                container.appendChild(tpl);
+                window.QuestionEditorUtils.renderLatexInElement(container.querySelector('.stem-container'), data.stem || '');
+                window.QuestionEditorUtils.renderLatexInElement(container.querySelector('.frame-container'), data.frame || '');
+            } else {
+                const fbTpl = getTemplateContent('questionContentFallbackJsonTemplate');
+                fbTpl.querySelector('.stem-content').innerHTML = data.stem || '';
+                fbTpl.querySelector('.frame-content').innerHTML = data.frame || '';
+                container.appendChild(fbTpl);
+            }
         } else {
-            container.innerHTML = `<math-span class="latex-content">${content}</math-span>`;
+            const tpl = getTemplateContent('questionContentStandardTemplate');
+            container.appendChild(tpl);
+            if (window.QuestionEditorUtils) {
+                window.QuestionEditorUtils.renderLatexInElement(tpl, content);
+            } else {
+                tpl.innerHTML = content;
+            }
         }
     } catch (e) {
-        container.innerHTML = `<div class="latex-content">${content}</div>`;
+        const errTpl = getTemplateContent('questionContentErrorTemplate');
+        errTpl.textContent = `Lỗi hiển thị nội dung: ${e.message}`;
+        container.innerHTML = "";
+        container.appendChild(errTpl);
+    }
+}
+
+function renderAnswersAndExplanation(answersContainerId, explanationContainerId, q) {
+    const ansContainer = document.getElementById(answersContainerId);
+    const expContainer = document.getElementById(explanationContainerId);
+    if (!ansContainer || !expContainer) return;
+
+    ansContainer.innerHTML = '';
+    if (q.answers && q.answers.length > 0) {
+        const isMultipleChoice = q.questionType === 'MultipleChoice' || q.questionType === 'MultipleResponse';
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        
+        const ansLabel = document.createElement("strong");
+        ansLabel.className = "d-block mb-2 text-dark";
+        ansLabel.textContent = "Đáp án:";
+        ansContainer.appendChild(ansLabel);
+
+        q.answers.forEach((ans, idx) => {
+            try {
+                const label = isMultipleChoice ? (labels[idx] || '?') : `Ô trống ${idx+1}`;
+                const displayContent = ans.correctAnswer ? ans.correctAnswer : ans.content;
+                const safeContent = (displayContent !== null && displayContent !== undefined) ? String(displayContent) : '';
+                
+                const row = getTemplateContent('answerRowTemplate');
+                if (ans.isCorrect) {
+                    row.className = `p-2 mb-2 border rounded bg-success bg-opacity-10 border-success`;
+                    row.querySelector('[data-correct-icon]').classList.remove('d-none');
+                } else {
+                    row.className = `p-2 mb-2 border rounded bg-white`;
+                }
+                
+                row.querySelector('[data-answer-label]').textContent = `${label}.`;
+                
+                ansContainer.appendChild(row);
+                
+                const renderTarget = row.querySelector('.render-target');
+                if (window.QuestionEditorUtils) {
+                    window.QuestionEditorUtils.renderLatexInElement(renderTarget, safeContent);
+                } else {
+                    renderTarget.innerHTML = safeContent;
+                }
+            } catch (e) {
+                console.error("Lỗi khi kết xuất đáp án", e);
+            }
+        });
+    } else {
+        ansContainer.appendChild(getTemplateContent('emptyAnswersTemplate'));
+    }
+
+    let explanationText = "";
+    try {
+        const isJson = q.contentLatex && q.contentLatex.trim().startsWith('{') && q.contentLatex.trim().endsWith('}');
+        if (isJson || q.questionType === 'FillInBlank') {
+            const data = JSON.parse(q.contentLatex);
+            explanationText = data.explanation || "";
+        }
+    } catch(e) {}
+
+    const expContent = expContainer.querySelector('.explanation-content');
+    if (explanationText.trim()) {
+        if (window.QuestionEditorUtils) {
+            window.QuestionEditorUtils.renderLatexInElement(expContent, explanationText);
+        } else {
+            expContent.innerHTML = explanationText;
+        }
+    } else {
+        expContainer.style.display = 'none';
     }
 }
 
@@ -263,18 +371,17 @@ async function openSwapModal(paperId, questionId) {
 
     const list = document.getElementById("alternativesList");
     if (!list) return;
-    list.innerHTML = `<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Đang tìm câu hỏi thay thế...</div>`;
+    list.innerHTML = "";
+    list.appendChild(getTemplateContent('alternativesLoadingTemplate'));
 
     try {
-        const response = await apiGet(`${API_BASE}/papers/${paperId}/questions/${questionId}/alternatives`);
-        if (response.ok) {
-            const alternatives = await response.json();
-            renderAlternatives(alternatives);
-        } else {
-            list.innerHTML = `<div class="alert alert-danger">Lỗi khi tải dữ liệu.</div>`;
-        }
+        const alternatives = await apiClient.get(`${API_BASE}/papers/${paperId}/questions/${questionId}/alternatives`);
+        renderAlternatives(alternatives);
     } catch (e) {
-        list.innerHTML = `<div class="alert alert-danger">Lỗi: ${e.message}</div>`;
+        const errTpl = getTemplateContent('alternativesErrorTemplate');
+        errTpl.textContent = `Lỗi: ${e.message || 'Lỗi khi tải dữ liệu.'}`;
+        list.innerHTML = "";
+        list.appendChild(errTpl);
     }
 }
 
@@ -284,29 +391,27 @@ function renderAlternatives(list) {
     container.innerHTML = "";
 
     if (list.length === 0) {
-        container.innerHTML = `<div class="text-center py-4 text-muted">Không tìm thấy câu hỏi phù hợp.</div>`;
+        container.appendChild(getTemplateContent('alternativesEmptyTemplate'));
         return;
     }
 
     list.forEach(q => {
-        const div = document.createElement("div");
-        div.className = "alternative-item";
-        div.innerHTML = `
-            <div class="d-flex justify-content-between small text-muted mb-1">
-                <span>ID: ${q.questionId} | ${q.chapterName}</span>
-                <span class="difficulty-badge ${getDifficultyClass(q.difficulty)}">${getDifficultyText(q.difficulty)}</span>
-            </div>
-            <div class="render-content-target-alt" style="font-size:0.95rem"></div>
-        `;
-        div.onclick = () => {
+        const row = getTemplateContent('alternativeItemTemplate');
+        row.querySelector('[data-item-info]').textContent = `ID: ${q.questionId} | ${q.chapterName}`;
+        
+        const badge = row.querySelector('[data-difficulty-badge]');
+        badge.className = `difficulty-badge ${getDifficultyClass(q.difficulty)}`;
+        badge.textContent = getDifficultyText(q.difficulty);
+        
+        row.onclick = () => {
             container.querySelectorAll(".alternative-item").forEach(i => i.classList.remove("selected"));
-            div.classList.add("selected");
+            row.classList.add("selected");
             selectedAlternativeId = q.questionId;
             const btn = document.getElementById("btnConfirmSwap");
             if (btn) btn.disabled = false;
         };
-        container.appendChild(div);
-        renderQuestionItemContent(div.querySelector('.render-content-target-alt'), q.questionContent, q.questionType);
+        container.appendChild(row);
+        renderQuestionItemContent(row.querySelector('.render-content-target-alt'), q.questionContent, q.questionType);
     });
 }
 
@@ -315,24 +420,18 @@ async function confirmSwap() {
     const btn = document.getElementById("btnConfirmSwap");
     btn.disabled = true;
     try {
-        const response = await apiPost(`${API_BASE}/swap-question`, {
+        await apiClient.post(`${API_BASE}/swap-question`, {
             paperId: swapContext.paperId,
             oldQuestionId: swapContext.oldQuestionId,
             newQuestionId: selectedAlternativeId
         });
-
-        if (response.ok) {
-            showToast("Đổi câu hỏi thành công!", "success");
-            bootstrap.Modal.getInstance(document.getElementById('alternativeQuestionsModal')).hide();
-            await loadReviewData(currentReviewData.examId);
-            // Re-render current paper view
-            const paper = currentReviewData.papers.find(p => p.paperId === swapContext.paperId);
-            if (paper) renderPaperQuestions(paper);
-        } else {
-            showToast("Đổi câu hỏi thất bại.", "error");
-        }
+        showToast("Đổi câu hỏi thành công!", "success");
+        bootstrap.Modal.getInstance(document.getElementById('alternativeQuestionsModal')).hide();
+        await loadReviewData(currentReviewData.examId);
+        const paper = currentReviewData.papers.find(p => p.paperId === swapContext.paperId);
+        if (paper) renderPaperQuestions(paper);
     } catch (e) {
-        showToast("Lỗi kết nối.", "error");
+        showToast("Đổi câu hỏi thất bại.", "error");
     } finally {
         btn.disabled = false;
     }
@@ -343,15 +442,11 @@ async function approveExam() {
     const btn = document.getElementById("btnApprove");
     btn.disabled = true;
     try {
-        const response = await apiPost(`${API_BASE}/approve/${currentReviewData.examId}`);
-        if (response.ok) {
-            showToast("Đề thi đã được phê duyệt!", "success");
-            setTimeout(() => { window.location.href = `/Course/ExamListInCourse/${CLASS_ID || ''}`; }, 1000);
-        } else {
-            showToast("Phê duyệt thất bại.", "error");
-        }
+        await apiClient.post(`${API_BASE}/approve/${currentReviewData.examId}`);
+        showToast("Đề thi đã được phê duyệt!", "success");
+        setTimeout(() => { window.location.href = `/Course/ExamListInCourse/${CLASS_ID || ''}`; }, 1000);
     } catch (e) {
-        showToast("Lỗi kết nối.", "error");
+        showToast("Phê duyệt thất bại.", "error");
     } finally {
         btn.disabled = false;
     }
@@ -383,29 +478,8 @@ function getDifficultyClass(d) {
     return "bg-secondary";
 }
 
-function getToken() {
-    return localStorage.getItem('jwtToken') || sessionStorage.getItem('jwtToken') || '';
-}
-
-async function apiGet(url) {
-    return await fetch(url, { headers: { "Authorization": `Bearer ${getToken()}` } });
-}
-
-async function apiPost(url, data) {
-    return await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
-        body: JSON.stringify(data)
-    });
-}
-
-// Re-use site.js toast if possible
-function showToast(msg, type = "success") {
-    if (window.showToast) {
-        window.showToast(msg, type);
-    } else if (window.toastr) {
-        window.toastr[type](msg);
-    } else {
-        alert(msg);
-    }
+function getTemplateContent(id) {
+    const t = document.getElementById(id);
+    if (!t) return document.createElement('div');
+    return t.content.cloneNode(true).firstElementChild;
 }
