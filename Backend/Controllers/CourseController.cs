@@ -57,16 +57,8 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            var course = await _service.GetByIdAsync(id);
-            if (course == null)
-                return NotFound();
             var exams = await _service.GetExamsByClassAsync(id);
-            return Ok(new
-            {
-                CourseId = course.ClassId,
-                CourseName = course.ClassName,
-                Exams = exams
-            });
+            return Ok(exams);
         }
 
         // New: return chapters belonging to the class's subject
@@ -151,17 +143,8 @@ namespace Backend.Controllers
         [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
-            var course = await _service.GetByIdAsync(id);
-            if (course == null)
-                return NotFound();
             var students = await _service.GetStudentsInClassAsync(id);
-           
-            return Ok(new
-            {
-                CourseId = course.ClassId,
-                CourseName = course.ClassName,
-                students
-            });
+            return Ok(students);
         }
 
         [HttpGet("{id}/settings")]

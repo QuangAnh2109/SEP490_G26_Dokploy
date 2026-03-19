@@ -26,17 +26,17 @@ function setupRoleUI() {
     const settings = document.getElementById("settingsMenuItem");
     if (settings) {
         settings.style.display =
-            (role === "Teacher" || role === "Admin") ? "block" : "none";
+            (role === "Teacher") ? "block" : "none";
     }
 
     const addBtn = document.getElementById("addStudentBtn");
     if (addBtn) {
         addBtn.style.display =
-            (role === "Teacher" || role === "Admin") ? "inline-block" : "none";
+            (role === "Teacher") ? "inline-block" : "none";
     }
 }
 function renderTableHeader() {
-    const isTeacher = getUserRole() === "Teacher" || getUserRole() === "Admin";
+    const isTeacher = getUserRole() === "Teacher";
 
     let html = `
         <th><input type="checkbox" id="checkAll"></th>
@@ -361,7 +361,7 @@ const CourseUI = (function () {
 
         tbody.innerHTML = "";
 
-        const isTeacher = getUserRole() === "Teacher" || getUserRole() === "Admin";
+        const isTeacher = getUserRole() === "Teacher";
 
         students.forEach((s, i) => {
             let html = `
@@ -406,12 +406,7 @@ const CourseUI = (function () {
         renderError
     };
 })();
-function renderStudentClassName(data) {
-    const el = document.getElementById("className");
-    if (!el) return;
 
-    el.innerText = `Danh sách học sinh - ${data.courseName || ""}`;
-}
 const CoursePage = (function () {
 
     async function initStudentPage(classId) {
@@ -426,13 +421,15 @@ const CoursePage = (function () {
         try {
             const res = await CourseService.getStudents(classId);
 
-            const data = res.data || res;
+            // API mới trả về list trực tiếp
+            const students = res.data || res;
 
-            renderStudentClassName(data);
-            allStudents = data.students || [];
+            allStudents = students || [];
             applyFilter();
+
         } catch (e) {
             console.error(e);
+            CourseUI.renderError();
         }
 
         document.getElementById("searchInput")?.addEventListener("input", applyFilter);
@@ -447,13 +444,6 @@ const CoursePage = (function () {
 })();
 
 const ExamUI = (function () {
-
-    function renderClassName(data) {
-        const title = document.getElementById("className");
-        if (title && data) {
-            title.innerText = `Danh sách đề thi - ${data.courseName}`;
-        }
-    }
 
     function renderChapters(chapters) {
         const select = document.getElementById("chapterFilter");
@@ -556,7 +546,6 @@ const ExamUI = (function () {
     }
 
     return {
-        renderClassName,
         renderChapters,
         renderExams
     };
@@ -575,18 +564,21 @@ const ExamPage = (function () {
 
         try {
             const res = await CourseService.getExams(classId);
+            const exams = res.data || res;
 
-            const data = res.data || res;
+            if (!Array.isArray(exams)) {
+                throw new Error("Dữ liệu không hợp lệ");
+            }
 
-            ExamUI.renderClassName(data);
-            ExamUI.renderExams(data.exams);
+            ExamUI.renderExams(exams);
 
             const chapters = await CourseService.getChapters(classId);
             ExamUI.renderChapters(chapters);
 
             initExamFilters();
+
         } catch (err) {
-            throw new Error(err.message || "Không tải được danh sách đề");
+            console.error(err);
         }
     }
     return {
