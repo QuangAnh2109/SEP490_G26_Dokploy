@@ -21,6 +21,9 @@
             <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action active">
                 <i class="fas fa-users me-2"></i> Danh sách học sinh
             </a>
+            <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="list-group-item list-group-item-action">
+                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
+            </a>
             <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
                 <i class="fas fa-cog me-2"></i> Cài đặt
             </a>
@@ -78,6 +81,8 @@
                 if (role === "Student") {
                     const settingsMenu = document.getElementById("settingsMenuItem");
                     if (settingsMenu) settingsMenu.style.display = 'none';
+                    const pendingMenu = document.getElementById("pendingMenuItem");
+                    if (pendingMenu) pendingMenu.style.display = 'none';
                 }
 
                 const response = await fetch(`${API_BASE}/api/Course/${classId}/students`, {

@@ -21,7 +21,7 @@ namespace Backend.Repositories.Implements
         public async Task<List<CourseDTO>> GetCoursesForUserAsync(int userId)
         {
             return await _context.Classes
-                .Where(c => c.TeacherId == userId || c.ClassMembers.Any(m => m.StudentId == userId))
+                .Where(c => c.TeacherId == userId || c.ClassMembers.Any(m => m.StudentId == userId && (m.MemberStatus == Backend.Constants.MemberStatus.Active || m.MemberStatus == Backend.Constants.MemberStatus.Pending)))
                 .Select(c => new CourseDTO
                 {
                     ClassId = c.ClassId,
@@ -36,7 +36,7 @@ namespace Backend.Repositories.Implements
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
-                    Role = c.TeacherId == userId ? "Teacher" : "Student"
+                    Role = c.TeacherId == userId ? "Teacher" : (c.ClassMembers.Any(m => m.StudentId == userId && m.MemberStatus == Backend.Constants.MemberStatus.Pending) ? "Pending" : "Student")
                 })
                 .ToListAsync();
         }

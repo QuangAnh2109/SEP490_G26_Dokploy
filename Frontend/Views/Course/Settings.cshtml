@@ -337,7 +337,8 @@
                 });
 
                 if (response.ok) {
-                    showToast("Đã gửi lời mời thành công!", "success");
+                    const data = await response.json();
+                    showToast(data.message || "Đã gửi lời mời thành công!", "success");
                     emailInput.value = "";
                 } else {
                     const err = await response.text();

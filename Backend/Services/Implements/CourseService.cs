@@ -3,8 +3,7 @@ using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Backend.Constants;
 
 namespace Backend.Services.Implements
 {
@@ -13,12 +12,14 @@ namespace Backend.Services.Implements
         private readonly ICourseRepo _repo;
         private readonly MtcaSep490G26Context _context;
         private readonly IEmailService _emailService;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
 
-        public CourseService(ICourseRepo repo, MtcaSep490G26Context context, IEmailService emailService)
+        public CourseService(ICourseRepo repo, MtcaSep490G26Context context, IEmailService emailService, Microsoft.Extensions.Configuration.IConfiguration config)
         {
             _repo = repo;
             _context = context;
             _emailService = emailService;
+            _config = config;
         }
 
         public Task<List<CourseDTO>> GetCoursesForUserAsync(int userId)
@@ -74,13 +75,13 @@ namespace Backend.Services.Implements
             var course = await _repo.GetClassByInviteCodeAsync(inviteCode);
             if (course == null)
             {
-                throw new System.Exception("Mã mời không chính xác hoặc lớp học đã bị đóng.");
+                throw new Exception("Mã mời không chính xác hoặc lớp học đã bị đóng.");
             }
 
             bool alreadyJoined = await _repo.IsUserInClassAsync(course.ClassId, studentId);
             if (alreadyJoined)
             {
-                throw new System.Exception("Bạn đã ở trong lớp học này rồi.");
+                throw new Exception("Bạn đã ở trong lớp học này rồi.");
             }
 
             await _repo.JoinClassAsync(course.ClassId, studentId);
@@ -103,27 +104,53 @@ namespace Backend.Services.Implements
 
         public async Task<string> InviteStudentByEmailAsync(int teacherId, int classId, string studentEmail)
         {
+            var trustedFrontendBase = _config["FrontendSettings:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(trustedFrontendBase))
+            {
+                throw new Exception("Lỗi khi thêm học sinh vào lớp.");
+            }
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == studentEmail);
             if (user == null)
             {
-                throw new System.Exception("Học sinh chưa có tài khoản trong hệ thống.");
+                throw new Exception("Học sinh chưa có tài khoản trong hệ thống.");
             }
 
             var course = await _repo.GetByIdAsync(classId);
-            if (course == null) throw new System.Exception("Không tìm thấy lớp học.");
+            if (course == null) throw new Exception("Không tìm thấy lớp học.");
+
+            var existingMembership = await _context.ClassMembers.FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == user.UserId);
+            if (existingMembership != null)
+            {
+                if (existingMembership.MemberStatus == MemberStatus.Active)
+                {
+                    throw new Exception("Học sinh này đã tham gia lớp học.");
+                }
+                else if (existingMembership.MemberStatus == MemberStatus.Invited)
+                {
+                    throw new Exception("Học sinh này đã được gửi lời mời trước đó.");
+                }
+                else if (existingMembership.MemberStatus == MemberStatus.Pending)
+                {
+                    // Action becomes auto-approval
+                    existingMembership.MemberStatus = MemberStatus.Active;
+                    await _context.SaveChangesAsync();
+                    return "APPROVED_PENDING";
+                }
+            }
 
             var membership = await _repo.InviteStudentAsync(classId, user.UserId);
 
             // Generate token: {classId}:{concurrencyStamp_base64}
-            var stampBase64 = System.Convert.ToBase64String(membership.ConcurrencyStamp);
+            var stampBase64 = Convert.ToBase64String(membership.ConcurrencyStamp);
             // URL safe base64
             stampBase64 = stampBase64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
             var plainToken = $"{classId}:{stampBase64}";
-            var tokenBase64 = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(plainToken));
+            var tokenBase64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(plainToken));
             var tokenUrlSafe = tokenBase64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
 
             // Optionally call IEmailService
-            var inviteLink = $"https://localhost:7167/Course/AcceptInvite?token={tokenUrlSafe}"; // Default base fallback if needed
+            var inviteLink = $"{trustedFrontendBase}/Course/AcceptInvite?token={tokenUrlSafe}"; // Fallback dynamic base
             var emailContent = $"<p>Bạn được mời tham gia lớp học <strong>{course.ClassName}</strong>.</p><p><a href=\"{inviteLink}\">Nhấn vào đây để tham gia</a></p>";
             await _emailService.SendEmailAsync(studentEmail, "Thư mời tham gia lớp học", emailContent);
 
@@ -140,11 +167,11 @@ namespace Backend.Services.Implements
                 case 3: base64 += "="; break;
             }
 
-            var plainToken = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(base64));
+            var plainToken = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64));
             var parts = plainToken.Split(':');
-            if (parts.Length != 2) throw new System.Exception("Token không hợp lệ.");
+            if (parts.Length != 2) throw new Exception("Token không hợp lệ.");
 
-            if (!int.TryParse(parts[0], out int classId)) throw new System.Exception("Token không hợp lệ.");
+            if (!int.TryParse(parts[0], out int classId)) throw new Exception("Token không hợp lệ.");
 
             string stampBase64 = parts[1].Replace("-", "+").Replace("_", "/");
             switch (stampBase64.Length % 4)
@@ -152,12 +179,12 @@ namespace Backend.Services.Implements
                 case 2: stampBase64 += "=="; break;
                 case 3: stampBase64 += "="; break;
             }
-            var concurrencyStamp = System.Convert.FromBase64String(stampBase64);
+            var concurrencyStamp = Convert.FromBase64String(stampBase64);
 
             var rows = await _repo.AcceptEmailInvitationAsync(classId, studentId, concurrencyStamp);
             if (rows == 0)
             {
-                throw new System.Exception("Link mời không hợp lệ hoặc đã hết hạn.");
+                throw new Exception("Link mời không hợp lệ hoặc đã hết hạn.");
             }
         }
 

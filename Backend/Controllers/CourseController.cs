@@ -56,6 +56,13 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
+                return Unauthorized();
+
+            var myCourses = await _service.GetCoursesForUserAsync(userId);
+            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+                return Forbid();
+
             var exams = await _service.GetExamsByClassAsync(id);
             return Ok(exams);
         }
@@ -67,10 +74,15 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetChaptersForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            var course = await _service.GetByIdAsync(id);
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
+                return Unauthorized();
 
-            if (course == null)
-                return NotFound();
+            var myCourses = await _service.GetCoursesForUserAsync(userId);
+            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+                return Forbid();
+
+            var course = await _service.GetByIdAsync(id);
+            if (course == null) return NotFound();
 
             return Ok(course.Chapters);
         }
@@ -190,6 +202,10 @@ namespace Backend.Controllers
             try
             {
                 var token = await _service.InviteStudentByEmailAsync(teacherId, id, request.Email);
+                if (token == "APPROVED_PENDING")
+                {
+                    return Ok(new { message = "Học sinh đang ở trạng thái chờ duyệt và đã được phê duyệt thành công." });
+                }
                 return Ok(new { message = "Đã gửi thư mời.", token }); // Sending token back for debugging/frontend copy just in case
             }
             catch (Exception ex)
