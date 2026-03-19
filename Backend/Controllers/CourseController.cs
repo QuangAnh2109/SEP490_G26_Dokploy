@@ -179,6 +179,70 @@ namespace Backend.Controllers
             return Ok();
         }
 
+        [HttpPost("{id}/invite")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
+        {
+            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var teacherId))
+                return Unauthorized();
+
+            try
+            {
+                var token = await _service.InviteStudentByEmailAsync(teacherId, id, request.Email);
+                return Ok(new { message = "Đã gửi thư mời.", token }); // Sending token back for debugging/frontend copy just in case
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("accept-invite")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequestDTO request)
+        {
+            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var studentId))
+                return Unauthorized();
+
+            try
+            {
+                await _service.AcceptInvitationAsync(studentId, request.Token);
+                return Ok(new { message = "Tham gia lớp học thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/students/pending")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetPendingStudents(int id)
+        {
+            var students = await _service.GetPendingStudentsAsync(id);
+            return Ok(students);
+        }
+
+        [HttpPost("{id}/students/{studentId}/approve")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> ApproveStudent(int id, int studentId)
+        {
+            var success = await _service.ApproveStudentAsync(id, studentId);
+            if (!success) return NotFound("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
+            return Ok();
+        }
+
+        [HttpDelete("{id}/students/{studentId}/reject")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> RejectStudent(int id, int studentId)
+        {
+            var success = await _service.RejectStudentAsync(id, studentId);
+            if (!success) return NotFound("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
+            return Ok();
+        }
+
         [HttpGet("subjects")]
         [Authorize(Roles = "Teacher")]
         public IActionResult GetSubjects()

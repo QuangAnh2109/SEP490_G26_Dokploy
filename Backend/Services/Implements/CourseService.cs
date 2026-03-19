@@ -11,10 +11,14 @@ namespace Backend.Services.Implements
     public class CourseService : ICourseService
     {
         private readonly ICourseRepo _repo;
+        private readonly MtcaSep490G26Context _context;
+        private readonly IEmailService _emailService;
 
-        public CourseService(ICourseRepo repo)
+        public CourseService(ICourseRepo repo, MtcaSep490G26Context context, IEmailService emailService)
         {
             _repo = repo;
+            _context = context;
+            _emailService = emailService;
         }
 
         public Task<List<CourseDTO>> GetCoursesForUserAsync(int userId)
@@ -95,6 +99,81 @@ namespace Backend.Services.Implements
         public async Task LeaveCourseAsync(int classId, int userId)
         {
             await _repo.LeaveClassAsync(classId, userId);
+        }
+
+        public async Task<string> InviteStudentByEmailAsync(int teacherId, int classId, string studentEmail)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == studentEmail);
+            if (user == null)
+            {
+                throw new System.Exception("Học sinh chưa có tài khoản trong hệ thống.");
+            }
+
+            var course = await _repo.GetByIdAsync(classId);
+            if (course == null) throw new System.Exception("Không tìm thấy lớp học.");
+
+            var membership = await _repo.InviteStudentAsync(classId, user.UserId);
+
+            // Generate token: {classId}:{concurrencyStamp_base64}
+            var stampBase64 = System.Convert.ToBase64String(membership.ConcurrencyStamp);
+            // URL safe base64
+            stampBase64 = stampBase64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
+            var plainToken = $"{classId}:{stampBase64}";
+            var tokenBase64 = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(plainToken));
+            var tokenUrlSafe = tokenBase64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
+
+            // Optionally call IEmailService
+            var inviteLink = $"https://localhost:7167/Course/AcceptInvite?token={tokenUrlSafe}"; // Default base fallback if needed
+            var emailContent = $"<p>Bạn được mời tham gia lớp học <strong>{course.ClassName}</strong>.</p><p><a href=\"{inviteLink}\">Nhấn vào đây để tham gia</a></p>";
+            await _emailService.SendEmailAsync(studentEmail, "Thư mời tham gia lớp học", emailContent);
+
+            return tokenUrlSafe;
+        }
+
+        public async Task AcceptInvitationAsync(int studentId, string token)
+        {
+            // Decode URL safe base64
+            string base64 = token.Replace("-", "+").Replace("_", "/");
+            switch (base64.Length % 4)
+            {
+                case 2: base64 += "=="; break;
+                case 3: base64 += "="; break;
+            }
+
+            var plainToken = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(base64));
+            var parts = plainToken.Split(':');
+            if (parts.Length != 2) throw new System.Exception("Token không hợp lệ.");
+
+            if (!int.TryParse(parts[0], out int classId)) throw new System.Exception("Token không hợp lệ.");
+
+            string stampBase64 = parts[1].Replace("-", "+").Replace("_", "/");
+            switch (stampBase64.Length % 4)
+            {
+                case 2: stampBase64 += "=="; break;
+                case 3: stampBase64 += "="; break;
+            }
+            var concurrencyStamp = System.Convert.FromBase64String(stampBase64);
+
+            var rows = await _repo.AcceptEmailInvitationAsync(classId, studentId, concurrencyStamp);
+            if (rows == 0)
+            {
+                throw new System.Exception("Link mời không hợp lệ hoặc đã hết hạn.");
+            }
+        }
+
+        public async Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId)
+        {
+            return await _repo.GetPendingStudentsAsync(classId);
+        }
+
+        public async Task<bool> ApproveStudentAsync(int classId, int studentId)
+        {
+            return await _repo.ApproveStudentAsync(classId, studentId);
+        }
+
+        public async Task<bool> RejectStudentAsync(int classId, int studentId)
+        {
+            return await _repo.RejectStudentAsync(classId, studentId);
         }
     }
 }

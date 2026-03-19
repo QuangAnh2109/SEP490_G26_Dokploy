@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Frontend.Controllers
 {
@@ -38,6 +38,20 @@ namespace Frontend.Controllers
         public IActionResult Join(string code)
         {
             ViewBag.InviteCode = code;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult AcceptInvite(string token)
+        {
+            ViewBag.Token = token;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult PendingStudents(int id)
+        {
+            ViewBag.ClassId = id;
             return View();
         }
 
