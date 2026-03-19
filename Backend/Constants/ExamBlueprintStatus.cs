@@ -2,8 +2,8 @@ namespace Backend.Constants
 {
     public static class ExamBlueprintStatus
     {
-        public const int Draft = 0;
-        public const int Published = 1;
+        public const int NotStarted = 0;
+        public const int Approved = 1;
         public const int InUse = 2;
         public const int Archived = 3;
 
@@ -11,8 +11,8 @@ namespace Backend.Constants
         {
             return status switch
             {
-                Draft => "Draft",
-                Published => "Published",
+                NotStarted => "Draft",
+                Approved => "Approved",
                 InUse => "In Use",
                 Archived => "Archived",
                 _ => "Unknown"

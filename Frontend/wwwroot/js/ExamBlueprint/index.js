@@ -49,6 +49,17 @@ $(document).ready(function () {
             });
         }
 
+        if (bulkArchiveBtn) {
+            bulkArchiveBtn.addEventListener('click', () => {
+                const checked = tbody.querySelectorAll('.blueprint-item-checkbox:checked');
+                const ids = Array.from(checked)
+                    .filter(cb => cb.closest('.blueprint-row'))
+                    .map(cb => parseInt(cb.closest('.blueprint-row').dataset.blueprintId, 10))
+                    .filter(id => Number.isInteger(id) && id > 0);
+                if (ids.length > 0) showArchiveConfirm(ids);
+            });
+        }
+
         if (masterCheckbox) {
             masterCheckbox.addEventListener('change', () => {
                 tbody.querySelectorAll('.blueprint-item-checkbox').forEach(cb => {
@@ -74,14 +85,6 @@ $(document).ready(function () {
                 }
             }
 
-            const archiveBtn = e.target.closest('.btn-archive');
-            if (archiveBtn) {
-                const detailRow = archiveBtn.closest('.blueprint-detail-row');
-                if (detailRow) {
-                    const id = parseInt(detailRow.dataset.blueprintId, 10);
-                    if (id) showArchiveConfirm([id]);
-                }
-            }
         });
 
         if (paginationContainer) {
@@ -159,22 +162,65 @@ $(document).ready(function () {
         totalEl.textContent = detail.totalQuestions ?? 0;
 
         if (editBtn) {
-            editBtn.href = '/ExamBlueprint/Create';
-            editBtn.title = 'Sửa ma trận (sẽ triển khai sau)';
-            editBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (typeof showToast === 'function') showToast('Chức năng sửa ma trận sẽ triển khai sau.', 'info');
-            });
+            editBtn.href = '/ExamBlueprint/Edit/' + detail.examBlueprintId;
+            editBtn.title = 'Sửa ma trận đề';
+            if (detail.status === 3) {
+                editBtn.classList.add('disabled');
+                editBtn.removeAttribute('href');
+                editBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (typeof showToast === 'function') showToast('Ma trận đề đã lưu trữ, không thể sửa.', 'warning');
+                });
+            }
         }
         if (archiveBtn) {
             archiveBtn.dataset.blueprintId = detail.examBlueprintId;
+            archiveBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (detail.status === 3) {
+                    if (typeof showToast === 'function') showToast('Ma trận đề đã được lưu trữ.', 'info');
+                    return;
+                }
+                showArchiveConfirm([detail.examBlueprintId]);
+            };
         }
     }
 
+    let pendingArchiveIds = [];
+    const archiveModalEl = document.getElementById('archiveConfirmModal');
+    const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
+    let archiveModal = null;
+
+    if (archiveModalEl) {
+        archiveModal = new bootstrap.Modal(archiveModalEl);
+    }
+
     function showArchiveConfirm(ids) {
-        if (typeof showToast === 'function') {
-            showToast('Chức năng lưu trữ sẽ triển khai sau.', 'info');
-        }
+        pendingArchiveIds = ids || [];
+        if (archiveModal) archiveModal.show();
+    }
+
+    if (confirmArchiveBtn) {
+        confirmArchiveBtn.addEventListener('click', async () => {
+            if (pendingArchiveIds.length === 0) return;
+            confirmArchiveBtn.disabled = true;
+            confirmArchiveBtn.textContent = 'Đang xử lý...';
+            try {
+                await apiClient.patch('/api/exam-blueprints/status', {
+                    examBlueprintIds: pendingArchiveIds,
+                    status: 3
+                });
+                if (archiveModal) archiveModal.hide();
+                if (typeof showToast === 'function') showToast('Đã lưu trữ thành công!');
+                loadList(state.page);
+            } catch (err) {
+                const msg = err?.xhr?.responseJSON?.message || err?.message || 'Đã xảy ra lỗi.';
+                if (typeof showToast === 'function') showToast(msg, 'error');
+            } finally {
+                confirmArchiveBtn.disabled = false;
+                confirmArchiveBtn.textContent = 'Đồng ý lưu trữ';
+            }
+        });
     }
 
     function renderNoticeFromQuery() {
@@ -182,10 +228,10 @@ $(document).ready(function () {
         const flashSuccess = sessionStorage.getItem('examBlueprintFlashSuccess');
         const flashWarningsRaw = sessionStorage.getItem('examBlueprintFlashWarnings');
 
-        if (params.get('created') === '1') {
+        if (params.get('created') === '1' || params.get('updated') === '1') {
             const notice = document.getElementById('pageNotice');
             if (notice) {
-                notice.textContent = flashSuccess || 'Tạo ma trận đề thành công.';
+                notice.textContent = flashSuccess || (params.get('updated') === '1' ? 'Cập nhật ma trận đề thành công.' : 'Tạo ma trận đề thành công.');
                 notice.classList.remove('d-none');
             }
         }

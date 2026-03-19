@@ -9,5 +9,7 @@ namespace Backend.Services.Interfaces
         Task<BlueprintListResponseDto> GetBlueprintsAsync(BlueprintListQueryDto query, int currentUserId);
         Task<BlueprintDetailDto> GetBlueprintDetailAsync(int id, int currentUserId);
         Task<CreateExamBlueprintResponse> CreateBlueprintAsync(int currentUserId, CreateExamBlueprintRequest request);
+        Task<CreateExamBlueprintResponse> UpdateBlueprintAsync(int id, int currentUserId, CreateExamBlueprintRequest request);
+        Task<int> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int currentUserId, int status);
     }
 }

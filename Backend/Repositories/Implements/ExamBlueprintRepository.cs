@@ -210,6 +210,68 @@ namespace Backend.Repositories.Implements
             return blueprint;
         }
 
+        public async Task<ExamBlueprint?> UpdateBlueprintAsync(int id, int currentUserId, ExamBlueprint blueprint, IEnumerable<ExamBlueprintChapter> rows)
+        {
+            var entity = await _context.ExamBlueprints
+                .Include(b => b.ExamBlueprintChapters)
+                .FirstOrDefaultAsync(b => b.ExamBlueprintId == id && b.TeacherId == currentUserId);
+
+            if (entity == null) return null;
+
+            if (entity.Status == ExamBlueprintStatus.Archived)
+            {
+                throw new InvalidOperationException("Không thể sửa ma trận đề đã lưu trữ.");
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            entity.Name = blueprint.Name;
+            entity.Description = blueprint.Description;
+            entity.SubjectId = blueprint.SubjectId;
+            entity.TotalQuestions = blueprint.TotalQuestions;
+            entity.Status = blueprint.Status;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+
+            _context.ExamBlueprintChapters.RemoveRange(entity.ExamBlueprintChapters);
+
+            var rowEntities = rows.Select(r => new ExamBlueprintChapter
+            {
+                ExamBlueprintId = id,
+                ChapterId = r.ChapterId,
+                Difficulty = r.Difficulty,
+                TotalOfQuestions = r.TotalOfQuestions
+            }).ToList();
+
+            if (rowEntities.Count > 0)
+            {
+                await _context.ExamBlueprintChapters.AddRangeAsync(rowEntities);
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return entity;
+        }
+
+        public async Task<int> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int currentUserId, int status)
+        {
+            var ids = examBlueprintIds.Where(id => id > 0).Distinct().ToList();
+            if (ids.Count == 0) return 0;
+
+            var entities = await _context.ExamBlueprints
+                .Where(b => ids.Contains(b.ExamBlueprintId) && b.TeacherId == currentUserId)
+                .ToListAsync();
+
+            foreach (var e in entities)
+            {
+                e.Status = status;
+                e.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+            return entities.Count;
+        }
+
         private static string GetDifficultyLabel(int difficulty)
         {
             return difficulty switch

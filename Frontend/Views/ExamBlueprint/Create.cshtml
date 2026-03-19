@@ -1,5 +1,6 @@
 @{
 	ViewData["Title"] = "Tạo ma trận đề";
+	var editId = ViewBag.EditId as int?;
 }
 
 @section Styles {
@@ -11,8 +12,8 @@
 		<div class="container-fluid px-2 px-md-3">
 			<section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
 				<div>
-					<h1 class="page-title">Thêm ma trận đề</h1>
-					<p class="page-subtitle">Tạo ma trận đề mới theo chương và mức độ.</p>
+					<h1 class="page-title">@(editId.HasValue ? "Sửa ma trận đề" : "Thêm ma trận đề")</h1>
+					<p class="page-subtitle">@(editId.HasValue ? "Cập nhật cấu trúc ma trận đề theo chương và mức độ." : "Tạo ma trận đề mới theo chương và mức độ.")</p>
 				</div>
 				<div class="page-actions">
 					<button class="btn btn-outline-secondary" type="button" disabled title="Sẽ triển khai sau">Nhập</button>
@@ -101,6 +102,9 @@
 </div>
 
 @section Scripts {
+	<script>
+		window.ExamBlueprintEditId = @(editId.HasValue ? editId.Value : 0);
+	</script>
 	<script src="~/js/Shared/validation_shared.js" asp-append-version="true"></script>
 	<script src="~/js/Validations/blueprint_val.js" asp-append-version="true"></script>
 	<script src="~/js/ExamBlueprint/create.js" asp-append-version="true"></script>
