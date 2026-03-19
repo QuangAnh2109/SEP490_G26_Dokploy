@@ -1,12 +1,10 @@
-using System;
-using Backend.DTOs;
 using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Services.Interfaces;
+using Backend.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -111,11 +109,6 @@ namespace Backend.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> JoinCourse([FromBody] JoinCourseRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request?.InvitationCode))
-            {
-                return BadRequest("Mã mời không thể trống.");
-            }
-
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
             if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
             {
@@ -182,13 +175,15 @@ namespace Backend.Controllers
         [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request.ClassName))
-                return BadRequest("Tên lớp không được để trống.");
-
-            var success = await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
-            if (!success) return NotFound("Không tìm thấy lớp học.");
-
-            return Ok();
+            try
+            {
+                await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("{id}/invite")]
@@ -202,11 +197,11 @@ namespace Backend.Controllers
             try
             {
                 var token = await _service.InviteStudentByEmailAsync(teacherId, id, request.Email);
-                if (token == "APPROVED_PENDING")
-                {
-                    return Ok(new { message = "Học sinh đang ở trạng thái chờ duyệt và đã được phê duyệt thành công." });
-                }
                 return Ok(new { message = "Đã gửi thư mời.", token }); // Sending token back for debugging/frontend copy just in case
+            }
+            catch (AutoApprovePendingException ex)
+            {
+                return Ok(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -245,18 +240,24 @@ namespace Backend.Controllers
         [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> ApproveStudent(int id, int studentId)
         {
-            var success = await _service.ApproveStudentAsync(id, studentId);
-            if (!success) return NotFound("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
-            return Ok();
+            try {
+                await _service.ApproveStudentAsync(id, studentId);
+                return Ok();
+            } catch (Exception ex) {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id}/students/{studentId}/reject")]
         [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> RejectStudent(int id, int studentId)
         {
-            var success = await _service.RejectStudentAsync(id, studentId);
-            if (!success) return NotFound("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
-            return Ok();
+            try {
+                await _service.RejectStudentAsync(id, studentId);
+                return Ok();
+            } catch (Exception ex) {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("subjects")]

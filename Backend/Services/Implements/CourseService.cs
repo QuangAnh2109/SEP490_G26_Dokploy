@@ -72,6 +72,11 @@ namespace Backend.Services.Implements
 
         public async Task JoinCourseAsync(int studentId, string inviteCode)
         {
+            if (string.IsNullOrWhiteSpace(inviteCode)) 
+            {
+                throw new Exception("Mã mời không thể trống.");
+            }
+
             var course = await _repo.GetClassByInviteCodeAsync(inviteCode);
             if (course == null)
             {
@@ -92,9 +97,13 @@ namespace Backend.Services.Implements
             return await _repo.GetStudentsInClassAsync(classId);
         }
 
-        public async Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
+        public async Task UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
         {
-            return await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
+            if (string.IsNullOrWhiteSpace(newName)) 
+                throw new Exception("Tên lớp không được để trống.");
+
+            var success = await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
+            if (!success) throw new Exception("Không tìm thấy lớp học.");
         }
 
         public async Task LeaveCourseAsync(int classId, int userId)
@@ -135,7 +144,7 @@ namespace Backend.Services.Implements
                     // Action becomes auto-approval
                     existingMembership.MemberStatus = MemberStatus.Active;
                     await _context.SaveChangesAsync();
-                    return "APPROVED_PENDING";
+                    throw new Backend.Exceptions.AutoApprovePendingException("Học sinh đang ở trạng thái chờ duyệt và đã được phê duyệt thành công.");
                 }
             }
 
@@ -193,14 +202,16 @@ namespace Backend.Services.Implements
             return await _repo.GetPendingStudentsAsync(classId);
         }
 
-        public async Task<bool> ApproveStudentAsync(int classId, int studentId)
+        public async Task ApproveStudentAsync(int classId, int studentId)
         {
-            return await _repo.ApproveStudentAsync(classId, studentId);
+            var success = await _repo.ApproveStudentAsync(classId, studentId);
+            if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
         }
 
-        public async Task<bool> RejectStudentAsync(int classId, int studentId)
+        public async Task RejectStudentAsync(int classId, int studentId)
         {
-            return await _repo.RejectStudentAsync(classId, studentId);
+            var success = await _repo.RejectStudentAsync(classId, studentId);
+            if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
         }
     }
 }

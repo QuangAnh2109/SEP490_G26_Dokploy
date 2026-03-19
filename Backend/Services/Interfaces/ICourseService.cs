@@ -20,13 +20,13 @@ namespace Backend.Services.Interfaces
 
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
         Task LeaveCourseAsync(int classId, int userId);
-        Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
+        Task UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
 
         // Feature: Email Invitation & Approval
         Task<string> InviteStudentByEmailAsync(int teacherId, int classId, string studentEmail);
         Task AcceptInvitationAsync(int studentId, string token);
         Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
-        Task<bool> ApproveStudentAsync(int classId, int studentId);
-        Task<bool> RejectStudentAsync(int classId, int studentId);
+        Task ApproveStudentAsync(int classId, int studentId);
+        Task RejectStudentAsync(int classId, int studentId);
     }
 }
