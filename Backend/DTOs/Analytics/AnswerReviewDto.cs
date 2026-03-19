@@ -3,7 +3,7 @@ namespace Backend.DTOs.Analytics;
 /// <summary>
 /// DTO cho học sinh xem lại từng câu trả lời.
 /// Luôn trả về câu hỏi + câu trả lời đã điền.
-/// Đáp án đúng chỉ trả về khi Exam.ShowAnswer = "with_correct".
+/// Đáp án đúng chỉ trả về khi Exam.ShowAnswer = true.
 /// </summary>
 public class AnswerReviewDto
 {
@@ -32,9 +32,9 @@ public class AnswerOptionReviewDto
     /// <summary>HS có chọn đáp án này không (cho MultipleChoice)</summary>
     public bool IsSelected { get; set; }
 
-    /// <summary>Đáp án này có đúng không — chỉ trả về khi ShowAnswer = "with_correct", otherwise null</summary>
+    /// <summary>Đáp án này có đúng không — chỉ trả về khi ShowAnswer = true, otherwise null</summary>
     public bool? IsCorrect { get; set; }
 
-    /// <summary>Đáp án đúng — chỉ trả về khi ShowAnswer = "with_correct", otherwise null</summary>
+    /// <summary>Đáp án đúng — chỉ trả về khi ShowAnswer = true, otherwise null</summary>
     public string? CorrectAnswer { get; set; }
 }

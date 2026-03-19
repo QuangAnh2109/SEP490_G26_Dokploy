@@ -8,6 +8,9 @@ namespace Backend.Constants
         /// <summary>Đã nộp bài – không thao tác được nữa</summary>
         public const int Submitted = 2;
 
+        /// <summary>Vắng thi – học sinh không có bài làm nào</summary>
+        public const int Absent = 3;
+
         public static bool IsValid(int status)
         {
             return status == InProgress || status == Submitted;

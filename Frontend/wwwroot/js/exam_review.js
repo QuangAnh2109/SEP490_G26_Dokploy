@@ -31,6 +31,9 @@ async function initReviewPage(config) {
 
 async function loadReviewData(examId) {
     currentReviewData = await apiClient.get(`${API_BASE}/review/${examId}`);
+    if (currentReviewData.classId && !CLASS_ID) {
+        CLASS_ID = currentReviewData.classId;
+    }
     renderInfoView();
     renderPaperSidebar();
     renderOverview();
@@ -212,6 +215,17 @@ function renderOverview() {
         expContainer.id = `exp-overview-${idx}`;
 
         container.appendChild(item);
+
+        if (currentReviewData.status === 0) {
+            const paperInstance = currentReviewData.papers.find(p => p.questions.some(pq => pq.questionId === q.questionId));
+            const paperId = paperInstance ? paperInstance.paperId : null;
+            const swapBtnContainer = item.querySelector('.swap-button-container');
+            if (swapBtnContainer) {
+                swapBtnContainer.classList.remove('d-none');
+                item.querySelector('[data-btn-swap]').onclick = () => openSwapModal(paperId, q.questionId, true);
+            }
+        }
+
         renderQuestionItemContent(item.querySelector('.render-content-target'), q.contentLatex, q.questionType);
         renderAnswersAndExplanation(`answers-overview-${idx}`, `exp-overview-${idx}`, q);
     });
@@ -257,10 +271,11 @@ function renderPaperQuestions(paper) {
 
 function renderQuestionItemContent(container, content, type) {
     try {
+        if (!content) content = "";
         const isJson = content.trim().startsWith('{') && content.trim().endsWith('}');
         container.innerHTML = "";
         if (isJson || type === 'FillInBlank') {
-            const data = JSON.parse(content);
+            const data = JSON.parse(content || "{}");
             if (window.QuestionEditorUtils) {
                 const tpl = getTemplateContent('questionContentJsonTemplate');
                 container.appendChild(tpl);
@@ -340,7 +355,7 @@ function renderAnswersAndExplanation(answersContainerId, explanationContainerId,
     try {
         const isJson = q.contentLatex && q.contentLatex.trim().startsWith('{') && q.contentLatex.trim().endsWith('}');
         if (isJson || q.questionType === 'FillInBlank') {
-            const data = JSON.parse(q.contentLatex);
+            const data = JSON.parse(q.contentLatex || "{}");
             explanationText = data.explanation || "";
         }
     } catch(e) {}
@@ -358,11 +373,17 @@ function renderAnswersAndExplanation(answersContainerId, explanationContainerId,
 }
 
 // Modal and Swapping Logic
-async function openSwapModal(paperId, questionId) {
+async function openSwapModal(paperId, questionId, isForceGlobal = false) {
     swapContext = { paperId, questionId };
     selectedAlternativeId = null;
     const btn = document.getElementById("btnConfirmSwap");
     if (btn) btn.disabled = true;
+
+    const chkGlobal = document.getElementById("chkSwapGlobal");
+    if (chkGlobal) {
+        chkGlobal.checked = isForceGlobal;
+        chkGlobal.disabled = isForceGlobal;
+    }
 
     const modalEl = document.getElementById('alternativeQuestionsModal');
     if (!modalEl) return;
@@ -419,11 +440,16 @@ async function confirmSwap() {
     if (!selectedAlternativeId) return;
     const btn = document.getElementById("btnConfirmSwap");
     btn.disabled = true;
+    
+    const chkGlobal = document.getElementById("chkSwapGlobal");
+    const isGlobal = chkGlobal ? chkGlobal.checked : false;
+
     try {
         await apiClient.post(`${API_BASE}/swap-question`, {
             paperId: swapContext.paperId,
-            oldQuestionId: swapContext.oldQuestionId,
-            newQuestionId: selectedAlternativeId
+            oldQuestionId: swapContext.questionId,
+            newQuestionId: selectedAlternativeId,
+            swapGlobal: isGlobal
         });
         showToast("Đổi câu hỏi thành công!", "success");
         bootstrap.Modal.getInstance(document.getElementById('alternativeQuestionsModal')).hide();
@@ -444,11 +470,22 @@ async function approveExam() {
     try {
         await apiClient.post(`${API_BASE}/approve/${currentReviewData.examId}`);
         showToast("Đề thi đã được phê duyệt!", "success");
-        setTimeout(() => { window.location.href = `/Course/ExamListInCourse/${CLASS_ID || ''}`; }, 1000);
+        setTimeout(() => { 
+            if (CLASS_ID) window.location.href = `/Course/ExamListInCourse/${CLASS_ID}`;
+            else window.location.href = "/Exam";
+        }, 1000);
     } catch (e) {
         showToast("Phê duyệt thất bại.", "error");
     } finally {
         btn.disabled = false;
+    }
+}
+
+function goBack() {
+    if (CLASS_ID) {
+        window.location.href = `/Course/ExamListInCourse/${CLASS_ID}`;
+    } else {
+        history.back();
     }
 }
 

@@ -74,7 +74,8 @@
                                     <span class="badge rounded-pill bg-primary" data-blank-label>Ô trống</span>
                                 </div>
                                 <div class="d-flex gap-2 align-items-center mb-2">
-                                    <math-field class="math-input flex-grow-1" data-blank-answer placeholder="Đáp án đúng..."></math-field>
+                                    <input type="text" class="form-control flex-grow-1" data-blank-answer placeholder="Đáp án đúng...">
+                                    <span class="katex-preview" data-blank-answer-preview></span>
                                 </div>
                                 <div class="blank-constraint-body" data-blank-constraint-body>
                                     <p class="form-note" data-blank-constraint-loading>Đang tải...</p>
@@ -141,7 +142,7 @@
                 <div class="answer-row">
                     <div class="d-flex align-items-center gap-2">
                         <span class="input-group-text" data-answer-index></span>
-                        <math-field class="math-input flex-grow-1" data-option-content></math-field>
+                        <input type="text" class="form-control flex-grow-1" data-option-content placeholder="Nội dung đáp án...">
 
                         <textarea class="math-raw-textarea flex-grow-1 d-none" rows="1" data-option-raw></textarea>
                     </div>

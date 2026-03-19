@@ -1,0 +1,219 @@
+@{
+    ViewData["Title"] = "Phê duyệt học sinh";
+    var classId = ViewBag.ClassId ?? 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+}
+
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <aside class="bg-light border-end" style="width: 250px;">
+        <div class="p-3 border-bottom">
+            <h5 class="mb-0">Quản lý lớp học</h5>
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action">
+                <i class="fas fa-list me-2"></i> Danh sách đề
+            </a>
+            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
+                <i class="fas fa-users me-2"></i> Danh sách học sinh
+            </a>
+            <a href="/Course/PendingStudents/@classId" class="list-group-item list-group-item-action active" id="pendingMenuItem">
+                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
+            </a>
+            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
+                <i class="fas fa-cog me-2"></i> Cài đặt
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1 p-4">
+
+        <section class="mb-4">
+            <h2>Phê duyệt học sinh</h2>
+            <p class="text-muted">Danh sách học sinh đang chờ phê duyệt để tham gia lớp.</p>
+        </section>
+
+        <!-- Tìm kiếm -->
+        <section class="card p-3 mb-4">
+            <div class="row g-2">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" id="searchEmail" placeholder="Tìm theo Email...">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" id="searchStudentId" placeholder="Tìm theo Mã sinh viên...">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="filterStudents()"><i class="fas fa-search me-1"></i> Tìm</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table -->
+        <section class="card p-3">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Mã sinh viên</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center">Đang tải...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+@section Scripts {
+    <script>
+        const classId = @classId;
+        const API_BASE = "https://localhost:7167";
+        let allPendingStudents = [];
+
+        async function loadPendingStudents() {
+            const token = getToken();
+            if (!token) {
+                showToast("Bạn chưa đăng nhập", "error");
+                window.location.href = "/Auth/Login";
+                return;
+            }
+
+            const role = getUserRole();
+            if (role === "Student") {
+                showToast("Bạn không có quyền truy cập", "error");
+                window.location.href = `/Course/ExamListInCourse/${classId}`;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/students/pending`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                if (response.status === 401) {
+                    showToast("Phiên đăng nhập hết hạn", "error");
+                    window.location.href = "/Auth/Login";
+                    return;
+                }
+
+                if (!response.ok) throw new Error("Không thể tải danh sách chờ phê duyệt");
+
+                allPendingStudents = await response.json();
+                renderStudents(allPendingStudents);
+            } catch (error) {
+                console.error(error);
+                document.getElementById("studentTableBody").innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">Có lỗi xảy ra khi tải danh sách.</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function filterStudents() {
+            const emailFilter = document.getElementById("searchEmail").value.toLowerCase();
+            const idFilter = document.getElementById("searchStudentId").value.toLowerCase();
+
+            const filtered = allPendingStudents.filter(s => {
+                const mailMatch = !emailFilter || (s.email && s.email.toLowerCase().includes(emailFilter));
+                const idMatch = !idFilter || (s.studentCode && s.studentCode.toLowerCase().includes(idFilter));
+                return mailMatch && idMatch;
+            });
+
+            renderStudents(filtered);
+        }
+
+        function renderStudents(students) {
+            const tbody = document.getElementById("studentTableBody");
+            tbody.innerHTML = "";
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">Không có học sinh nào đang chờ duyệt.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            students.forEach((student, index) => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${student.studentCode || '-'}</td>
+                    <td>${student.fullName || '-'}</td>
+                    <td>${student.email || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success me-2" onclick="approveStudent(${student.studentId})" title="Cho phép">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectStudent(${student.studentId})" title="Từ chối">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        async function approveStudent(studentId) {
+            if (!confirm("Cho phép học sinh này tham gia lớp?")) return;
+            const token = getToken();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}/approve`, {
+                    method: 'POST',
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                if (res.ok) {
+                    showToast("Đã phê duyệt thành công", "success");
+                    loadPendingStudents();
+                } else {
+                    showToast("Lỗi khi phê duyệt", "error");
+                }
+            } catch (e) {
+                showToast("Đã xảy ra lỗi hệ thống", "error");
+            }
+        }
+
+        async function rejectStudent(studentId) {
+            if (!confirm("Bạn chắc chắn muốn từ chối học sinh này?")) return;
+            const token = getToken();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}/reject`, {
+                    method: 'DELETE',
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                if (res.ok) {
+                    showToast("Đã từ chối thành công", "success");
+                    loadPendingStudents();
+                } else {
+                    showToast("Lỗi khi từ chối", "error");
+                }
+            } catch (e) {
+                showToast("Đã xảy ra lỗi hệ thống", "error");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadPendingStudents);
+    </script>
+}

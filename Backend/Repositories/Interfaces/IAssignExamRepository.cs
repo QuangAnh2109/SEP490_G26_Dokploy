@@ -41,9 +41,11 @@ public interface IAssignExamRepository
     Task<Exam?> GetExamReviewDataAsync(int id, CancellationToken ct);
     
     Task<List<QuestionListItemDto>> GetAlternativeQuestionsAsync(
-        int subjectId, int difficulty, string[] activeStatus, List<int> excludeIds, CancellationToken ct);
+        int subjectId, int chapterId, int difficulty, string[] activeStatus, List<int> excludeIds, CancellationToken ct);
         
     Task SwapPaperQuestionAsync(int paperId, int oldQuestionId, int newQuestionId, CancellationToken ct);
+    
+    Task SwapExamQuestionGloballyAsync(int examId, int oldQuestionId, int newQuestionId, CancellationToken ct);
     
     Task<Paper?> GetPaperWithQuestionsAsync(int paperId, CancellationToken ct);
     

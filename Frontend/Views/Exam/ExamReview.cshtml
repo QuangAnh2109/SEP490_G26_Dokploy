@@ -39,9 +39,9 @@
             <button class="btn btn-success w-100 mb-2 py-2 fw-bold" id="btnApprove" onclick="approveExam()">
                 <i class="fas fa-check-circle me-1"></i> PHÊ DUYỆT
             </button>
-            <a href="/Course/ExamListInCourse/@ViewBag.ClassId" class="nav-item-custom text-center justify-content-center">
+            <button class="nav-item-custom text-center justify-content-center bg-transparent border-0 w-100" onclick="goBack()">
                 <i class="fas fa-arrow-left"></i> Quay lại
-            </a>
+            </button>
         </div>
     </aside>
 
@@ -128,7 +128,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small mb-3">Hệ thống gợi ý các câu hỏi cùng mức độ khó và chưa có trong mã đề này.</p>
+                <p class="text-muted small mb-3">Hệ thống gợi ý các câu hỏi cùng chương, cùng mức độ khó và chưa có trong mã đề này.</p>
+                <div class="form-check mb-3 ms-1">
+                    <input class="form-check-input" type="checkbox" id="chkSwapGlobal">
+                    <label class="form-check-label fw-bold text-primary" for="chkSwapGlobal">
+                        Đổi câu hỏi này trên TOÀN BỘ các mã đề khác (chứa câu hỏi tương tự)
+                    </label>
+                </div>
                 <div id="alternativesList" style="max-height: 400px; overflow-y: auto;">
                     <!-- Alternative questions will be injected here -->
                 </div>
@@ -187,6 +193,11 @@
                     <div class="answers-container mb-3"></div>
                     <div class="explanation-container mb-2 text-dark">
                         <strong>Giải thích:</strong> <span class="explanation-content d-block mt-1"></span>
+                    </div>
+                    <div class="text-end border-top pt-3 mt-2 swap-button-container d-none">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm" data-btn-swap>
+                            <i class="fas fa-exchange-alt me-1"></i> Đổi câu hỏi này
+                        </button>
                     </div>
                 </div>
             </div>

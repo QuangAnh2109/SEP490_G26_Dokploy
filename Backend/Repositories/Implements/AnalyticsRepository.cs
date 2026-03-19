@@ -1,4 +1,3 @@
-using Backend.DTOs.Analytics;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -16,75 +15,69 @@ public class AnalyticsRepository : IAnalyticsRepository
 
     public async Task<Exam?> GetExamWithFullGraphAsync(int examId)
     {
-        return await _context.Exams
+        // 1. Tải Exam với thông tin cơ bản (kèm Class cho thống kê nộp bài)
+        var exam = await _context.Exams
             .Include(e => e.Subject)
+            .Include(e => e.Class)
             .FirstOrDefaultAsync(e => e.ExamId == examId);
+        if (exam == null) return null;
+
+        // 2. Tải trực tiếp tất cả các Paper
+        var papers = await _context.Papers
+            .Include(p => p.Questions)
+                .ThenInclude(q => q.Chapter)
+            .Include(p => p.Questions)
+                .ThenInclude(q => q.QuestionAnswers)
+            .Where(p => p.ExamId == examId)
+            .ToListAsync();
+
+        var paperIds = papers.Select(p => p.PaperId).ToList();
+
+        // 3. Tải tất cả Submissions liên quan
+        var submissions = await _context.Submissions
+            .Include(s => s.Student)
+            .Where(s => paperIds.Contains(s.PaperId))
+            .ToListAsync();
+
+        var subIds = submissions.Select(s => s.SubmissionId).ToList();
+
+        // 4. Tải StudentAnswers — TRUY VẤN PHẲNG (Flat Query)
+        // Đây là bước quan trọng nhất để chống lỗi "totalAnswersFound = 0"
+        var allAnswers = await _context.StudentAnswers
+            .Include(sa => sa.QuestionAnswer)
+                .ThenInclude(qa => qa.Question)
+                    .ThenInclude(q => q.Chapter)
+            .Where(sa => subIds.Contains(sa.SubmissionId))
+            .ToListAsync();
+
+        // 5. Khâu nối thủ công (Deep Stitching)
+        foreach (var sub in submissions)
+        {
+            sub.StudentAnswers = allAnswers.Where(a => a.SubmissionId == sub.SubmissionId).ToList();
+        }
+
+        foreach (var paper in papers)
+        {
+            paper.Submissions = submissions.Where(s => s.PaperId == paper.PaperId).ToList();
+        }
+        
+        exam.Papers = papers;
+
+        return exam;
     }
 
-    public async Task<List<StudentSubmissionSummaryDto>> GetExamSubmissionsSummaryAsync(int examId)
+    public async Task<List<ClassMember>> GetClassMembersWithStudentsAsync(int classId)
+    {
+        return await _context.ClassMembers
+            .Include(cm => cm.Student)
+            .Where(cm => cm.ClassId == classId)
+            .ToListAsync();
+    }
+
+    public async Task<Submission?> GetSubmissionByIdWithPaperAsync(int submissionId)
     {
         return await _context.Submissions
-            .Where(s => s.Paper.ExamId == examId && s.Status == 2)
-            .Select(s => new StudentSubmissionSummaryDto
-            {
-                StudentId = s.StudentId,
-                StudentName = s.Student.FullName,
-                TotalPoints = s.TotalPoints,
-                UpdatedAtUtc = s.UpdatedAtUtc
-            })
-            .ToListAsync();
-    }
-
-    public async Task<List<ChapterStatsSummaryDto>> GetChapterStatsAsync(int examId)
-    {
-        return await _context.StudentAnswers
-            .Where(sa => sa.Submission.Paper.ExamId == examId && sa.Submission.Status == 2)
-            .GroupBy(sa => sa.QuestionAnswer.Question.Chapter.Name)
-            .Select(g => new ChapterStatsSummaryDto
-            {
-                ChapterName = g.Key ?? "N/A",
-                TotalAnswers = g.Count(),
-                CorrectAnswers = g.Count(sa => sa.QuestionAnswer.IsCorrect == true)
-            })
-            .ToListAsync();
-    }
-
-    public async Task<List<DifficultyStatsSummaryDto>> GetDifficultyStatsAsync(int examId)
-    {
-        return await _context.StudentAnswers
-            .Where(sa => sa.Submission.Paper.ExamId == examId && sa.Submission.Status == 2)
-            .GroupBy(sa => sa.QuestionAnswer.Question.Difficulty)
-            .Select(g => new DifficultyStatsSummaryDto
-            {
-                Difficulty = g.Key,
-                TotalAnswers = g.Count(),
-                CorrectAnswers = g.Count(sa => sa.QuestionAnswer.IsCorrect == true)
-            })
-            .ToListAsync();
-    }
-
-    public async Task<List<QuestionStatsSummaryDto>> GetHardestQuestionsAsync(int examId, int topCount)
-    {
-        return await _context.StudentAnswers
-            .Where(sa => sa.Submission.Paper.ExamId == examId && sa.Submission.Status == 2)
-            .GroupBy(sa => new
-            {
-                sa.QuestionAnswer.QuestionId,
-                sa.QuestionAnswer.Question.QuestionContent,
-                ChapterName = sa.QuestionAnswer.Question.Chapter.Name,
-                sa.QuestionAnswer.Question.Difficulty
-            })
-            .Select(g => new QuestionStatsSummaryDto
-            {
-                QuestionId = g.Key.QuestionId,
-                QuestionContent = g.Key.QuestionContent,
-                ChapterName = g.Key.ChapterName ?? "N/A",
-                Difficulty = g.Key.Difficulty,
-                TotalAttempts = g.Count(),
-                CorrectCount = g.Count(sa => sa.QuestionAnswer.IsCorrect == true)
-            })
-            .OrderBy(q => (double)q.CorrectCount / q.TotalAttempts)
-            .Take(topCount)
-            .ToListAsync();
+            .Include(s => s.Paper)
+            .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
     }
 }

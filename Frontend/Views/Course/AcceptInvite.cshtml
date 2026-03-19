@@ -1,0 +1,86 @@
+@{
+    ViewData["Title"] = "Chấp nhận lời mời";
+    var token = ViewBag.Token as string;
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div id="loadingStatus">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <h4>Đang xử lý lời mời...</h4>
+            </div>
+            
+            <div id="successStatus" class="d-none">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h4>Tham gia thành công!</h4>
+                <p>Bạn đã được thêm vào lớp học.</p>
+                <p>Đang chuyển hướng đến danh sách đề thi...</p>
+            </div>
+
+            <div id="errorStatus" class="d-none">
+                <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                <h4 id="errorMessage">Link không hợp lệ hoặc đã hết hạn</h4>
+                <p>Vui lòng kiểm tra lại đường link hoặc liên hệ giáo viên để được cấp lại.</p>
+                <a href="/Course/CourseList" class="btn btn-primary mt-3">Về danh sách lớp</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const API_BASE = "https://localhost:7167";
+
+        async function acceptInvite() {
+            const tokenQuery = "@token";
+            const currentToken = getToken();
+
+            if (!currentToken) {
+                // Save redirect URL and go to login
+                sessionStorage.setItem("redirectAfterLogin", window.location.href);
+                window.location.href = "/Auth/Login";
+                return;
+            }
+
+            if (!tokenQuery) {
+                showError("Link không hợp lệ.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/accept-invite`, {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": "Bearer " + currentToken,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ token: tokenQuery })
+                });
+
+                if (response.ok) {
+                    document.getElementById("loadingStatus").classList.add("d-none");
+                    document.getElementById("successStatus").classList.remove("d-none");
+                    
+                    setTimeout(() => {
+                        window.location.href = "/Course/CourseList";
+                    }, 2000);
+                } else {
+                    const err = await response.text();
+                    showError(err || "Link không hợp lệ hoặc đã hết hạn");
+                }
+            } catch (error) {
+                console.error(error);
+                showError("Đã xảy ra lỗi mạng.");
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById("loadingStatus").classList.add("d-none");
+            document.getElementById("errorStatus").classList.remove("d-none");
+            document.getElementById("errorMessage").innerText = msg;
+        }
+
+        document.addEventListener("DOMContentLoaded", acceptInvite);
+    </script>
+}

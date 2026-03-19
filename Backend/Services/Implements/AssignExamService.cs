@@ -9,7 +9,7 @@ namespace Backend.Services.Implements;
 
 public class AssignExamService : IAssignExamService
 {
-    private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogess];
+    private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
     private readonly IAssignExamRepository _repo;
 
@@ -136,45 +136,44 @@ public class AssignExamService : IAssignExamService
                     throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}.");
                 }
 
-                if (r.ShuffleQuestion)
+                // Always use randomized selection to maximize variety across papers
+                var totalPool = new List<int>();
+                int totalNeeded = r.PaperCount * row.TotalOfQuestions;
+
+                // Shuffle the available bank once
+                var shuffledBank = pool.OrderBy(_ => Guid.NewGuid()).ToList();
+
+                // Fill the totalPool (handling the case where bank is smaller than needed by allowing repeats)
+                while (totalPool.Count < totalNeeded)
                 {
-                    // Step 1: Create the total pool of T questions (PaperCount * k)
-                    var totalPool = new List<int>();
-                    int totalNeeded = r.PaperCount * row.TotalOfQuestions;
-
-                    var tempBank = pool.OrderBy(_ => Guid.NewGuid()).ToList();
-                    while (totalPool.Count < totalNeeded)
-                    {
-                        var pass = tempBank.OrderBy(_ => Guid.NewGuid()).ToList();
-                        int remaining = totalNeeded - totalPool.Count;
-                        totalPool.AddRange(pass.Take(Math.Min(pass.Count, remaining)));
-                    }
-
-                    // Step 2-4: Distribute to papers with repeated shuffling
-                    for (int i = 0; i < r.PaperCount; i++)
-                    {
-                        // Shuffle the remaining pool
-                        totalPool = totalPool.OrderBy(_ => Guid.NewGuid()).ToList();
-
-                        // Pick k questions for this paper
-                        var paperSet = totalPool.Take(row.TotalOfQuestions).ToList();
-
-                        // Remove from total pool
-                        foreach (var qid in paperSet) totalPool.Remove(qid);
-
-                        // Shuffle the paper set (though effectively redundant, user requested it)
-                        paperSet = paperSet.OrderBy(_ => Guid.NewGuid()).ToList();
-
-                        papersQuestions[i].AddRange(paperSet);
-                    }
+                    var pass = shuffledBank.OrderBy(_ => Guid.NewGuid()).ToList();
+                    int remaining = totalNeeded - totalPool.Count;
+                    totalPool.AddRange(pass.Take(Math.Min(pass.Count, remaining)));
                 }
-                else
+
+                // Distribute to papers
+                for (int i = 0; i < r.PaperCount; i++)
                 {
-                    var rowQuestions = pool.Take(row.TotalOfQuestions).ToList();
-                    for (int i = 0; i < r.PaperCount; i++)
+                    // Pick k questions for this paper from the totalPool
+                    // (Shuffle the pool to pick randomly)
+                    totalPool = totalPool.OrderBy(_ => Guid.NewGuid()).ToList();
+                    var paperSet = totalPool.Take(row.TotalOfQuestions).ToList();
+
+                    // Remove these questions from totalPool so they aren't reused for other papers (if possible)
+                    foreach (var qid in paperSet) totalPool.Remove(qid);
+
+                    // If user requested shuffle, randomize the order WITHIN the paper
+                    if (r.ShuffleQuestion)
                     {
-                        papersQuestions[i].AddRange(rowQuestions);
+                        paperSet = paperSet.OrderBy(_ => Guid.NewGuid()).ToList();
                     }
+                    else
+                    {
+                        // Otherwise, sort them by ID (or keep as is) to be predictable but still different questions
+                        paperSet = paperSet.OrderBy(x => x).ToList();
+                    }
+
+                    papersQuestions[i].AddRange(paperSet);
                 }
             }
         }
@@ -340,6 +339,7 @@ public class AssignExamService : IAssignExamService
 
         return new ExamReviewDto(
             e.ExamId,
+            e.ClassId,
             e.Title,
             e.Subject?.Code ?? "N/A",
             e.Description,
@@ -367,6 +367,7 @@ public class AssignExamService : IAssignExamService
 
         return await _repo.GetAlternativeQuestionsAsync(
             p.Exam.SubjectId,
+            old.ChapterId,
             old.Difficulty,
             ActiveStatus,
             currentIds,
@@ -386,8 +387,16 @@ public class AssignExamService : IAssignExamService
 
         ThrowIf(!ActiveStatus.Contains(@new.Status), "New question is inactive.");
         ThrowIf(@new.Difficulty != old.Difficulty, "Difficulty mismatch.");
+        ThrowIf(@new.ChapterId != old.ChapterId, "Chapter mismatch.");
 
-        await _repo.SwapPaperQuestionAsync(r.PaperId, r.OldQuestionId, r.NewQuestionId, ct);
+        if (r.SwapGlobal)
+        {
+            await _repo.SwapExamQuestionGloballyAsync(p.ExamId, r.OldQuestionId, r.NewQuestionId, ct);
+        }
+        else
+        {
+            await _repo.SwapPaperQuestionAsync(r.PaperId, r.OldQuestionId, r.NewQuestionId, ct);
+        }
     }
 
     public async Task ApproveExamAsync(int id, CancellationToken ct = default)

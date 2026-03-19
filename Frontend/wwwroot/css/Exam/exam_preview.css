@@ -1,139 +1,234 @@
-/* ---------- Role-specific themes ---------- */
-.student-theme {
-    --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4361ee 100%);
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+﻿/* =========================================================
+   exam_preview.css  –  Exam Preview Page Styles
+   ========================================================= */
+
+/* ---------- Page shell ---------- */
+.page-shell {
+    min-height: calc(100vh - 56px);
+    background-color: #f8f9fb;
 }
 
-.student-theme .page-header {
-    display: none !important;
-}
-
-.teacher-theme {
-    --primary-color: #2b3a4a;
-    --sidebar-bg: #fdfdfe;
-}
-
-/* ---------- Student Card View (Exam List) ---------- */
-.exam-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-}
-
-.exam-card {
-    background: white;
-    border-radius: 16px;
-    border: 1px solid #eef0f3;
-    padding: 1.5rem;
-    position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.exam-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--card-shadow);
-}
-
-.exam-card-title {
-    font-size: 1.15rem;
+/* ---------- Page header ---------- */
+.page-title {
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.5rem;
+    color: #1a1d23;
+    margin: 0;
+    line-height: 1.3;
 }
 
-.exam-card-meta {
-    font-size: 0.85rem;
-    color: #64748b;
-    margin-bottom: 0.25rem;
+.page-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.page-actions {
     display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ---------- Status badge ---------- */
+.meta-badge {
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
-.exam-card-footer {
-    margin-top: auto;
-    padding-top: 1.25rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.badge-public {
+    background-color: #e6f4ea;
+    color: #1e7e34;
+    border: 1px solid #b7dfbe;
 }
 
-/* ---------- Student Focused Hub (Detail) ---------- */
-.student-theme .page-shell {
-    background: radial-gradient(circle at top right, #f8faff 0%, #f1f4f9 100%);
+.badge-private {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffd97d;
 }
 
-.student-theme .exam-hub-container {
-    max-width: 800px;
-    margin: 0 auto;
+.badge-closed {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
 }
 
-.student-theme .hero-panel {
-    text-align: center;
-    padding: 3rem 2rem;
-    background: white;
-    border-radius: 24px;
-    box-shadow: var(--card-shadow);
-    margin-bottom: 2rem;
-    border: 1px solid rgba(255,255,255,0.7);
-    backdrop-filter: blur(10px);
-    position: relative;
+.badge-unknown {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
 }
 
-.student-theme .btn-hub-back {
-    position: absolute;
-    top: 1.5rem;
-    left: 2rem;
-    color: #64748b;
+/* ---------- Panel card ---------- */
+.panel-card {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.panel-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+/* ---------- Summary cards (info grid) ---------- */
+.summary-card {
+    background: #f8f9fb;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    padding: 12px 14px;
+    height: 100%;
+}
+
+.summary-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9aa0ab;
+}
+
+.summary-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1d23;
+}
+
+/* ---------- Aside info cards ---------- */
+.info-card {
+    background: #f8f9fb;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9aa0ab;
+}
+
+.info-value {
     font-size: 0.9rem;
     font-weight: 500;
-    transition: all 0.2s;
+    color: #1a1d23;
 }
 
-.student-theme .btn-hub-back:hover {
-    color: #4361ee;
-    transform: translateX(-3px);
+/* ---------- Section title (below table) ---------- */
+.section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0 0 8px;
 }
 
-.student-theme .hero-info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin: 2rem 0;
+/* ---------- Table ---------- */
+.table-soft {
+    font-size: 0.875rem;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-.student-theme .hero-info-item {
-    padding: 1rem;
-    background: #f8fafc;
-    border-radius: 12px;
+    .table-soft thead tr th {
+        background-color: #f4f5f7;
+        color: #6c757d;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 10px 14px;
+        border-bottom: 1px solid #e8eaed;
+        white-space: nowrap;
+    }
+
+        .table-soft thead tr th:first-child {
+            border-top-left-radius: 8px;
+        }
+
+        .table-soft thead tr th:last-child {
+            border-top-right-radius: 8px;
+        }
+
+    .table-soft tbody tr td,
+    .table-soft tbody tr th {
+        padding: 10px 14px;
+        border-bottom: 1px solid #f0f1f3;
+        color: #2d3139;
+        font-weight: 500;
+        vertical-align: middle;
+    }
+
+    .table-soft tbody tr:last-child td,
+    .table-soft tbody tr:last-child th {
+        border-bottom: none;
+        font-weight: 700;
+        background-color: #f8f9fb;
+        color: #1a1d23;
+    }
+
+.interactive-row {
+    transition: background-color 0.15s ease;
+    cursor: default;
 }
 
-.student-theme .btn-take-exam-lg {
-    font-size: 1.15rem;
-    padding: 1.25rem 3.5rem;
-    border-radius: 50px;
-    background: var(--primary-gradient);
-    border: none;
-    box-shadow: 0 10px 15px -3px rgba(67, 97, 238, 0.3);
-    transition: all 0.2s;
+    .interactive-row:hover {
+        background-color: #f4f6ff;
+    }
+
+/* ---------- Instruction list ---------- */
+ul.muted {
+    color: #6c757d;
+    font-size: 0.875rem;
+    padding-left: 1.25rem;
+    line-height: 1.9;
 }
 
-.student-theme .btn-take-exam-lg:hover:not(:disabled) {
-    transform: scale(1.02);
-    box-shadow: 0 20px 25px -5px rgba(67, 97, 238, 0.4);
+/* ---------- Buttons ---------- */
+.btn-primary {
+    background-color: #4361ee;
+    border-color: #4361ee;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 20px;
 }
 
-/* ---------- Teacher Admin Table (Exam List) ---------- */
-.teacher-theme .table-container {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
+    .btn-primary:hover:not(:disabled) {
+        background-color: #3451d1;
+        border-color: #3451d1;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+.btn-outline-secondary {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 20px;
 }
 
-.teacher-theme .table tr:hover {
-    background-color: #f8fafc;
+/* ---------- Loading skeleton pulse ---------- */
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
 }

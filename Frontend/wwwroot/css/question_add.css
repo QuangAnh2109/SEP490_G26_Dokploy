@@ -515,17 +515,33 @@
 }
 
 /* KaTeX Input Styling inside Preview */
+.katex-display {
+    text-align: left !important;
+    margin: 0.5em 0 !important;
+}
+
+.katex-display > .katex {
+    display: inline-block;
+    text-align: left;
+}
+
 .katex-input {
-    border: 1px solid #0d6efd;
+    border: 1px dashed #0d6efd;
     border-radius: 4px;
-    width: 60px;
+    width: 45px;
+    height: 24px;
     text-align: center;
-    padding: 2px;
-    margin: 0 5px;
-    font-size: 1.1em;
+    padding: 2px 4px;
+    margin: 0 4px;
+    font-size: 0.9em;
     outline: none;
+    background-color: #f8f9fa;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .katex-input:focus {
     box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+    background-color: #ffffff;
 }

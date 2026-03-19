@@ -4,10 +4,8 @@ namespace Frontend.Controllers
 {
     public class ExamController : Controller
     {
-        public IActionResult AssignExam([FromQuery] int? classId, [FromQuery] string? subjectCode)
+        public IActionResult AssignExam()
         {
-            ViewBag.ClassId = classId;
-            ViewBag.SubjectCode = subjectCode;
             return View("assign_exam");
         }
 

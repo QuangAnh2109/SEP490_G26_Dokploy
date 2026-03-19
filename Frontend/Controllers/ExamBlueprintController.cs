@@ -15,5 +15,11 @@ namespace Frontend.Controllers
         {
             return View();
         }
+
+        public IActionResult Edit(int id)
+        {
+            ViewBag.EditId = id;
+            return View("Create");
+        }
     }
 }

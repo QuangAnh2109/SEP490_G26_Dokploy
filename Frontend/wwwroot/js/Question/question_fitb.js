@@ -569,11 +569,28 @@ window.QuestionEditorFITB = (() => {
             if (blanks.length > 0) {
                 const nameElem = g.querySelector('[data-blank-group-name]');
                 const dependsSelect = g.querySelector('[data-blank-group-depends]');
-                const dependsVal = dependsSelect?.value || null;
+                const dependsVal = dependsSelect?.value || '';
+
+                let dependsOnGroupId = null;
+                let dependsOnGroupIndex = null;
+
+                if (dependsVal) {
+                    if (dependsVal.startsWith('__idx_')) {
+                        // New group reference by index
+                        dependsOnGroupIndex = parseInt(dependsVal.replace('__idx_', ''), 10);
+                        if (isNaN(dependsOnGroupIndex)) dependsOnGroupIndex = null;
+                    } else {
+                        // Existing group reference by DB ID
+                        dependsOnGroupId = parseInt(dependsVal, 10);
+                        if (isNaN(dependsOnGroupId)) dependsOnGroupId = null;
+                    }
+                }
+
                 groups.push({
                     groupAnswerId: parseInt(g.getAttribute('data-group-id')) || null,
                     name: nameElem?.value || 'Nhóm',
-                    dependsOnGroupId: dependsVal ? (parseInt(dependsVal) || null) : null,
+                    dependsOnGroupId: dependsOnGroupId,
+                    dependsOnGroupIndex: dependsOnGroupIndex,
                     segmentIndices: selectedSegIdxs,
                     blankIndices: [...new Set(blanks)]
                 });
@@ -591,97 +608,109 @@ window.QuestionEditorFITB = (() => {
             item._frameEditor.setValue(data.frame || '');
         }
 
-
-
-        setTimeout(() => {
+        // Wait for rows to be created, then set values
+        const waitForRowsAndSet = () => {
             syncPlaceholderState(item, inputTypesData);
 
-            setTimeout(() => {
-                let hasCustom = false;
-                data.answers?.forEach(ans => {
-                    const row = item.querySelector(`[data-blank-num="${ans.blankIndex}"]`);
-                    if (row) {
-                        if (ans.answerId) {
-                            row.setAttribute('data-answer-id', ans.answerId);
-                        }
+            const rows = item.querySelectorAll('[data-blank-answer-item]');
+            if (rows.length === 0 && data.answers?.length > 0) {
+                setTimeout(waitForRowsAndSet, 200);
+                return;
+            }
 
-                        const ansInp = row.querySelector('[data-blank-answer]');
-                        UTILS.setMathValue(ansInp, ans.correctAnswer || '');
-
-                        if (ans.inputTypeId) {
-                            const chip = row.querySelector(`.constraint-chip[data-input-type-id="${ans.inputTypeId}"]`);
-                            chip?.classList.add('active');
-                        }
-
-                        if (ans.point > 0) {
-                            const scoreInp = row.querySelector('[data-blank-score]');
-                            if (scoreInp) {
-                                scoreInp.value = ans.point;
-                            }
-                            hasCustom = true;
-                        }
+            // Apply answer values to rows
+            let hasCustom = false;
+            const answerPoints = [];
+            data.answers?.forEach(ans => {
+                const row = item.querySelector(`[data-blank-answer-item][data-blank-num="${ans.blankIndex}"]`);
+                if (row) {
+                    if (ans.answerId) {
+                        row.setAttribute('data-answer-id', ans.answerId);
                     }
-                });
 
-                if (hasCustom) {
-                    const st = item.querySelector('[data-scoring-toggle]');
-                    if (st) {
-                        st.checked = true;
-                        st.dispatchEvent(new Event('change'));
+                    const ansInp = row.querySelector('[data-blank-answer]');
+                    if (ansInp) {
+                        ansInp.value = ans.correctAnswer || '';
                     }
+
+                    if (ans.inputTypeId) {
+                        const chip = row.querySelector(`.constraint-chip[data-input-type-id="${ans.inputTypeId}"]`);
+                        chip?.classList.add('active');
+                    }
+
+                    const scoreInp = row.querySelector('[data-blank-score]');
+                    if (scoreInp && ans.point != null) {
+                        scoreInp.value = ans.point;
+                    }
+                    answerPoints.push(ans.point || 0);
                 }
+            });
 
-                data.blankGroups?.forEach(g => {
-                    const list = item.querySelector('[data-blank-group-list]');
-                    const gEl = createBlankGroupItem(item, list, g);
-                    if (gEl) {
-                        list.appendChild(gEl);
-                    }
-                });
+            // Detect custom scoring
+            if (answerPoints.length > 0) {
+                const equalPoint = Math.floor(100 / answerPoints.length);
+                hasCustom = answerPoints.some(p => p !== equalPoint && p !== equalPoint + 1);
+            }
 
-                syncBlankGroupSegments(item);
+            if (hasCustom) {
+                const st = item.querySelector('[data-scoring-toggle]');
+                if (st) {
+                    st.checked = true;
+                    st.dispatchEvent(new Event('change'));
+                }
+            }
 
-                setTimeout(() => {
-                    const gEls = item.querySelectorAll('[data-blank-group-item]');
-                    data.blankGroups?.forEach((g, i) => {
-                        const gEl = gEls[i];
-                        if (!gEl) {
-                            return;
-                        }
+            // Explicitly update score summary
+            updateScoreSummary(item);
 
-                        if (g.segmentIndices?.length > 0) {
-                            g.segmentIndices.forEach(si => {
+            // Set up blank groups
+            data.blankGroups?.forEach(g => {
+                const list = item.querySelector('[data-blank-group-list]');
+                const gEl = createBlankGroupItem(item, list, g);
+                if (gEl) {
+                    list.appendChild(gEl);
+                }
+            });
+
+            syncBlankGroupSegments(item);
+
+            setTimeout(() => {
+                const gEls = item.querySelectorAll('[data-blank-group-item]');
+                data.blankGroups?.forEach((g, i) => {
+                    const gEl = gEls[i];
+                    if (!gEl) return;
+
+                    if (g.segmentIndices?.length > 0) {
+                        g.segmentIndices.forEach(si => {
+                            const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
+                            segCard?.classList.add('selected');
+                        });
+                    } else {
+                        const segs = UTILS.parseLatexSegments(data.frame);
+                        g.blankIndices?.forEach(ph => {
+                            const si = segs.findIndex(s => UTILS.getNumberedPlaceholders(s.content).includes(ph));
+                            if (si !== -1) {
                                 const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
                                 segCard?.classList.add('selected');
-                            });
-                        } else {
-                            const segs = UTILS.parseLatexSegments(data.frame);
-                            g.blankIndices?.forEach(ph => {
-                                const si = segs.findIndex(s => {
-                                    return UTILS.getNumberedPlaceholders(s.content).includes(ph);
-                                });
-                                if (si !== -1) {
-                                    const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
-                                    segCard?.classList.add('selected');
-                                }
-                            });
-                        }
-                    });
+                            }
+                        });
+                    }
+                });
 
-                    // Refresh dependency dropdowns and restore selections
-                    refreshDependencyDropdowns(item);
-                    data.blankGroups?.forEach((g, i) => {
-                        const gEl = gEls[i];
-                        if (gEl && g.dependsOnGroupId) {
-                            const select = gEl.querySelector('[data-blank-group-depends]');
-                            if (select) select.value = String(g.dependsOnGroupId);
-                        }
-                    });
+                refreshDependencyDropdowns(item);
+                data.blankGroups?.forEach((g, i) => {
+                    const gEl = gEls[i];
+                    if (gEl && g.dependsOnGroupId) {
+                        const select = gEl.querySelector('[data-blank-group-depends]');
+                        if (select) select.value = String(g.dependsOnGroupId);
+                    }
+                });
 
-                    updateGroupScores(item);
-                }, 50);
-            }, 100);
-        }, 300);
+                updateGroupScores(item);
+            }, 50);
+        };
+
+        setTimeout(waitForRowsAndSet, 300);
     };
 
     return {

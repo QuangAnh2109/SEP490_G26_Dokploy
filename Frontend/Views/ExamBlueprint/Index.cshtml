@@ -1,190 +1,203 @@
 @{
-    ViewData["Title"] = "Danh sách ma trận đề";
+	ViewData["Title"] = "Danh sách ma trận đề";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/ExamBlueprint/index.css" asp-append-version="true" />
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="~/css/ExamBlueprint/index.css" asp-append-version="true" />
 }
 
-<div class="exam-blueprint-page">
-    <div class="page-shell py-4">
-        <div class="container-fluid px-2 px-md-3">
-            <section class="page-header d-flex flex-column flex-lg-row justify-content-between gap-3">
-                <div>
-                    <h1 class="page-title">Danh sách ma trận đề</h1>
-                    <p class="page-subtitle">Danh sách ma trận đề thi đã tạo.</p>
-                </div>
-                <div class="page-actions">
-                    <button class="btn btn-outline-secondary" type="button" disabled title="Sẽ triển khai sau">Nhập</button>
-                    <a class="btn btn-primary" href="/ExamBlueprint/Create">Tạo ma trận mới</a>
-                </div>
-            </section>
+<div class="container-fluid px-4 py-4 exam-blueprint-page">
+	<div class="mb-3">
+		<h4 class="mb-1 fw-normal text-dark">Danh sách ma trận đề</h4>
+		<p class="text-secondary small mb-0">Danh sách ma trận đề thi đã tạo.</p>
+	</div>
 
-            <div id="pageNotice" class="alert alert-success d-none mt-3" role="alert"></div>
-            <div id="pageError" class="alert alert-danger d-none mt-3" role="alert"></div>
-            <div id="flashWarningContainer" class="alert alert-warning d-none mt-3" role="alert">
-                <strong>Cảnh báo khi lưu nháp:</strong>
-                <ul class="mb-0 ps-3 mt-1" id="flashWarningList"></ul>
-            </div>
-            <template id="flashWarningItemTemplate">
-                <li></li>
-            </template>
+	<div class="d-flex justify-content-between align-items-center mb-4 mt-4 flex-wrap gap-3">
+		<div class="d-flex align-items-center gap-3">
+			<span class="fw-medium" id="selectedCountText">Đã chọn 0 ma trận</span>
+			<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" id="bulkArchiveBtn" type="button" disabled>
+				<i class="bi bi-archive me-1"></i> Lưu trữ hàng loạt
+			</button>
+		</div>
+		<div class="d-flex gap-2">
+			<div class="dropdown">
+				<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="filterDropdownBtn">
+					<i class="bi bi-filter"></i> Bộ lọc
+				</button>
+				<div class="dropdown-menu dropdown-menu-end p-4 filter-dropdown" style="width: 320px; border-radius: 0.75rem;">
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<h6 class="mb-0 fw-bold fs-6">Bộ lọc tìm kiếm</h6>
+						<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="dropdown" aria-label="Close"></button>
+					</div>
+					<div class="mb-3">
+						<label class="form-label text-secondary small fw-medium">Tên ma trận đề</label>
+						<div class="input-group input-group-sm input-group-search">
+							<span class="input-group-text bg-white text-secondary border-end-0"><i class="bi bi-search"></i></span>
+							<input type="text" class="form-control border-start-0 ps-0 shadow-none" id="filterKeyword" placeholder="Nhập tên ma trận đề...">
+						</div>
+					</div>
+					<div class="mb-4">
+						<label class="form-label text-secondary small fw-medium">Môn học</label>
+						<select class="form-select form-select-sm shadow-none" id="filterSubject">
+							<option value="">Tất cả môn học</option>
+						</select>
+					</div>
+					<div class="d-flex justify-content-end gap-2 border-top pt-3">
+						<button type="button" class="btn btn-light btn-sm px-3 fw-medium" id="clearFilterBtn">Xóa lọc</button>
+						<button type="button" class="btn btn-primary btn-sm px-4 fw-medium" id="applyFilterBtn">Áp dụng</button>
+					</div>
+				</div>
+			</div>
+			<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" type="button" disabled title="Sẽ triển khai sau">Nhập</button>
+			<a class="btn btn-primary fw-medium btn-sm py-2 px-3" href="/ExamBlueprint/Create">Tạo ma trận mới</a>
+		</div>
+	</div>
 
-            <section class="panel-card mb-3">
-                <form id="blueprintFilterForm" class="row g-2 align-items-end">
-                    <div class="col-12 col-lg-6">
-                        <label for="filterKeyword" class="form-label">Tìm theo tên ma trận đề</label>
-                        <input id="filterKeyword" class="form-control" placeholder="Nhập tên ma trận đề..." />
-                    </div>
-                    <div class="col-12 col-lg-4">
-                        <label for="filterSubject" class="form-label">Môn học</label>
-                        <select id="filterSubject" class="form-select">
-                            <option value="">Tất cả môn học</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-lg-2 d-grid">
-                        <button type="submit" class="btn btn-outline-secondary">Lọc</button>
-                    </div>
-                </form>
-            </section>
+	<div id="pageNotice" class="alert alert-success d-none mt-3" role="alert"></div>
+	<div id="pageError" class="alert alert-danger d-none mt-3" role="alert"></div>
+	<div id="flashWarningContainer" class="alert alert-warning d-none mt-3" role="alert">
+		<strong>Cảnh báo khi lưu nháp:</strong>
+		<ul class="mb-0 ps-3 mt-1" id="flashWarningList"></ul>
+	</div>
+	<template id="flashWarningItemTemplate">
+		<li></li>
+	</template>
 
-            <div class="row g-3">
-                <div class="col-12 col-xl-7">
-                    <section class="panel-card h-100">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Tên ma trận</th>
-                                        <th>Số câu</th>
-                                        <th>Môn học</th>
-                                        <th>Trạng thái</th>
-                                        <th>Cập nhật</th>
-                                        <th>Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="blueprintTableBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
+	<div class="bg-white border rounded-3 overflow-hidden blueprint-table-wrapper">
+		<div class="table-responsive">
+			<table class="table table-hover mb-0 blueprint-table">
+				<thead class="table-light text-dark fw-bold border-bottom">
+					<tr>
+						<th style="width: 40px;"><input class="form-check-input" type="checkbox" id="blueprintMasterCheckbox" aria-label="Chọn tất cả"></th>
+						<th>Tên ma trận</th>
+						<th>Số câu</th>
+						<th>Môn học</th>
+						<th>Ngày cập nhật</th>
+						<th style="width: 130px;">Trạng thái</th>
+						<th style="width: 60px;" class="text-center">Chi tiết</th>
+					</tr>
+				</thead>
+				<tbody id="blueprintTableBody">
+					<tr><td colspan="7" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
 
-                <div class="col-12 col-xl-5">
-                    <section class="panel-card h-100" id="blueprintDetailPanel">
-                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                            <h2 class="section-title mb-0">Chi tiết ma trận đề</h2>
-                            <span class="badge text-bg-light" id="blueprintInfoSubject">--</span>
-                        </div>
-
-                        <div class="row g-2 mb-2">
-                            <div class="col-12 col-md-6">
-                                <div class="summary-card py-2">
-                                    <p class="summary-label mb-1">Tên ma trận đề</p>
-                                    <p class="mb-0 fw-semibold" id="blueprintInfoName">Chưa chọn</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <div class="summary-card py-2">
-                                    <p class="summary-label mb-1">Ngày cập nhật</p>
-                                    <p class="mb-0 fw-semibold" id="blueprintInfoUpdated">--</p>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="summary-card py-2">
-                                    <p class="summary-label mb-1">Tổng số câu ma trận đề</p>
-                                    <p class="mb-0 fw-semibold" id="blueprintInfoQuestionCount">--</p>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="form-note mb-2">Chi tiết bên dưới hiển thị phân bổ số câu theo chương và mức độ.</p>
-
-                        <div class="table-responsive border rounded bg-white">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Chương</th>
-                                        <th>Mức độ</th>
-                                        <th>Số câu</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="blueprintMatrixBody">
-@* Matrix Templates are defined above inline in the panel, or we can move them here too. 
-   Actually, they are currently defined twice. Let's keep them ONLY at the bottom for consistency. *@
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-3">Chọn một ma trận đề để xem chi tiết.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-            </div>
-            <nav aria-label="Blueprint list pagination">
-                <ul id="blueprintPagination" class="pagination mt-3 justify-content-center"></ul>
-            </nav>
-        </div>
-    </div>
+	<div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
+		<span class="text-secondary" style="font-size: 0.95rem;" id="paginationSummary"></span>
+		<nav>
+			<ul class="pagination mb-0" id="blueprintPagination"></ul>
+		</nav>
+	</div>
 </div>
 
-@* Templates *@
+@* Row template *@
 <template id="blueprintRowTemplate">
-    <tr>
-        <td data-field-name></td>
-        <td data-field-questions></td>
-        <td data-field-subject></td>
-        <td><span class="badge" data-field-status></span></td>
-        <td data-field-updated></td>
-        <td>
-            <div class="d-flex flex-wrap gap-1">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="view-blueprint">Xem</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Sửa</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sẽ triển khai sau">Lưu trữ</button>
-            </div>
-        </td>
-    </tr>
+	<tr class="blueprint-row" data-blueprint-id>
+		<td><input class="form-check-input blueprint-item-checkbox" type="checkbox" aria-label="Chọn ma trận"></td>
+		<td class="fw-medium" data-field-name></td>
+		<td data-field-questions></td>
+		<td data-field-subject></td>
+		<td data-field-updated></td>
+		<td><span class="badge rounded-1 py-2 px-2 fw-medium" data-field-status></span></td>
+		<td class="text-center">
+			<button class="btn btn-link text-dark p-0 expand-btn" type="button" aria-label="Mở rộng"><i class="bi bi-chevron-down"></i></button>
+		</td>
+	</tr>
 </template>
+
+@* Detail row template (expandable) *@
+<template id="blueprintDetailRowTemplate">
+	<tr class="table-light blueprint-detail-row" data-blueprint-id>
+		<td colspan="7" class="border-top-0 pt-0 pb-4 px-0">
+			<div class="blueprint-detail-content px-4" style="padding-left: 60px; padding-right: 30px;">
+				<h6 class="fw-bold mb-3 text-secondary detail-title">Chi tiết ma trận đề</h6>
+				<div class="row mb-4">
+					<div class="col-md-8">
+						<table class="table table-sm table-bordered bg-white mb-0 detail-matrix-table">
+							<thead class="table-light">
+								<tr>
+									<th class="py-2 px-3">Chương</th>
+									<th class="py-2 px-3">Mức độ</th>
+									<th class="py-2 px-3 text-center" style="width: 100px;">Số câu</th>
+								</tr>
+							</thead>
+							<tbody class="detail-matrix-body">
+							</tbody>
+							<tfoot class="table-light fw-bold">
+								<tr>
+									<td colspan="2" class="py-2 px-3 text-end">Tổng số câu:</td>
+									<td class="py-2 px-3 text-center detail-total"></td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+				<div class="d-flex justify-content-start gap-4 border-top pt-3 border-secondary-subtle">
+					<a class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-edit" href="#"><i class="bi bi-pencil"></i> Sửa ma trận</a>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-danger" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+				</div>
+			</div>
+		</td>
+	</tr>
+</template>
+
 <template id="blueprintLoadingTemplate">
-    <tr><td colspan="6" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+	<tr><td colspan="7" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
 </template>
 <template id="blueprintEmptyTemplate">
-    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có ma trận đề nào.</td></tr>
+	<tr><td colspan="7" class="text-center text-muted py-4">Chưa có ma trận đề nào.</td></tr>
 </template>
 <template id="blueprintErrorTemplate">
-    <tr><td colspan="6" class="text-center text-danger py-4">Không thể tải danh sách ma trận đề.</td></tr>
+	<tr><td colspan="7" class="text-center text-danger py-4">Không thể tải danh sách ma trận đề.</td></tr>
 </template>
 
 <template id="blueprintMatrixRowTemplate">
-    <tr>
-        <td data-field-chapter></td>
-        <td data-field-difficulty></td>
-        <td data-field-questions></td>
-    </tr>
-</template>
-<template id="matrixEmptyTemplate">
-    <tr><td colspan="3" class="text-center text-muted py-3" data-message>Chọn một ma trận đề để xem chi tiết.</td></tr>
+	<tr>
+		<td class="py-2 px-3" data-field-chapter></td>
+		<td class="py-2 px-3" data-field-difficulty></td>
+		<td class="py-2 px-3 text-center" data-field-questions></td>
+	</tr>
 </template>
 
-@* Pagination Templates *@
-<template id="paginationPrevTemplate">
-    <li class="page-item"><a class="page-link" href="#" data-page>Trước</a></li>
-</template>
-<template id="paginationPrevDisabledTemplate">
-    <li class="page-item disabled"><span class="page-link">Trước</span></li>
-</template>
-<template id="paginationPageTemplate">
-    <li class="page-item"><a class="page-link" href="#" data-page></a></li>
-</template>
-<template id="paginationPageActiveTemplate">
-    <li class="page-item active"><span class="page-link"></span></li>
-</template>
-<template id="paginationNextTemplate">
-    <li class="page-item"><a class="page-link" href="#" data-page>Sau</a></li>
-</template>
-<template id="paginationNextDisabledTemplate">
-    <li class="page-item disabled"><span class="page-link">Sau</span></li>
-</template>
+<!-- Archive Confirmation Modal -->
+<div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content border-0 shadow-lg">
+			<div class="modal-header bg-danger text-white border-0">
+				<h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">Xác nhận lưu trữ</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-4">
+				<div class="d-flex align-items-center mb-3">
+					<div class="text-danger me-3">
+						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+					</div>
+					<div>
+						<h6 class="mb-1 text-dark fw-bold">Cảnh báo quan trọng!</h6>
+						<p class="mb-0 text-muted small">Bạn đang thực hiện lưu trữ ma trận đề.</p>
+					</div>
+				</div>
+				<div class="alert alert-warning border-0 mb-0 small">
+					<ul class="mb-0 ps-3">
+						<li>Ma trận đề khi sang trạng thái <strong>Lưu trữ</strong> sẽ <strong>không sửa được nữa</strong>.</li>
+						<li>Không thể sử dụng để <strong>giao đề thi</strong> nữa.</li>
+					</ul>
+				</div>
+			</div>
+			<div class="modal-footer border-0 p-3">
+				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+				<button type="button" class="btn btn-danger px-4 fw-bold" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 @section Scripts {
-    <script src="~/js/ExamBlueprint/index.js" asp-append-version="true"></script>
+	<script>
+		setBreadcrumb([{ text: "Ma trận đề", url: null }]);
+	</script>
+	<script src="~/js/ExamBlueprint/index.js" asp-append-version="true"></script>
 }

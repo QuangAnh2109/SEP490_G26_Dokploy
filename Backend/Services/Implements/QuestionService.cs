@@ -74,10 +74,10 @@ namespace Backend.Services.Implements
             var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
             Question result;
 
-            if (existing.Status == QuestionStatus.Inprogess || isUsed)
+            if (existing.Status == QuestionStatus.Inprogress || isUsed)
             {
                 existing.Status = QuestionStatus.Archive;
-                if (request.Status == QuestionStatus.Inprogess) request.Status = QuestionStatus.Active;
+                if (request.Status == QuestionStatus.Inprogress) request.Status = QuestionStatus.Active;
                 result = MapToQuestionEntity(request, userId);
                 await _questionRepository.CreateQuestionsAsync(new List<Question> { result });
                 _logger.LogInformation("Cloned question {OldId} into {NewId} (Used={IsUsed}).", questionId, result.QuestionId, isUsed);
@@ -101,7 +101,7 @@ namespace Backend.Services.Implements
             if (q == null || q.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xem.");
 
             var (stem, frame) = ParseContent(q.QuestionContent);
-            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem ?? string.Empty, Frame = frame };
+            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem, Frame = frame };
 
             dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
@@ -242,17 +242,46 @@ namespace Backend.Services.Implements
 
             answers.ForEach(a => { a.GroupAnswerId = null; a.GroupAnswer = null; });
 
+            // Build list of groups in order (index = position in BlankGroups list)
+            var groupsByIndex = new List<GroupAnswer>();
+
             foreach (var gDto in item.BlankGroups)
             {
                 var group = gDto.GroupAnswerId.HasValue ? existingGroups.FirstOrDefault(g => g.GroupAnswerId == gDto.GroupAnswerId) : null;
-                if (group == null) group = new GroupAnswer { Name = gDto.Name, DependsOnGroupId = gDto.DependsOnGroupId };
-                else { group.Name = gDto.Name; group.DependsOnGroupId = gDto.DependsOnGroupId; }
+                if (group == null) group = new GroupAnswer { Name = gDto.Name };
+                else group.Name = gDto.Name;
+
+                // Set DependsOnGroupId if it refers to an existing group
+                if (gDto.DependsOnGroupId.HasValue)
+                {
+                    group.DependsOnGroupId = gDto.DependsOnGroupId.Value;
+                }
+                else
+                {
+                    group.DependsOnGroupId = null;
+                }
 
                 foreach (var idx in gDto.BlankIndices)
                 {
                     var ans = answers.FirstOrDefault(a => a.Content != null && 
                               System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{idx}\](\{{|$)"));
                     if (ans != null) ans.GroupAnswer = group;
+                }
+
+                groupsByIndex.Add(group);
+            }
+
+            // Resolve index-based dependencies (DependsOnGroupIndex) for new groups
+            for (int i = 0; i < item.BlankGroups.Count; i++)
+            {
+                var gDto = item.BlankGroups[i];
+                if (gDto.DependsOnGroupIndex.HasValue && !gDto.DependsOnGroupId.HasValue)
+                {
+                    var depIdx = gDto.DependsOnGroupIndex.Value;
+                    if (depIdx >= 0 && depIdx < groupsByIndex.Count && depIdx != i)
+                    {
+                        groupsByIndex[i].DependsOnGroup = groupsByIndex[depIdx];
+                    }
                 }
             }
         }

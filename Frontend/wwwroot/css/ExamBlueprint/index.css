@@ -1,81 +1,110 @@
-:root {
-  --bp-bg-panel: #f7f8fa;
-  --bp-border: #dde3ea;
-  --bp-text: #1a2230;
-  --bp-muted: #6b7687;
+/* Exam Blueprint List - Reference design (danhsachmatrande.html) */
+.exam-blueprint-page {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f8f9fa;
 }
 
-.exam-blueprint-page .page-shell {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
+.blueprint-table-wrapper {
+    overflow-x: auto;
 }
 
-.exam-blueprint-page .page-title {
-  margin: 0;
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: var(--bp-text);
+.blueprint-table {
+    font-size: 16px;
+    color: #212529;
+    width: 100%;
 }
 
-.exam-blueprint-page .page-subtitle {
-  margin: .35rem 0 0;
-  color: var(--bp-muted);
+.blueprint-table > :not(caption) > * > * {
+    padding: 16px;
+    vertical-align: middle;
 }
 
-.exam-blueprint-page .page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
+.btn-outline-custom {
+    background-color: #fff;
 }
 
-.exam-blueprint-page .panel-card {
-  border: 1px solid var(--bp-border);
-  border-radius: 1rem;
-  background: var(--bp-bg-panel);
-  padding: 1rem;
-  box-shadow: 0 .25rem .75rem rgba(16, 24, 40, .04);
+.btn-outline-custom:hover {
+    background-color: #f8f9fa;
+    color: #212529 !important;
 }
 
-.exam-blueprint-page .section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+.btn-action-text:hover {
+    color: #0d6efd !important;
 }
 
-.exam-blueprint-page .summary-card {
-  border: 1px solid var(--bp-border);
-  border-radius: .75rem;
-  background: #fff;
-  padding: .75rem;
+.btn-action-text.text-danger:hover {
+    color: #dc3545 !important;
 }
 
-.exam-blueprint-page .summary-label,
-.exam-blueprint-page .form-note {
-  color: var(--bp-muted);
-  font-size: .9rem;
+.input-group-search:focus-within {
+    border-radius: 0.375rem;
 }
 
-.badge-status {
-  color: #fff;
+.input-group-search:focus-within .input-group-text,
+.input-group-search:focus-within .form-control {
+    border-color: #86b7fe;
 }
 
-.badge-draft {
-  background: #f0ad00;
+/* Expandable detail row */
+.blueprint-detail-row td {
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
 }
 
-.badge-published {
-  background: #198754;
+.blueprint-detail-row .blueprint-detail-content {
+    padding-top: 0;
 }
 
-.badge-inuse {
-  background: #0d6efd;
+.blueprint-detail-row .detail-matrix-table {
+    font-size: 0.9rem;
 }
 
-.badge-archived {
-  background: #6c757d;
+/* Status badges - match reference */
+.bg-success-subtle {
+    background-color: var(--bs-success-bg-subtle, #d1e7dd);
 }
 
-@media (max-width: 991.98px) {
-  .exam-blueprint-page .page-title {
-    font-size: 1.4rem;
-  }
+.text-success-emphasis {
+    color: var(--bs-success-text-emphasis, #0f5132);
+}
+
+.bg-secondary-subtle {
+    background-color: var(--bs-secondary-bg-subtle, #e2e3e5);
+}
+
+.text-secondary-emphasis {
+    color: var(--bs-secondary-text-emphasis, #495057);
+}
+
+.bg-primary-subtle {
+    background-color: var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+.text-primary-emphasis {
+    color: var(--bs-primary-text-emphasis, #0d6efd);
+}
+
+.bg-warning-subtle {
+    background-color: var(--bs-warning-bg-subtle, #fff3cd);
+}
+
+.text-warning-emphasis {
+    color: var(--bs-warning-text-emphasis, #664d03);
+}
+
+/* Pagination */
+.pagination .page-link {
+    border-radius: 0.25rem;
+    margin: 0 0.25rem;
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    border: 0;
+}
+
+/* Full width for blueprint list (like question list) */
+.container:has(.exam-blueprint-page) {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
 }

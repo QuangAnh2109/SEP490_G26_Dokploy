@@ -16,4 +16,14 @@ public interface IAnalyticsService
     /// Xem lại bài (luôn có), điểm + biểu đồ (ShowScore), đáp án (ShowAnswer).
     /// </summary>
     Task<StudentSubmissionAnalyticsDto> GetStudentSubmissionAnalyticsAsync(int examId, int studentId);
+
+    /// <summary>
+    /// Thống kê nộp bài cho Giáo viên: danh sách học sinh, lần nộp, điểm, trạng thái.
+    /// </summary>
+    Task<ExamSubmitResultsDto> GetExamSubmitResultsAsync(int examId);
+
+    /// <summary>
+    /// Xem chi tiết bài làm theo submissionId — dành cho Giáo viên (luôn ShowScore + ShowAnswer).
+    /// </summary>
+    Task<StudentSubmissionAnalyticsDto> GetSubmissionBySubmissionIdAsync(int submissionId);
 }

@@ -1,6 +1,9 @@
 $(document).ready(function () {
     const state = {
-        chapterOptions: []
+        chapterOptions: [],
+        editId: typeof window.ExamBlueprintEditId === 'number' && window.ExamBlueprintEditId > 0 ? window.ExamBlueprintEditId : 0,
+        // Chỉ đánh dấu is-invalid cho "Tổng số câu mục tiêu" khi người dùng chuẩn bị Xuất bản
+        lastTargetStatus: null
     };
 
     const role = getUserRole();
@@ -11,9 +14,14 @@ $(document).ready(function () {
     }
 
     bindEvents();
-    loadSubjects();
-    recalcTotals();
-    refreshEmptyHint();
+    loadSubjects().then(function () {
+        if (state.editId) {
+            loadBlueprintForEdit();
+        } else {
+            recalcTotals();
+            refreshEmptyHint();
+        }
+    });
 
     function bindEvents() {
         $('#btnAddRow').on('click', function () {
@@ -43,16 +51,20 @@ $(document).ready(function () {
         });
 
         $('#btnSaveDraft').on('click', function () {
+            state.lastTargetStatus = 0;
+            recalcTotals(); // cập nhật lại UI (gỡ is-invalid nếu trước đó đã bấm Xuất bản)
             submitCreate(0);
         });
 
         $('#btnPublish').on('click', function () {
+            state.lastTargetStatus = 1;
+            recalcTotals(); // đánh dấu is-invalid ngay lập tức nếu mismatch trước khi submit
             submitCreate(1);
         });
     }
 
     function loadSubjects() {
-        apiClient.get('/api/exam-blueprints/subjects')
+        return apiClient.get('/api/exam-blueprints/subjects')
             .then(function (subjects) {
                 const $subject = $('#blueprintSubject');
                 $subject.find('option:not(:first)').remove();
@@ -67,8 +79,41 @@ $(document).ready(function () {
             });
     }
 
+    function loadBlueprintForEdit() {
+        apiClient.get('/api/exam-blueprints/' + state.editId)
+            .then(function (detail) {
+                $('#blueprintName').val(detail.name || '');
+                $('#blueprintDescription').val(detail.description || '');
+                $('#blueprintSubject').val(detail.subjectId || '');
+                loadChapters(detail.subjectId || 0).then(function () {
+                    $('#matrixRowList').empty();
+                    (detail.rows || []).forEach(function (row) {
+                        addMatrixRow({
+                            ChapterId: row.chapterId ?? row.ChapterId,
+                            Difficulty: row.difficulty ?? row.Difficulty ?? 1,
+                            TotalQuestions: row.totalQuestions ?? row.TotalQuestions ?? 0
+                        });
+                    });
+                    $('#blueprintTargetQuestionCount').val(detail.totalQuestions || 0);
+                    recalcTotals();
+                    refreshEmptyHint();
+                }).catch(function () {
+                    $('#matrixRowList').empty();
+                    refreshEmptyHint();
+                });
+                if (detail.status === 3) {
+                    showError(['Ma trận đề đã lưu trữ, không thể sửa.']);
+                    $('#btnSaveDraft, #btnPublish, #btnAddRow').prop('disabled', true);
+                }
+            })
+            .catch(function (error) {
+                console.error(error);
+                showError([resolveApiError(error)]);
+            });
+    }
+
     function loadChapters(subjectId) {
-        apiClient.get(`/api/exam-blueprints/subjects/${subjectId}/chapters`)
+        return apiClient.get(`/api/exam-blueprints/subjects/${subjectId}/chapters`)
             .then(function (chapters) {
                 state.chapterOptions = chapters || [];
                 refreshAllChapterSelects();
@@ -138,6 +183,20 @@ $(document).ready(function () {
             }
         });
         $('#computedMatrixTotal').text(total);
+
+        const $target = $('#blueprintTargetQuestionCount');
+        if ($target.length) {
+            const targetVal = parseInt($target.val(), 10);
+            const shouldValidatePublish = state.lastTargetStatus === 1;
+            const isMismatch = shouldValidatePublish && Number.isInteger(targetVal) && targetVal !== total;
+
+            if (shouldValidatePublish) {
+                $target.toggleClass('is-invalid', Boolean(isMismatch));
+            } else {
+                // Không bấm Xuất bản thì không ép trạng thái invalid (chỉ hiển thị lỗi khi người dùng chọn Xuất bản)
+                $target.removeClass('is-invalid');
+            }
+        }
     }
 
     function refreshEmptyHint() {
@@ -219,13 +278,59 @@ $(document).ready(function () {
         const rowErrors = validator.validateRows(rows);
         const payloadErrors = validator.validate(payload, buildChapterAvailability());
         const errors = [...rowErrors, ...payloadErrors];
+
+        const markInvalidFields = () => {
+            // Clear previous invalid states
+            $('#blueprintName, #blueprintSubject, #blueprintTargetQuestionCount').removeClass('is-invalid');
+            $('#matrixRowList .matrix-chapter, #matrixRowList .matrix-difficulty, #matrixRowList .matrix-count').removeClass('is-invalid');
+
+            const setRowInvalid = (rowNo, fieldKey) => {
+                const $rows = $('#matrixRowList [data-matrix-item]');
+                const $row = $rows.eq(rowNo - 1);
+                if (!$row.length) return;
+                if (fieldKey === 'chapter') $row.find('.matrix-chapter').addClass('is-invalid');
+                if (fieldKey === 'difficulty') $row.find('.matrix-difficulty').addClass('is-invalid');
+                if (fieldKey === 'count') $row.find('.matrix-count').addClass('is-invalid');
+            };
+
+            errors.forEach(msg => {
+                if (!msg) return;
+                if (msg.includes('Tên ma trận đề là bắt buộc')) {
+                    $('#blueprintName').addClass('is-invalid');
+                    return;
+                }
+                if (msg.includes('Vui lòng chọn môn học')) {
+                    $('#blueprintSubject').addClass('is-invalid');
+                    return;
+                }
+                if (msg.includes('Tổng số câu mục tiêu')) {
+                    $('#blueprintTargetQuestionCount').addClass('is-invalid');
+                    return;
+                }
+
+                // Match: "Dòng X: ...."
+                const m = msg.match(/Dòng\s+(\d+)\s*:\s*(.*)$/i);
+                if (m) {
+                    const rowNo = parseInt(m[1], 10);
+                    const detail = (m[2] || '').toLowerCase();
+                    if (detail.includes('chương')) setRowInvalid(rowNo, 'chapter');
+                    if (detail.includes('mức độ')) setRowInvalid(rowNo, 'difficulty');
+                    if (detail.includes('số câu')) setRowInvalid(rowNo, 'count');
+                }
+            });
+        };
+
         if (errors.length > 0) {
+            markInvalidFields();
             showError(errors);
             return;
         }
 
         setSubmitting(true);
-        apiClient.post('/api/exam-blueprints', payload)
+        const apiCall = state.editId
+            ? apiClient.put('/api/exam-blueprints/' + state.editId, payload)
+            : apiClient.post('/api/exam-blueprints', payload);
+        apiCall
             .then(function (response) {
                 const hasWarnings = Array.isArray(response?.warnings) && response.warnings.length > 0;
                 
@@ -245,7 +350,7 @@ $(document).ready(function () {
                     } catch (e) {
                         console.warn('Cannot persist flash message', e);
                     }
-                    window.location.href = '/ExamBlueprint?created=1';
+                    window.location.href = '/ExamBlueprint?' + (state.editId ? 'updated=1' : 'created=1');
                 }
             })
             .catch(function (error) {

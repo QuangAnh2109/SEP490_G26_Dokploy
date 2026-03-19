@@ -1,11 +1,10 @@
 using Backend.DTOs.Course;
-using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Services.Interfaces;
+using Backend.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -16,17 +15,25 @@ namespace Backend.Controllers
         private readonly ICourseService _service;
         private readonly IChapterService _chapterService;
         private readonly ILogger<CourseController> _logger;
+        private readonly MtcaSep490G26Context _context;
 
-        public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger)
+        public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger, MtcaSep490G26Context context)
         {
             _service = service;
             _chapterService = chapterService;
             _logger = logger;
+            _context = context;
         }
 
+        // TEMPORARY for debugging only
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll()
+        //{
+        //    return Ok(await _service.GetAllAsync());
+        //}
 
         [HttpGet("my")]
-        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetMyClasses()
         {
             // Keep same behaviour as before; now it will run without auth
@@ -43,25 +50,37 @@ namespace Backend.Controllers
 
         // New: return exams for a class that are visible now
         [HttpGet("{id}/exams")]
-        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            bool isTeacher = User.IsInRole("Teacher") || User.IsInRole("Giáo viên");
-            _logger.LogInformation("GetExamsForClass: id={id}, userId={userId}, isTeacher={isTeacher}", id, idClaim, isTeacher);
-            var exams = await _service.GetExamsByClassAsync(id, isTeacher);
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
+                return Unauthorized();
+
+            var myCourses = await _service.GetCoursesForUserAsync(userId);
+            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+                return Forbid();
+
+            var exams = await _service.GetExamsByClassAsync(id);
             return Ok(exams);
         }
 
+        // New: return chapters belonging to the class's subject
+        // Route: GET api/course/{id}/chapters
         [HttpGet("{id}/chapters")]
-        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
+        [Authorize]
         public async Task<IActionResult> GetChaptersForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            var course = await _service.GetByIdAsync(id);
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
+                return Unauthorized();
 
-            if (course == null)
-                return NotFound();
+            var myCourses = await _service.GetCoursesForUserAsync(userId);
+            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+                return Forbid();
+
+            var course = await _service.GetByIdAsync(id);
+            if (course == null) return NotFound();
 
             return Ok(course.Chapters);
         }
@@ -74,6 +93,7 @@ namespace Backend.Controllers
             {
                 return Unauthorized();
             }
+
             try
             {
                 await _service.LeaveCourseAsync(id, userId);
@@ -89,11 +109,6 @@ namespace Backend.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> JoinCourse([FromBody] JoinCourseRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request?.InvitationCode))
-            {
-                return BadRequest("Mã mời không thể trống.");
-            }
-
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
             if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
             {
@@ -112,7 +127,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Teacher,Giáo viên")]
+        [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -133,12 +148,14 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
+                // Typically you might use an ApiException filter or specific exceptions,
+                // but for now catching generic exceptions matched in the Service layer is fine.
                 return BadRequest(new { message = ex.Message });
             }
         }
 
         [HttpGet("{id}/students")]
-        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
             var students = await _service.GetStudentsInClassAsync(id);
@@ -146,7 +163,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/settings")]
-        [Authorize(Roles = "Teacher,Giáo viên")]
+        [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> GetClassSettings(int id)
         {
             var course = await _service.GetByIdAsync(id);
@@ -155,23 +172,103 @@ namespace Backend.Controllers
         }
 
         [HttpPut("{id}/settings")]
-        [Authorize(Roles = "Teacher,Giáo viên")]
+        [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request.ClassName))
-                return BadRequest("Tên lớp không được để trống.");
+            try
+            {
+                await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-            var success = await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
-            if (!success) return NotFound("Không tìm thấy lớp học.");
+        [HttpPost("{id}/invite")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
+        {
+            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var teacherId))
+                return Unauthorized();
 
-            return Ok();
+            try
+            {
+                var token = await _service.InviteStudentByEmailAsync(teacherId, id, request.Email);
+                return Ok(new { message = "Đã gửi thư mời.", token }); // Sending token back for debugging/frontend copy just in case
+            }
+            catch (AutoApprovePendingException ex)
+            {
+                return Ok(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("accept-invite")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequestDTO request)
+        {
+            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var studentId))
+                return Unauthorized();
+
+            try
+            {
+                await _service.AcceptInvitationAsync(studentId, request.Token);
+                return Ok(new { message = "Tham gia lớp học thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/students/pending")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetPendingStudents(int id)
+        {
+            var students = await _service.GetPendingStudentsAsync(id);
+            return Ok(students);
+        }
+
+        [HttpPost("{id}/students/{studentId}/approve")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> ApproveStudent(int id, int studentId)
+        {
+            try {
+                await _service.ApproveStudentAsync(id, studentId);
+                return Ok();
+            } catch (Exception ex) {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpDelete("{id}/students/{studentId}/reject")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> RejectStudent(int id, int studentId)
+        {
+            try {
+                await _service.RejectStudentAsync(id, studentId);
+                return Ok();
+            } catch (Exception ex) {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("subjects")]
-        [Authorize(Roles = "Teacher,Giáo viên")]
-        public async Task<IActionResult> GetSubjects()
+        [Authorize(Roles = "Teacher")]
+        public IActionResult GetSubjects()
         {
-            var subjects = await _service.GetSubjectsAsync();
+            // A simple endpoint to fetch subjects for the dropdown
+            // Ideally should be in ISubjectService, placing here for quick access matching the plan
+            var subjects = _context.Subjects
+                .Select(s => new { s.SubjectId, s.Name, s.Code })
+                .ToList();
             return Ok(subjects);
         }
     }

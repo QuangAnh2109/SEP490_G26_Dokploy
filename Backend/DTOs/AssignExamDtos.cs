@@ -116,6 +116,7 @@ public record PaperReviewDto(
 
 public record ExamReviewDto(
     int ExamId,
+    int? ClassId,
     string Title,
     string SubjectCode,
     string? Description,
@@ -144,5 +145,6 @@ public record BlueprintRowDto
 public record SwapQuestionRequestDto(
     int PaperId,
     int OldQuestionId,
-    int NewQuestionId
+    int NewQuestionId,
+    bool SwapGlobal = false
 );

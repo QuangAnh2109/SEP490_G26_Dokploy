@@ -1,12 +1,13 @@
 @{
     ViewData["Title"] = "Danh sách đề trong lớp";
     var classId = ViewBag.ClassId ?? 0;
+    var className = ViewBag.ClassName as string;
+    var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="~/css/Exam/exam_preview.css" asp-append-version="true" />
 }
 
 <div class="d-flex" style="min-height: 100vh;">
@@ -16,82 +17,84 @@
             <h5 class="mb-0">Quản lý lớp học</h5>
         </div>
         <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action active">
+            <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action active">
                 <i class="fas fa-list me-2"></i> Danh sách đề
             </a>
-            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
+            <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action">
                 <i class="fas fa-users me-2"></i> Danh sách học sinh
             </a>
-            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
+            <a href="/Course/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="list-group-item list-group-item-action">
+                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
+            </a>
+            <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action">
                 <i class="fas fa-cog me-2"></i> Cài đặt
             </a>
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 p-4" id="main-content">
+    <main class="flex-grow-1 p-4">
 
         <section class="mb-4 d-flex justify-content-between align-items-center">
-            <div class="header-brief">
-                <h2 id="courseHeaderTitle" class="fw-bold mb-1">Danh sách đề trong lớp</h2>
-                <p class="text-muted small mb-0" id="courseSubtitle">Quản lý và theo dõi các bài kiểm tra của lớp.</p>
-            </div>
-            <a id="btnAssignExam" href="#" class="btn btn-primary d-none shadow-sm">
-                <i class="fas fa-plus-circle me-1"></i> Giao đề thi
+            <h2 class="mb-0">Danh sách đề trong lớp</h2>
+            <a id="btnCreateExam" class="btn btn-primary d-none" href="/Exam/AssignExam?classId=@classId">
+                <i class="fas fa-plus me-1"></i> Tạo đề
             </a>
         </section>
 
         <!-- Filters -->
-        <section class="card border-0 shadow-sm p-3 mb-4 rounded-4">
+        <section class="card p-3 mb-4">
             <div class="row g-2">
-                <div class="col-md-3">
-                    <select id="chapterFilter" class="form-select border-0 bg-light">
-                        <option value="">Tất cả chương</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="statusFilter" class="form-select border-0 bg-light">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="open">Đang mở</option>
-                        <option value="upcoming">Sắp diễn ra</option>
-                        <option value="closed">Đã đóng</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text border-0 bg-light"><i class="fas fa-search text-muted"></i></span>
-                        <input id="searchFilter" class="form-control border-0 bg-light" placeholder="Tìm kiếm tên đề thi..." />
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- Card View for Students -->
-        <div id="student-card-view" class="exam-card-grid d-none">
-            <!-- Cards will be injected here -->
-        </div>
-
-        <!-- Table View for Teachers -->
-        <div id="teacher-table-view" class="card border-0 shadow-sm p-3 rounded-4 d-none">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="border-0">Tên đề</th>
-                            <th class="border-0">Thời gian</th>
-                            <th class="border-0 text-center">Thời lượng</th>
-                            <th class="border-0 text-center">Trạng thái</th>
-                            <th class="border-0 text-end">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="examTableBody">
-                        <tr>
-                            <td colspan="5" class="text-center py-4">Đang tải...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Chapter -->
+            <div class="col-md-3">
+                <select id="chapterFilter" class="form-select">
+                    <option value="">Tất cả chương</option>
+                </select>
             </div>
+
+            <!-- Status -->
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="open">Mở</option>
+                    <option value="upcoming">Sắp diễn ra</option>
+                    <option value="closed">Đóng</option>
+                </select>
+            </div>
+
+            <!-- Search -->
+            <div class="col-md-6">
+                <input id="searchFilter"
+                        class="form-control"
+                        placeholder="Tìm theo tên đề..." />
+            </div>
+
+
         </div>
+    </section>
+
+    <!-- Table -->
+    <section class="card p-3">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tên đề</th>
+                        <th>Khoảng thời gian</th>
+                        <th>Thời lượng</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="examTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center">Đang tải...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 
     </main>
 </div>
@@ -99,259 +102,257 @@
 @section Scripts {
     <script>
         const classId = @classId;
+        const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
         const API_BASE = "https://localhost:7167";
         let allExams = [];
 
+        function initBreadcrumb(name) {
+            setBreadcrumb([
+                { text: "Khóa học", url: "/Course/CourseList" },
+                { text: name, url: "/Course/ExamListInCourse/" + classId + (name ? "?className=" + encodeURIComponent(name) : "") },
+                { text: "Danh sách đề", url: null }
+            ]);
+        }
+
+        async function ensureClassNameAndBreadcrumb() {
+            if (classNameFromServer) {
+                initBreadcrumb(classNameFromServer);
+                return;
+            }
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
+                if (res.ok) {
+                    const data = await res.json();
+                    initBreadcrumb(data.className || "Lớp " + classId);
+                } else {
+                    initBreadcrumb("Lớp " + classId);
+                }
+            } catch {
+                initBreadcrumb("Lớp " + classId);
+            }
+        }
 
         async function loadExams() {
+
             const token = getToken();
+
             if (!token) {
-                console.warn("No token found, redirecting to login.");
+                showToast("Bạn chưa đăng nhập", "error");
                 window.location.href = "/Auth/Login";
                 return;
             }
 
-            const role = (getUserRole() || "").toLowerCase();
-            console.log("loadExams: role=", role, "classId=", classId);
-
-            if (role === "student" || role === "học sinh") {
+            const role = getUserRole();
+            if (role === "Student") {
                 const settingsMenu = document.getElementById("settingsMenuItem");
                 if (settingsMenu) settingsMenu.style.display = 'none';
+                const pendingMenu = document.getElementById("pendingMenuItem");
+                if (pendingMenu) pendingMenu.style.display = 'none';
+            }
+            if (role === "Teacher") {
+                const btnCreate = document.getElementById("btnCreateExam");
+                if (btnCreate) btnCreate.classList.remove("d-none");
             }
 
-            try {
-                await loadChapters(); 
+            await loadChapters();   // load chapter trước
 
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/exams`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
+            const response = await fetch(`${API_BASE}/api/Course/${classId}/exams`, {
+                headers: { "Authorization": "Bearer " + token }
+            });
 
-                if (response.status === 401) {
-                    showToast("Phiên đăng nhập hết hạn", "error");
-                    removeToken();
-                    window.location.href = "/Auth/Login";
-                    return;
-                }
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("API Error:", response.status, errorText);
-                    throw new Error(`API returned ${response.status}`);
-                }
-
-                const examsJson = await response.json();
-                console.log("Exams fetched successfully:", examsJson);
-                allExams = Array.isArray(examsJson) ? examsJson : [];
-                renderExams(allExams);
-                
-                initFilters();
-                
-                if (role === "teacher" || role === "giáo viên") {
-                    await setupAssignExamButton();
-                }
-            } catch (err) {
-                console.error("loadExams failed:", err);
-                const errorMessage = err.message || "Lỗi không xác định";
-                showToast(`Lỗi: ${errorMessage}. Vui lòng kiểm tra console hoặc làm mới trang.`, "error");
-                renderExams([]);
+            if (response.status === 401) {
+                showToast("Phiên đăng nhập hết hạn", "error");
+                removeToken();
+                window.location.href = "/Auth/Login";
+                return;
             }
+
+            allExams = await response.json();
+            renderExams(allExams);
+            initFilters();
         }
-
-        async function setupAssignExamButton() {
-            const btn = document.getElementById("btnAssignExam");
-            if (!btn) return;
-
-            try {
-                const token = getToken();
-                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const subCode = data.subjectCode || "";
-                    const className = data.className || data.name || "";
-                    const titleEl = document.getElementById("courseHeaderTitle");
-                    if (titleEl) titleEl.textContent = `Danh sách đề trong lớp - ${className} - ${subCode}`;
-
-                    btn.href = `/Exam/AssignExam?classId=${classId}&subjectCode=${subCode}`;
-                    btn.onclick = () => {
-                        sessionStorage.setItem('currentClassName', className);
-                    };
-                    btn.classList.remove("d-none");
-                }
-            } catch (e) { 
-                console.error("setupAssignExamButton failed:", e); 
-            }
-        }
-
         async function loadChapters() {
+
             const token = getToken();
             if (!token) return;
 
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/chapters`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
+            const response = await fetch(`${API_BASE}/api/Course/${classId}/chapters`, {
+                headers: { "Authorization": "Bearer " + token }
+            });
 
-                if (response.ok) {
-                    const chapters = await response.json();
-                    const chapterSelect = document.getElementById("chapterFilter");
-                    if (chapterSelect) {
-                        chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
-                        if (Array.isArray(chapters)) {
-                            chapters.forEach(ch => {
-                                chapterSelect.innerHTML += `<option value="${ch.chapterId}">${ch.name ?? ch.title}</option>`;
-                            });
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("loadChapters failed:", e);
+            if (!response.ok) {
+                console.error("Không load được chapters");
+                return;
             }
+
+            const chapters = await response.json();
+
+            const chapterSelect = document.getElementById("chapterFilter");
+            chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
+
+            if (!chapters || chapters.length === 0) return;
+
+            chapters.forEach(ch => {
+                chapterSelect.innerHTML += `
+                    <option value="${ch.chapterId}">
+                        ${ch.name ?? ch.title}
+                    </option>
+                `;
+            });
         }
         
         function getExamStatus(openAt, closeAt) {
+
             if (!openAt || !closeAt) return "unknown";
 
             const now = new Date();
             const openTime = new Date(openAt);
             const closeTime = new Date(closeAt);
 
+            const diffMinutes = (openTime - now) / 1000 / 60;
+
             if (now > closeTime) return "closed";
             if (now >= openTime && now <= closeTime) return "open";
+            if (diffMinutes > 0 && diffMinutes <= 30) return "upcoming";
+
             return "upcoming";
         }
 
         function applyFilter() {
+
             const chapter = document.getElementById("chapterFilter").value;
             const status = document.getElementById("statusFilter").value;
             const keyword = document.getElementById("searchFilter").value.toLowerCase();
 
-            document.querySelectorAll(".exam-row, .exam-card-item").forEach(row => {
-                const matchChapter = !chapter || row.dataset.chapter == chapter;
-                const matchStatus = !status || row.dataset.status === status;
-                const matchKeyword = !keyword || row.dataset.keyword.includes(keyword);
+            document.querySelectorAll(".exam-row").forEach(row => {
 
-                row.classList.toggle("d-none", !(matchChapter && matchStatus && matchKeyword));
+                const matchChapter =
+                    !chapter || row.dataset.chapter == chapter;
+
+                const matchStatus =
+                    !status || row.dataset.status === status;
+
+                const matchKeyword =
+                    !keyword || row.dataset.keyword.includes(keyword);
+
+                row.classList.toggle(
+                    "d-none",
+                    !(matchChapter && matchStatus && matchKeyword)
+                );
             });
         }
-
         function formatDateTime(dateString) {
             if (!dateString) return "-";
             return new Date(dateString).toLocaleString("vi-VN");
         }
 
-        function renderStatusBadge(status, dbStatus) {
-            if (dbStatus === 0)
-                return '<span class="badge rounded-pill bg-warning text-dark px-3 mt-1">Chờ duyệt</span>';
-            if (status === "open")
-                return '<span class="badge rounded-pill bg-success px-3 mt-1">Đang mở</span>';
-            if (status === "closed")
-                return '<span class="badge rounded-pill bg-secondary px-3 mt-1">Đã đóng</span>';
-            if (status === "upcoming")
-                return '<span class="badge rounded-pill bg-info text-white px-3 mt-1">Sắp diễn ra</span>';
+        function renderStatusBadge(status) {
 
-            return '<span class="badge rounded-pill bg-light text-muted px-3 mt-1">Không xác định</span>';
+            if (status === "open")
+                return '<span class="badge bg-primary">Mở</span>';
+
+            if (status === "closed")
+                return '<span class="badge bg-danger">Đóng</span>';
+
+            if (status === "upcoming")
+                return '<span class="badge bg-warning text-dark">Sắp diễn ra</span>';
+
+            return '<span class="badge bg-secondary">Không xác định</span>';
         }
 
         function renderExams(exams) {
-            const role = (getUserRole() || "").toLowerCase();
-            const isTeacher = role === "teacher" || role === "giáo viên";
-            
+
             const tbody = document.getElementById("examTableBody");
-            const cardView = document.getElementById("student-card-view");
-            const tableView = document.getElementById("teacher-table-view");
-            const mainContent = document.getElementById("main-content");
-
-            console.log("renderExams: isTeacher=", isTeacher, "examsCount=", exams.length);
-
-            if (!tbody || !cardView || !tableView || !mainContent) {
-                console.error("DOM missing in renderExams");
-                return;
-            }
-
             tbody.innerHTML = "";
-            cardView.innerHTML = "";
 
             if (!exams || exams.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5">Không có bài kiểm tra nào trong lớp này.</td></tr>`;
-                cardView.innerHTML = `<div class="col-12 text-center py-5 text-muted">Không có bài kiểm tra nào trong lớp này.</div>`;
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            Không có bài kiểm tra
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
-            if (isTeacher) {
-                mainContent.classList.add("teacher-theme");
-                tableView.classList.remove("d-none");
-                cardView.classList.add("d-none");
-            } else {
-                mainContent.classList.add("student-theme");
-                cardView.classList.remove("d-none");
-                tableView.classList.add("d-none");
-            }
+            const role = getUserRole();
+            const isStudent = role === "Student";
+            const isTeacher = role === "Teacher";
 
             exams.forEach(exam => {
-                if (!exam) return;
-                const title = exam.title || "Không có tiêu đề";
+
                 const status = getExamStatus(exam.openAt, exam.closeAt);
-                const detailsUrl = isTeacher
-                    ? `/Exam/ExamReview?examId=${exam.examId}&classId=${classId}`
+
+                const detailUrl = isTeacher
+                    ? `/Exam/ExamReview?examId=${exam.examId}`
                     : `/StudentExam/ExamPreview?examId=${exam.examId}`;
 
-                if (isTeacher) {
-                    let actions = `<a class="btn btn-sm btn-outline-primary me-1" href="${detailsUrl}"><i class="fas fa-eye"></i> Chi tiết</a>`;
-                    if (exam.status === 0) {
-                        actions += `<a class="btn btn-sm btn-warning text-dark me-1" href="${detailsUrl}"><i class="fas fa-search"></i> Hậu kì</a>`;
-                    }
-                    actions += `<a class="btn btn-sm btn-info text-white me-1" href="/Analytics/ExamAnalytics?examId=${exam.examId}"><i class="fas fa-chart-pie"></i> Phân tích</a>`;
-                    actions += `<a class="btn btn-sm btn-primary" href="/Exam/Edit/${exam.examId}"><i class="fas fa-edit"></i> Sửa</a>`;
+                let actions = `
+                    <a class="btn btn-sm btn-outline-secondary d-inline" href="${detailUrl}">
+                        Chi tiết
+                    </a>
+                `;
 
-                    const row = document.createElement("tr");
-                    row.classList.add("exam-row");
-                    row.dataset.chapter = exam.chapterId || "";
-                    row.dataset.status = status;
-                    row.dataset.keyword = title.toLowerCase();
-
-                    row.innerHTML = `
-                        <td class="fw-bold text-dark">${title}</td>
-                        <td class="small text-muted">${formatDateTime(exam.openAt)} <br> ${formatDateTime(exam.closeAt)}</td>
-                        <td class="text-center">${exam.durationMinutes ?? '-'} phút</td>
-                        <td class="text-center">${renderStatusBadge(status, exam.status)}</td>
-                        <td class="text-end text-nowrap">${actions}</td>
+                if (isStudent && status === "open") {
+                    actions += `
+                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam?examId=${exam.examId}">
+                            Vào làm
+                        </a>
                     `;
-                    tbody.appendChild(row);
-                } else {
-                    const card = document.createElement("div");
-                    card.className = "exam-card exam-card-item";
-                    card.dataset.chapter = exam.chapterId || "";
-                    card.dataset.status = status;
-                    card.dataset.keyword = title.toLowerCase();
-
-                    let actionButtons = `<a href="${detailsUrl}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1">Chi tiết</a>`;
-                    if (status === "open") {
-                        actionButtons += `<a href="/StudentExam/TakeExam?examId=${exam.examId}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">Vào làm</a>`;
-                    }
-                    if (status === "closed" || exam.showScore) {
-                        actionButtons += `<a href="/Analytics/StudentResult?examId=${exam.examId}" class="btn btn-sm btn-info text-white rounded-pill px-3">Kết quả</a>`;
-                    }
-
-                    card.innerHTML = `
-                        <div class="mb-2 d-flex justify-content-between align-items-center">
-                            ${renderStatusBadge(status, exam.status)}
-                            <span class="small text-muted"><i class="fas fa-book-open me-1"></i> ${exam.totalQuestions || 0} câu</span>
-                        </div>
-                        <h3 class="exam-card-title">${title}</h3>
-                        <div class="exam-card-meta"><i class="far fa-clock me-1"></i> ${exam.durationMinutes ?? '-'} phút</div>
-                        <div class="exam-card-meta mb-3"><i class="far fa-calendar-alt me-1"></i> Hạn: ${formatDateTime(exam.closeAt)}</div>
-                        <div class="exam-card-footer border-top-0 pt-0">
-                             <div class="d-flex w-100 justify-content-end">${actionButtons}</div>
-                        </div>
-                    `;
-                    cardView.appendChild(card);
                 }
+
+                if (isStudent && (status === "closed" || exam.showScore)) {
+                    actions += `
+                        <a class="btn btn-sm btn-info text-white d-inline"
+                           href="/Analytics/StudentResult?examId=${exam.examId}">
+                            <i class="fas fa-chart-bar"></i> Xem kết quả
+                        </a>
+                    `;
+                }
+
+                if (isTeacher) {
+                    actions += `
+                        <a class="btn btn-sm btn-info text-white"
+                           href="/Analytics/ExamSubmitResults?examId=${exam.examId}&classId=${classId}">
+                            <i class="fas fa-chart-bar"></i> Xem kết quả
+                        </a>
+                        <a class="btn btn-sm btn-outline-info"
+                           href="/Analytics/ExamAnalytics?examId=${exam.examId}">
+                            <i class="fas fa-chart-pie"></i> Phân tích
+                        </a>
+                        <a class="btn btn-sm btn-primary"
+                           href="/Exam/Edit/${exam.examId}">
+                            Sửa
+                        </a>
+                    `;
+                }
+
+                const row = document.createElement("tr");
+
+                row.classList.add("exam-row");
+                row.dataset.chapter = exam.chapterId || "";
+                row.dataset.status = status;
+                row.dataset.keyword = exam.title.toLowerCase();
+
+                row.innerHTML = `
+                    <td>${exam.title}</td>
+                    <td>${formatDateTime(exam.openAt)} - ${formatDateTime(exam.closeAt)}</td>
+                    <td>${exam.durationMinutes ?? '-'} phút</td>
+                    <td>${renderStatusBadge(status)}</td>
+                    <td>${actions}</td>
+                `;
+
+                tbody.appendChild(row);
             });
         }
 
-        document.addEventListener("DOMContentLoaded", loadExams);
+        document.addEventListener("DOMContentLoaded", function () {
+            ensureClassNameAndBreadcrumb();
+            loadExams();
+        });
         function initFilters() {
 
             const chapter = document.getElementById("chapterFilter");

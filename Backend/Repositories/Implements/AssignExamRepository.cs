@@ -281,10 +281,11 @@ public class AssignExamRepository : IAssignExamRepository
     }
 
     public async Task<List<QuestionListItemDto>> GetAlternativeQuestionsAsync(
-        int subjectId, int difficulty, string[] activeStatus, List<int> excludeIds, CancellationToken ct)
+        int subjectId, int chapterId, int difficulty, string[] activeStatus, List<int> excludeIds, CancellationToken ct)
     {
         return await BuildQuestionQuery(activeStatus)
             .Where(z => z.s.SubjectId == subjectId &&
+                        z.q.ChapterId == chapterId &&
                         z.q.Difficulty == difficulty &&
                         !excludeIds.Contains(z.q.QuestionId))
             .Take(50)
@@ -301,8 +302,26 @@ public class AssignExamRepository : IAssignExamRepository
         await _db.Database.ExecuteSqlRawAsync(
             "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
             paperId, newQuestionId);
-            
-        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task SwapExamQuestionGloballyAsync(int examId, int oldQuestionId, int newQuestionId, CancellationToken ct)
+    {
+        var paperIds = await _db.Papers
+            .Where(p => p.ExamId == examId && p.Questions.Any(q => q.QuestionId == oldQuestionId))
+            .Select(p => p.PaperId)
+            .ToListAsync(ct);
+
+        if (paperIds.Count == 0) return;
+
+        var idsStr = string.Join(",", paperIds);
+        
+        await _db.Database.ExecuteSqlRawAsync(
+            $"DELETE FROM PaperQuestion WHERE PaperId IN ({idsStr}) AND QuestionId = {{0}}",
+            oldQuestionId);
+
+        var insertBatch = string.Join(",", paperIds.Select(pid => $"({pid}, {newQuestionId})"));
+        await _db.Database.ExecuteSqlRawAsync(
+            $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {insertBatch}");
     }
 
     public async Task<Paper?> GetPaperWithQuestionsAsync(int paperId, CancellationToken ct)

@@ -33,6 +33,7 @@ namespace Backend.DTOs.Question
         public int? GroupAnswerId { get; set; }
         public string Name { get; set; } = null!;
         public int? DependsOnGroupId { get; set; }
+        public int? DependsOnGroupIndex { get; set; }
         public List<int> SegmentIndices { get; set; } = new();
         public List<int> BlankIndices { get; set; } = new();
     }

@@ -1,5 +1,4 @@
 using Backend.Models;
-using Backend.DTOs.Analytics;
 
 namespace Backend.Repositories.Interfaces;
 
@@ -10,11 +9,13 @@ public interface IAnalyticsRepository
     /// </summary>
     Task<Exam?> GetExamWithFullGraphAsync(int examId);
 
-    Task<List<StudentSubmissionSummaryDto>> GetExamSubmissionsSummaryAsync(int examId);
+    /// <summary>
+    /// Lấy danh sách học sinh trong lớp (ClassMembers) kèm thông tin Student.
+    /// </summary>
+    Task<List<ClassMember>> GetClassMembersWithStudentsAsync(int classId);
 
-    Task<List<ChapterStatsSummaryDto>> GetChapterStatsAsync(int examId);
-
-    Task<List<DifficultyStatsSummaryDto>> GetDifficultyStatsAsync(int examId);
-
-    Task<List<QuestionStatsSummaryDto>> GetHardestQuestionsAsync(int examId, int topCount);
+    /// <summary>
+    /// Lấy Submission theo ID kèm Paper (để lấy ExamId).
+    /// </summary>
+    Task<Submission?> GetSubmissionByIdWithPaperAsync(int submissionId);
 }

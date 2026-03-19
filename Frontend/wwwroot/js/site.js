@@ -165,6 +165,42 @@ function showToast(message, type = 'success', duration = 3000) {
     });
 }
 
+/**
+ * Set breadcrumb in header (Classroom-style: Khóa học > [Tên lớp] > Danh sách đề)
+ * @param {Array<{text: string, url?: string|null}>} items - Each item: text, url (null/undefined = current, no link)
+ */
+function setBreadcrumb(items) {
+    const container = document.getElementById('header-breadcrumb');
+    if (!container || !Array.isArray(items) || items.length === 0) {
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    const parts = [];
+    items.forEach((item, i) => {
+        const text = item.text || '';
+        const url = item.url;
+
+        if (i > 0) {
+            parts.push('<span class="breadcrumb-sep">›</span>');
+        }
+
+        if (url) {
+            parts.push(`<a href="${encodeURI(url)}">${escapeHtml(text)}</a>`);
+        } else {
+            parts.push(`<span class="breadcrumb-current">${escapeHtml(text)}</span>`);
+        }
+    });
+
+    container.innerHTML = parts.join('');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function showConfirm(message, title = 'Xác nhận', onConfirm) {
     const modalEl = document.getElementById('globalConfirmModal');
     if (!modalEl) return;
