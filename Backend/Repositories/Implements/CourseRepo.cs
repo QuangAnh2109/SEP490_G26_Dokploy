@@ -95,15 +95,19 @@ namespace Backend.Repositories.Implements
         // - 1 => Open (now between OpenAt and CloseAt)
         // - 2 => Upcoming (within 30 minutes before OpenAt)
         // - 0 => Closed (otherwise)
-        public async Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId)
+        public async Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
         {
             var now = DateTime.UtcNow;
             var upcomingThreshold = now.AddMinutes(30);
 
-            // Include exams where VisibleFrom is null (considered visible immediately)
-            // or VisibleFrom is in the past (<= now).
-            var query = _context.Exams
-                .Where(e => e.ClassId == classId && (e.VisibleFrom == null || e.VisibleFrom <= now));
+            // Base query for exams in the class
+            var query = _context.Exams.Where(e => e.ClassId == classId);
+
+            // Students only see visible exams. Teachers see all.
+            if (!isTeacher)
+            {
+                query = query.Where(e => e.VisibleFrom == null || e.VisibleFrom <= now);
+            }
 
             // Project to DTO including ChapterId and computed Status
             return await query

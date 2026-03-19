@@ -35,9 +35,9 @@ namespace Backend.Services.Implements
         }
 
         // New: delegate to repo
-        public Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId)
+        public Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
         {
-            return _repo.GetExamsByClassAsync(classId);
+            return _repo.GetExamsByClassAsync(classId, isTeacher);
         }
         public async Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto)
         {

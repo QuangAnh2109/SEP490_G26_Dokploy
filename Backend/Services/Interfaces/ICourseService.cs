@@ -12,7 +12,7 @@ namespace Backend.Services.Interfaces
         Task<CourseDTO?> GetByIdAsync(int classId);
 
         // New: service method to get visible exams for a class
-        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId);
+        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false);
 
         Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto);
 

@@ -104,46 +104,62 @@
 
 
         async function loadExams() {
-
             const token = getToken();
-
             if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
+                console.warn("No token found, redirecting to login.");
                 window.location.href = "/Auth/Login";
                 return;
             }
 
-            const role = getUserRole();
-            if (role === "Student") {
+            const role = (getUserRole() || "").toLowerCase();
+            console.log("loadExams: role=", role, "classId=", classId);
+
+            if (role === "student" || role === "học sinh") {
                 const settingsMenu = document.getElementById("settingsMenuItem");
                 if (settingsMenu) settingsMenu.style.display = 'none';
             }
 
-            await loadChapters();   // load chapter trước
+            try {
+                await loadChapters(); 
 
-            const response = await fetch(`${API_BASE}/api/Course/${classId}/exams`, {
-                headers: { "Authorization": "Bearer " + token }
-            });
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/exams`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
 
-            if (response.status === 401) {
-                showToast("Phiên đăng nhập hết hạn", "error");
-                removeToken();
-                window.location.href = "/Auth/Login";
-                return;
+                if (response.status === 401) {
+                    showToast("Phiên đăng nhập hết hạn", "error");
+                    removeToken();
+                    window.location.href = "/Auth/Login";
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API Error:", response.status, errorText);
+                    throw new Error(`API returned ${response.status}`);
+                }
+
+                const examsJson = await response.json();
+                console.log("Exams fetched successfully:", examsJson);
+                allExams = Array.isArray(examsJson) ? examsJson : [];
+                renderExams(allExams);
+                
+                initFilters();
+                
+                if (role === "teacher" || role === "giáo viên") {
+                    await setupAssignExamButton();
+                }
+            } catch (err) {
+                console.error("loadExams failed:", err);
+                const errorMessage = err.message || "Lỗi không xác định";
+                showToast(`Lỗi: ${errorMessage}. Vui lòng kiểm tra console hoặc làm mới trang.`, "error");
+                renderExams([]);
             }
-
-            allExams = await response.json();
-            renderExams(allExams);
-            initFilters();
-            await setupAssignExamButton();
         }
 
         async function setupAssignExamButton() {
             const btn = document.getElementById("btnAssignExam");
             if (!btn) return;
-
-            const role = getUserRole();
-            if (role !== "Teacher" && role !== "Giáo viên") return;
 
             try {
                 const token = getToken();
@@ -163,57 +179,50 @@
                     };
                     btn.classList.remove("d-none");
                 }
-            } catch (e) { console.error("Error setting up assign exam button", e); }
+            } catch (e) { 
+                console.error("setupAssignExamButton failed:", e); 
+            }
         }
-        async function loadChapters() {
 
+        async function loadChapters() {
             const token = getToken();
             if (!token) return;
 
-            const response = await fetch(`${API_BASE}/api/Course/${classId}/chapters`, {
-                headers: { "Authorization": "Bearer " + token }
-            });
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/chapters`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
 
-            if (!response.ok) {
-                console.error("Không load được chapters");
-                return;
+                if (response.ok) {
+                    const chapters = await response.json();
+                    const chapterSelect = document.getElementById("chapterFilter");
+                    if (chapterSelect) {
+                        chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
+                        if (Array.isArray(chapters)) {
+                            chapters.forEach(ch => {
+                                chapterSelect.innerHTML += `<option value="${ch.chapterId}">${ch.name ?? ch.title}</option>`;
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("loadChapters failed:", e);
             }
-
-            const chapters = await response.json();
-
-            const chapterSelect = document.getElementById("chapterFilter");
-            chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
-
-            if (!chapters || chapters.length === 0) return;
-
-            chapters.forEach(ch => {
-                chapterSelect.innerHTML += `
-                    <option value="${ch.chapterId}">
-                        ${ch.name ?? ch.title}
-                    </option>
-                `;
-            });
         }
         
         function getExamStatus(openAt, closeAt) {
-
             if (!openAt || !closeAt) return "unknown";
 
             const now = new Date();
             const openTime = new Date(openAt);
             const closeTime = new Date(closeAt);
 
-            const diffMinutes = (openTime - now) / 1000 / 60;
-
             if (now > closeTime) return "closed";
             if (now >= openTime && now <= closeTime) return "open";
-            if (diffMinutes > 0 && diffMinutes <= 30) return "upcoming";
-
             return "upcoming";
         }
 
         function applyFilter() {
-
             const chapter = document.getElementById("chapterFilter").value;
             const status = document.getElementById("statusFilter").value;
             const keyword = document.getElementById("searchFilter").value.toLowerCase();
@@ -226,6 +235,7 @@
                 row.classList.toggle("d-none", !(matchChapter && matchStatus && matchKeyword));
             });
         }
+
         function formatDateTime(dateString) {
             if (!dateString) return "-";
             return new Date(dateString).toLocaleString("vi-VN");
@@ -234,13 +244,10 @@
         function renderStatusBadge(status, dbStatus) {
             if (dbStatus === 0)
                 return '<span class="badge rounded-pill bg-warning text-dark px-3 mt-1">Chờ duyệt</span>';
-
             if (status === "open")
                 return '<span class="badge rounded-pill bg-success px-3 mt-1">Đang mở</span>';
-
             if (status === "closed")
                 return '<span class="badge rounded-pill bg-secondary px-3 mt-1">Đã đóng</span>';
-
             if (status === "upcoming")
                 return '<span class="badge rounded-pill bg-info text-white px-3 mt-1">Sắp diễn ra</span>';
 
@@ -248,10 +255,20 @@
         }
 
         function renderExams(exams) {
+            const role = (getUserRole() || "").toLowerCase();
+            const isTeacher = role === "teacher" || role === "giáo viên";
+            
             const tbody = document.getElementById("examTableBody");
             const cardView = document.getElementById("student-card-view");
             const tableView = document.getElementById("teacher-table-view");
             const mainContent = document.getElementById("main-content");
+
+            console.log("renderExams: isTeacher=", isTeacher, "examsCount=", exams.length);
+
+            if (!tbody || !cardView || !tableView || !mainContent) {
+                console.error("DOM missing in renderExams");
+                return;
+            }
 
             tbody.innerHTML = "";
             cardView.innerHTML = "";
@@ -262,18 +279,19 @@
                 return;
             }
 
-            const role = getUserRole();
-            const isTeacher = role === "Teacher" || role === "Giáo viên";
-
             if (isTeacher) {
                 mainContent.classList.add("teacher-theme");
                 tableView.classList.remove("d-none");
+                cardView.classList.add("d-none");
             } else {
                 mainContent.classList.add("student-theme");
                 cardView.classList.remove("d-none");
+                tableView.classList.add("d-none");
             }
 
             exams.forEach(exam => {
+                if (!exam) return;
+                const title = exam.title || "Không có tiêu đề";
                 const status = getExamStatus(exam.openAt, exam.closeAt);
                 const detailsUrl = isTeacher
                     ? `/Exam/ExamReview?examId=${exam.examId}&classId=${classId}`
@@ -281,7 +299,6 @@
 
                 if (isTeacher) {
                     let actions = `<a class="btn btn-sm btn-outline-primary me-1" href="${detailsUrl}"><i class="fas fa-eye"></i> Chi tiết</a>`;
-                    
                     if (exam.status === 0) {
                         actions += `<a class="btn btn-sm btn-warning text-dark me-1" href="${detailsUrl}"><i class="fas fa-search"></i> Hậu kì</a>`;
                     }
@@ -292,10 +309,10 @@
                     row.classList.add("exam-row");
                     row.dataset.chapter = exam.chapterId || "";
                     row.dataset.status = status;
-                    row.dataset.keyword = exam.title.toLowerCase();
+                    row.dataset.keyword = title.toLowerCase();
 
                     row.innerHTML = `
-                        <td class="fw-bold text-dark">${exam.title}</td>
+                        <td class="fw-bold text-dark">${title}</td>
                         <td class="small text-muted">${formatDateTime(exam.openAt)} <br> ${formatDateTime(exam.closeAt)}</td>
                         <td class="text-center">${exam.durationMinutes ?? '-'} phút</td>
                         <td class="text-center">${renderStatusBadge(status, exam.status)}</td>
@@ -307,14 +324,12 @@
                     card.className = "exam-card exam-card-item";
                     card.dataset.chapter = exam.chapterId || "";
                     card.dataset.status = status;
-                    card.dataset.keyword = exam.title.toLowerCase();
+                    card.dataset.keyword = title.toLowerCase();
 
                     let actionButtons = `<a href="${detailsUrl}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1">Chi tiết</a>`;
-                    
                     if (status === "open") {
                         actionButtons += `<a href="/StudentExam/TakeExam?examId=${exam.examId}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">Vào làm</a>`;
                     }
-                    
                     if (status === "closed" || exam.showScore) {
                         actionButtons += `<a href="/Analytics/StudentResult?examId=${exam.examId}" class="btn btn-sm btn-info text-white rounded-pill px-3">Kết quả</a>`;
                     }
@@ -324,7 +339,7 @@
                             ${renderStatusBadge(status, exam.status)}
                             <span class="small text-muted"><i class="fas fa-book-open me-1"></i> ${exam.totalQuestions || 0} câu</span>
                         </div>
-                        <h3 class="exam-card-title">${exam.title}</h3>
+                        <h3 class="exam-card-title">${title}</h3>
                         <div class="exam-card-meta"><i class="far fa-clock me-1"></i> ${exam.durationMinutes ?? '-'} phút</div>
                         <div class="exam-card-meta mb-3"><i class="far fa-calendar-alt me-1"></i> Hạn: ${formatDateTime(exam.closeAt)}</div>
                         <div class="exam-card-footer border-top-0 pt-0">

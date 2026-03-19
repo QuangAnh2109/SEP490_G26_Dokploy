@@ -29,7 +29,7 @@ namespace Backend.Controllers
 
 
         [HttpGet("my")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
         public async Task<IActionResult> GetMyClasses()
         {
             // Keep same behaviour as before; now it will run without auth
@@ -46,16 +46,18 @@ namespace Backend.Controllers
 
         // New: return exams for a class that are visible now
         [HttpGet("{id}/exams")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            var exams = await _service.GetExamsByClassAsync(id);
+            bool isTeacher = User.IsInRole("Teacher") || User.IsInRole("Giáo viên");
+            _logger.LogInformation("GetExamsForClass: id={id}, userId={userId}, isTeacher={isTeacher}", id, idClaim, isTeacher);
+            var exams = await _service.GetExamsByClassAsync(id, isTeacher);
             return Ok(exams);
         }
 
         [HttpGet("{id}/chapters")]
-        [Authorize]
+        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
         public async Task<IActionResult> GetChaptersForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -113,7 +115,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Giáo viên")]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -139,7 +141,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/students")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize(Roles = "Teacher,Student,Giáo viên,Học sinh")]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
             var students = await _service.GetStudentsInClassAsync(id);
@@ -147,7 +149,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/settings")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Giáo viên")]
         public async Task<IActionResult> GetClassSettings(int id)
         {
             var course = await _service.GetByIdAsync(id);
@@ -156,7 +158,7 @@ namespace Backend.Controllers
         }
 
         [HttpPut("{id}/settings")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Giáo viên")]
         public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.ClassName))
@@ -169,7 +171,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("subjects")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Giáo viên")]
         public IActionResult GetSubjects()
         {
             var subjects = _context.Subjects

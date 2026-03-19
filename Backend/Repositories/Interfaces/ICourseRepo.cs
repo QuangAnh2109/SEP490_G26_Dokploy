@@ -10,7 +10,7 @@ namespace Backend.Repositories.Interfaces
         Task<List<CourseDTO>> GetCoursesForUserAsync(int userId);
         Task<List<CourseDTO>> GetAllAsync();
         Task<CourseDTO?> GetByIdAsync(int classId);
-        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId);
+        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false);
 
         Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId);
         Task<CourseDTO> CreateCourseAsync(Class newClass);

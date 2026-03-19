@@ -147,7 +147,7 @@ public partial class MtcaSep490G26Context : DbContext
                 .IsConcurrencyToken();
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.MaxAttempts).HasDefaultValue(1);
-            entity.Property(e => e.AnswerTimingMode).HasColumnName("AllowLateSubmission").HasDefaultValue(0);
+            entity.Property(e => e.AnswerTimingMode).HasDefaultValue(0);
             entity.Property(e => e.Status).HasDefaultValue(1);
             entity.Property(e => e.Title).HasMaxLength(500);
             entity.Property(e => e.UpdatedAtUtc).HasDefaultValueSql("(getutcdate())");
