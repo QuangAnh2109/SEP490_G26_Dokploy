@@ -250,9 +250,11 @@ public class AssignExamRepository : IAssignExamRepository
             return;
         }
 
-        // Optimized Batch Insert: Combine all questions into a single INSERT statement
-        // to minimize database roundtrips.
-        var values = string.Join(",", questionIds.Select(qid => $"({paperId}, {qid})"));
+        // Use Distinct() to prevent duplicate hits within the same paper (Creation)
+        var uniqueIds = questionIds.Distinct().ToList();
+
+        // Optimized Batch Insert
+        var values = string.Join(",", uniqueIds.Select(qid => $"({paperId}, {qid})"));
         var sql = $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {values}";
 
         await _db.Database.ExecuteSqlRawAsync(sql, ct);
@@ -299,29 +301,49 @@ public class AssignExamRepository : IAssignExamRepository
             "DELETE FROM PaperQuestion WHERE PaperId = {0} AND QuestionId = {1}",
             paperId, oldQuestionId);
 
-        await _db.Database.ExecuteSqlRawAsync(
-            "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
-            paperId, newQuestionId);
+        // Check if question already exists in this paper to avoid PK violation
+        bool exists = await _db.Papers
+            .Where(p => p.PaperId == paperId)
+            .AnyAsync(p => p.Questions.Any(q => q.QuestionId == newQuestionId), ct);
+
+        if (!exists)
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES ({0}, {1})",
+                paperId, newQuestionId);
+        }
     }
 
     public async Task SwapExamQuestionGloballyAsync(int examId, int oldQuestionId, int newQuestionId, CancellationToken ct)
     {
-        var paperIds = await _db.Papers
+        var paperIdsToProcess = await _db.Papers
             .Where(p => p.ExamId == examId && p.Questions.Any(q => q.QuestionId == oldQuestionId))
             .Select(p => p.PaperId)
             .ToListAsync(ct);
 
-        if (paperIds.Count == 0) return;
+        if (paperIdsToProcess.Count == 0) return;
 
-        var idsStr = string.Join(",", paperIds);
-        
+        // Delete old question from all papers that have it
+        var idsStr = string.Join(",", paperIdsToProcess);
         await _db.Database.ExecuteSqlRawAsync(
             $"DELETE FROM PaperQuestion WHERE PaperId IN ({idsStr}) AND QuestionId = {{0}}",
             oldQuestionId);
 
-        var insertBatch = string.Join(",", paperIds.Select(pid => $"({pid}, {newQuestionId})"));
-        await _db.Database.ExecuteSqlRawAsync(
-            $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {insertBatch}");
+        // Find which papers ALREADY have the NEW question
+        var papersWithNew = await _db.Papers
+            .Where(p => p.ExamId == examId && p.Questions.Any(q => q.QuestionId == newQuestionId))
+            .Select(p => p.PaperId)
+            .ToListAsync(ct);
+
+        // Only insert NewQuestion into papers that don't have it yet
+        var targetIds = paperIdsToProcess.Except(papersWithNew).ToList();
+
+        if (targetIds.Count > 0)
+        {
+            var insertBatch = string.Join(",", targetIds.Select(pid => $"({pid}, {newQuestionId})"));
+            await _db.Database.ExecuteSqlRawAsync(
+                $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {insertBatch}");
+        }
     }
 
     public async Task<Paper?> GetPaperWithQuestionsAsync(int paperId, CancellationToken ct)

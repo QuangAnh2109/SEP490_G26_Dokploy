@@ -128,51 +128,51 @@ public class AssignExamService : IAssignExamService
 
             foreach (var row in bp.ExamBlueprintChapters)
             {
-                // Note: The pool is already filtered by Chapter and Difficulty (Blueprint Row),
-                // so we are not shuffling the entire question bank.
-                var pool = await _repo.GetAllQuestionIdsForBlueprintRowAsync(row.ChapterId, row.Difficulty, ActiveStatus, ct);
-                if (pool.Count < row.TotalOfQuestions)
+                var bank = await _repo.GetAllQuestionIdsForBlueprintRowAsync(row.ChapterId, row.Difficulty, ActiveStatus, ct);
+                if (bank.Count < row.TotalOfQuestions)
                 {
-                    throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}.");
+                    throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}. Needs {row.TotalOfQuestions}, has {bank.Count}.");
                 }
 
-                // Always use randomized selection to maximize variety across papers
-                var totalPool = new List<int>();
-                int totalNeeded = r.PaperCount * row.TotalOfQuestions;
+                // Rolling Shuffle Strategy: 
+                // We use a "streaming" approach to pull questions from a shuffled bank.
+                // This ensures every question is used once before any question is used twice,
+                // minimizing overlap across papers and guaranteeing uniqueness within one paper.
+                var shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
+                int bankIdx = 0;
 
-                // Shuffle the available bank once
-                var shuffledBank = pool.OrderBy(_ => Guid.NewGuid()).ToList();
-
-                // Fill the totalPool (handling the case where bank is smaller than needed by allowing repeats)
-                while (totalPool.Count < totalNeeded)
-                {
-                    var pass = shuffledBank.OrderBy(_ => Guid.NewGuid()).ToList();
-                    int remaining = totalNeeded - totalPool.Count;
-                    totalPool.AddRange(pass.Take(Math.Min(pass.Count, remaining)));
-                }
-
-                // Distribute to papers
                 for (int i = 0; i < r.PaperCount; i++)
                 {
-                    // Pick k questions for this paper from the totalPool
-                    // (Shuffle the pool to pick randomly)
-                    totalPool = totalPool.OrderBy(_ => Guid.NewGuid()).ToList();
-                    var paperSet = totalPool.Take(row.TotalOfQuestions).ToList();
+                    var paperSet = new List<int>();
+                    int k = row.TotalOfQuestions;
 
-                    // Remove these questions from totalPool so they aren't reused for other papers (if possible)
-                    foreach (var qid in paperSet) totalPool.Remove(qid);
-
-                    // If user requested shuffle, randomize the order WITHIN the paper
-                    if (r.ShuffleQuestion)
+                    if (bankIdx + k > shuffledBank.Count)
                     {
-                        paperSet = paperSet.OrderBy(_ => Guid.NewGuid()).ToList();
+                        // Take the remainder of the current shuffle
+                        var firstPart = shuffledBank.GetRange(bankIdx, shuffledBank.Count - bankIdx);
+                        paperSet.AddRange(firstPart);
+                        int remainingCount = k - firstPart.Count;
+
+                        // Reshuffle the entire bank for the next "lap"
+                        shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
+                        
+                        // Pick the rest from the new shuffle, ensuring no duplicates within THIS paper
+                        // (Only an issue if k > bank.Count, which is prevented by the check above)
+                        var nextPart = shuffledBank.Except(firstPart).Take(remainingCount).ToList();
+                        paperSet.AddRange(nextPart);
+
+                        // Update index to start after what we just took from the new shuffle
+                        // Note: If we took everything from the new shuffle, we'll hit the 'if' again next time.
+                        bankIdx = remainingCount;
                     }
                     else
                     {
-                        // Otherwise, sort them by ID (or keep as is) to be predictable but still different questions
-                        paperSet = paperSet.OrderBy(x => x).ToList();
+                        paperSet.AddRange(shuffledBank.GetRange(bankIdx, k));
+                        bankIdx += k;
                     }
 
+                    // Distribute the questions into the paper list
+                    // If ShuffleQuestion is requested, the order WITHIN the paper will be random later
                     papersQuestions[i].AddRange(paperSet);
                 }
             }

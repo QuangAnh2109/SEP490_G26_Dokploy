@@ -117,7 +117,7 @@ public partial class MtcaSep490G26Context : DbContext
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-            entity.Property(e => e.MemberStatus).HasDefaultValue(1);
+
 
             entity.HasOne(d => d.Class).WithMany(p => p.ClassMembers)
                 .HasForeignKey(d => d.ClassId)
