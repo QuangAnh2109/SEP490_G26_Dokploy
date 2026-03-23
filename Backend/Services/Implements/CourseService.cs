@@ -119,10 +119,15 @@ namespace Backend.Services.Implements
                 throw new Exception("Lỗi khi thêm học sinh vào lớp.");
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == studentEmail);
+            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == studentEmail);
             if (user == null)
             {
                 throw new Exception("Học sinh chưa có tài khoản trong hệ thống.");
+            }
+
+            if (user.Role?.Name != UserRoles.Student)
+            {
+                throw new Exception("Chỉ có thể mời người dùng có vai trò là học sinh tham gia lớp học.");
             }
 
             var course = await _repo.GetByIdAsync(classId);
