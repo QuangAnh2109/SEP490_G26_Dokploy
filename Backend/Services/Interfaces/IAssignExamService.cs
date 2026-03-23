@@ -37,4 +37,12 @@ public interface IAssignExamService
     Task<CreateAssignExamResponse> CreateAssignExamAsync(
         CreateAssignExamRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ExamReviewDto> GetExamReviewAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<QuestionListItemDto>> GetAlternativeQuestionsAsync(int paperId, int questionId, CancellationToken cancellationToken = default);
+
+    Task SwapPaperQuestionAsync(SwapQuestionRequestDto request, CancellationToken cancellationToken = default);
+
+    Task ApproveExamAsync(int examId, CancellationToken cancellationToken = default);
 }

@@ -48,13 +48,26 @@
         }
     };
 
-    const setLatexContent = (element, latex) => {
+    const UTILS = window.QuestionEditorUtils;
+
+    const setLatexContent = (element, latex, { inline = false } = {}) => {
         if (!element) return;
         if (!latex || !String(latex).trim()) {
             element.textContent = '-';
             return;
         }
-        element.textContent = '\\(' + latex + '\\)';
+        const text = String(latex).trim();
+        if (inline && window.katex) {
+            try {
+                katex.render(text, element, { throwOnError: false, displayMode: false, trust: true, strict: false });
+            } catch (e) {
+                element.textContent = text;
+            }
+        } else if (UTILS && UTILS.renderLatexInElement) {
+            UTILS.renderLatexInElement(element, text);
+        } else {
+            element.textContent = text;
+        }
     };
 
     const loadSubjects = async () => {
@@ -158,7 +171,7 @@
             answers.forEach((a, idx) => {
                 const div = document.createElement('div');
                 div.className = 'answer-item' + (a.isCorrect ? ' correct' : '');
-                const displayVal = isFillBlank ? (a.correctAnswer || a.content || '') : (a.content || a.correctAnswer || '');
+                const displayVal = isFillBlank ? (a.correctAnswer || '') : (a.content || a.correctAnswer || '');
                 const span = document.createElement('span');
                 span.className = 'answer-content';
                 if (isFillBlank) {
@@ -179,7 +192,7 @@
                     div.appendChild(icon);
                 }
                 answersEl.appendChild(div);
-                setLatexContent(span, displayVal || '(Đáp án trống)');
+                setLatexContent(span, displayVal || '(Đáp án trống)', { inline: true });
             });
         }
 
@@ -190,8 +203,16 @@
             explanationWrap.style.display = qDetail.explanation ? 'flex' : 'none';
         }
 
-        if (typeof MathLive !== 'undefined' && MathLive.renderMathInElement) {
-            MathLive.renderMathInElement(detailRow);
+        if (window.renderMathInElement) {
+            renderMathInElement(detailRow, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                trust: true, strict: false
+            });
         }
 
         if (editBtn) {

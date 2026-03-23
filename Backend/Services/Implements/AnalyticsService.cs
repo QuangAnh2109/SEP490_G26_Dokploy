@@ -217,11 +217,11 @@ public class AnalyticsService : IAnalyticsService
             throw new KeyNotFoundException($"Không tìm thấy bài làm trong dữ liệu bài thi.");
 
         // Giáo viên luôn xem được điểm và đáp án
-        var dto = await BuildSubmissionAnalyticsDtoAsync(exam, targetSubmission, showScore: true, showAnswer: true);
+        var dto = await BuildSubmissionAnalyticsDtoAsync(exam, targetSubmission, showScore: 1, showAnswer: 2);
         return dto;
     }
 
-    private async Task<StudentSubmissionAnalyticsDto> BuildSubmissionAnalyticsDtoAsync(Exam exam, Submission submission, bool showScore, bool showAnswer)
+    private async Task<StudentSubmissionAnalyticsDto> BuildSubmissionAnalyticsDtoAsync(Exam exam, Submission submission, int showScore, int showAnswer)
     {
         var dto = new StudentSubmissionAnalyticsDto
         {
@@ -261,8 +261,8 @@ public class AnalyticsService : IAnalyticsService
                     Content = qa.Content,
                     StudentResponse = sa?.Response,
                     IsSelected = sa != null,
-                    IsCorrect = showAnswer ? qa.IsCorrect : null,
-                    CorrectAnswer = showAnswer ? qa.CorrectAnswer : null
+                    IsCorrect = showAnswer != 0 ? qa.IsCorrect : null,
+                    CorrectAnswer = showAnswer != 0 ? qa.CorrectAnswer : null
                 });
                 if (sa != null) { if (!AnalyticsHelper.CheckIsCorrect(qa, sa)) questionCorrect = false; }
                 else if (qa.IsCorrect == true) questionCorrect = false;
@@ -272,7 +272,7 @@ public class AnalyticsService : IAnalyticsService
             dto.AnswerReview.Add(review);
         }
 
-        if (showScore)
+        if (showScore != 0)
         {
             dto.TotalPoints = submission.TotalPoints;
             dto.CorrectCount = correctCount;

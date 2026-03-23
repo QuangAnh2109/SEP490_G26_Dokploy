@@ -40,3 +40,5 @@ public class ExamAnalyticsDetailDto
     // ── Debug Info (Chỉ xem trong F12) ──
     public object? DebugInfo { get; set; }
 }
+
+

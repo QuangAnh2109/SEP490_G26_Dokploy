@@ -4,14 +4,15 @@ namespace Backend.DTOs.Analytics;
 
 /// <summary>
 /// DTO phân tích bài làm cá nhân — dành cho Học sinh.
-/// ShowScore / ShowAnswer quyết định dữ liệu nào được trả về.
+/// ShowScore / ShowAnswer / AnswerTimingMode quyết định dữ liệu nào được trả về.
 /// AnswerReview (xem lại bài làm) luôn có.
 /// </summary>
 public class StudentSubmissionAnalyticsDto
 {
     // ── Cờ hiển thị — Frontend dựa vào đây để ẩn/hiện ──
-    public bool ShowScore { get; set; }
-    public bool ShowAnswer { get; set; }
+    public int ShowScore { get; set; }
+    public int ShowAnswer { get; set; }
+    public int AnswerTimingMode { get; set; }
 
     // ── Thông tin bài thi ──
     public int ExamId { get; set; }

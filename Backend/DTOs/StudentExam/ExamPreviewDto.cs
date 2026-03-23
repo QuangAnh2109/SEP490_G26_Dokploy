@@ -1,4 +1,4 @@
-﻿namespace Backend.DTOs.StudentExam
+namespace Backend.DTOs.StudentExam
 {
     public class ExamPreviewDto
     {
@@ -15,6 +15,13 @@
         public DateTime UpdatedAtUtc { get; set; }
         public string? Description { get; set; }
         public string SubjectName { get; set; } = string.Empty;
+
+        public int MaxAttempts { get; set; }
+        public int RemainingAttempts { get; set; }
+        public int ShowScore { get; set; }
+        public int ShowAnswer { get; set; }
+        public int AnswerTimingMode { get; set; }
+        public int PaperCount { get; set; }
 
         public List<BlueprintRowDto> BlueprintMatrix { get; set; } = new();
     }

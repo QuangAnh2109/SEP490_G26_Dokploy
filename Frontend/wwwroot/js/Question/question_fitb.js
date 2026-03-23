@@ -153,7 +153,20 @@ window.QuestionEditorFITB = (() => {
                     card = t.content.cloneNode(true).firstElementChild;
                     card.setAttribute('data-segment-index', sIdx);
                     card.addEventListener('click', () => {
+                        const willSelect = !card.classList.contains('selected');
+                        if (willSelect) {
+                            // Deselect this segment from all OTHER groups
+                            const allGroups = item.querySelectorAll('[data-blank-group-item]');
+                            const myGroup = card.closest('[data-blank-group-item]');
+                            UTILS.toArray(allGroups).forEach(otherG => {
+                                if (otherG !== myGroup) {
+                                    const same = otherG.querySelector(`.blank-group-segment[data-segment-index="${sIdx}"]`);
+                                    same?.classList.remove('selected');
+                                }
+                            });
+                        }
                         card.classList.toggle('selected');
+                        updateGroupScores(item);
                     });
                 }
                 
@@ -170,20 +183,100 @@ window.QuestionEditorFITB = (() => {
                         const newContent = seg.content;
                         // Use a custom property to track last content to avoid unnecessary DOM updates
                         if (contentElem._lastContent !== newContent) {
-                            UTILS.setMathValue(contentElem, newContent);
+                            UTILS.renderLatexInElement(contentElem, newContent);
                             contentElem._lastContent = newContent;
                         }
                     }
+                }
+                if (card) {
                     fragment.appendChild(card);
                     existingCards.delete(sIdx);
                 }
             });
+
 
             // Remove cards no longer in use
             existingCards.forEach(c => c.remove());
 
             // Build new list (moves existing elements to correct position)
             container.appendChild(fragment);
+        });
+        updateGroupScores(item);
+    };
+
+    const updateGroupScores = (item) => {
+        const latex = UTILS.getFrameLatex(item);
+        const segments = UTILS.parseLatexSegments(latex);
+        const groups = item.querySelectorAll('[data-blank-group-item]');
+
+        // Determine point per blank
+        const scoringToggle = item.querySelector('[data-scoring-toggle]');
+        const scoring = !!scoringToggle?.checked;
+        const totalBlanks = item.querySelectorAll('[data-blank-answer-item]').length;
+        const equalPoint = totalBlanks > 0 ? Math.floor(100 / totalBlanks) : 0;
+        const equalRemainder = totalBlanks > 0 ? 100 - equalPoint * totalBlanks : 0;
+
+        // Build a map: blankNum -> point
+        const blankPoints = new Map();
+        const allRows = item.querySelectorAll('[data-blank-answer-item]');
+        UTILS.toArray(allRows).forEach((row, i) => {
+            const num = row.getAttribute('data-blank-num');
+            if (scoring) {
+                const scoreInp = row.querySelector('[data-blank-score]');
+                blankPoints.set(num, parseInt(scoreInp?.value) || 0);
+            } else {
+                blankPoints.set(num, equalPoint + (i === 0 ? equalRemainder : 0));
+            }
+        });
+
+        UTILS.toArray(groups).forEach(g => {
+            const selectedCards = g.querySelectorAll('.blank-group-segment.selected');
+            const selectedSegIdxs = UTILS.toArray(selectedCards).map(c => parseInt(c.getAttribute('data-segment-index')));
+            let total = 0;
+
+            selectedSegIdxs.forEach(si => {
+                const seg = segments.find(s => s.index === si);
+                if (seg) {
+                    UTILS.getNumberedPlaceholders(seg.content).forEach(n => {
+                        total += blankPoints.get(String(n)) || 0;
+                    });
+                }
+            });
+
+            const badge = g.querySelector('[data-group-score-value]');
+            if (badge) badge.textContent = total;
+        });
+    };
+
+    const refreshDependencyDropdowns = (item) => {
+        const allGroups = item.querySelectorAll('[data-blank-group-item]');
+        const groupList = UTILS.toArray(allGroups);
+
+        groupList.forEach((g, idx) => {
+            const select = g.querySelector('[data-blank-group-depends]');
+            if (!select) return;
+
+            const currentVal = select.value;
+            // Clear options
+            select.innerHTML = '<option value="">Không phụ thuộc</option>';
+
+            // Add other groups as options
+            groupList.forEach((otherG, otherIdx) => {
+                if (otherIdx === idx) return;
+                const nameInp = otherG.querySelector('[data-blank-group-name]');
+                const gId = otherG.getAttribute('data-group-id');
+                const label = nameInp?.value || `Hình thức ${otherIdx + 1}`;
+                const optVal = gId || `__idx_${otherIdx}`;
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = label;
+                select.appendChild(opt);
+            });
+
+            // Restore selection if possible
+            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                select.value = currentVal;
+            }
         });
     };
 
@@ -201,7 +294,7 @@ window.QuestionEditorFITB = (() => {
         const nameInp = r.querySelector('[data-blank-group-name]');
         if (initialData) {
             if (nameInp) {
-                nameInp.value = initialData.name || 'Nhóm';
+                nameInp.value = initialData.name || 'Hình thức';
             }
             if (initialData.groupAnswerId) {
                 r.setAttribute('data-group-id', initialData.groupAnswerId);
@@ -209,13 +302,15 @@ window.QuestionEditorFITB = (() => {
         } else {
             if (nameInp) {
                 const count = list.querySelectorAll('[data-blank-group-item]').length;
-                nameInp.value = `Nhóm ${count + 1}`;
+                nameInp.value = `Hình thức ${count + 1}`;
             }
         }
 
         const removeBtn = r.querySelector('[data-remove-blank-group]');
+
         removeBtn?.addEventListener('click', () => {
             r.remove();
+            refreshDependencyDropdowns(item);
         });
 
         return r;
@@ -357,69 +452,57 @@ window.QuestionEditorFITB = (() => {
         syncBlankGroupSegments(item);
     };
 
+    const insertPlaceholder = (item) => {
+        const latex = UTILS.getFrameLatex(item);
+        const existing = UTILS.getNumberedPlaceholders(latex);
+
+        let next = 1;
+        for (const n of existing.sort((a, b) => a - b)) {
+            if (n === next) {
+                next++;
+            } else if (n > next) {
+                break;
+            }
+        }
+
+        const ph = `\\placeholder[${next}]{}`;
+        const raw = item.querySelector('[data-tabbed-editor="frame"] [data-editor-code]');
+        if (raw) {
+            let pos = raw.selectionStart || raw.value.length;
+            const prefix = (pos > 0 && raw.value[pos - 1] !== ' ' && raw.value[pos - 1] !== '\n') ? ' ' : '';
+            raw.value = raw.value.slice(0, pos) + prefix + ph + raw.value.slice(pos);
+            raw.selectionStart = raw.selectionEnd = pos + prefix.length + ph.length;
+            raw.focus();
+
+            syncPlaceholderState(item, item._inputTypesData);
+            if (item._frameEditor) {
+                item._frameEditor.refreshPreview();
+            }
+        }
+    };
+
     const init = (item) => {
-        const insertBtn = item.querySelector('[data-insert-placeholder]');
-        insertBtn?.addEventListener('click', () => {
-            const mf = item.querySelector('[data-frame-editor]');
-            const latex = UTILS.getFrameLatex(item);
-            const existing = UTILS.getNumberedPlaceholders(latex);
 
-            let next = 1;
-            for (const n of existing.sort((a, b) => a - b)) {
-                if (n === next) {
-                    next++;
-                } else if (n > next) {
-                    break;
-                }
-            }
 
-            const ph = `\\placeholder[${next}]{}`;
 
-            if (mf.classList.contains('d-none')) {
-                const raw = item.querySelector('[data-frame-raw]');
-                let pos = raw.selectionStart || raw.value.length;
-                const textBefore = raw.value.slice(0, pos);
-                const openMatch = textBefore.match(/\\placeholder\s*\[\d+\]\s*\{[^}]*$/);
 
-                if (openMatch) {
-                    const nextBrace = raw.value.indexOf('}', pos);
-                    if (nextBrace !== -1) {
-                        pos = nextBrace + 1;
-                    }
-                }
-
-                const prefix = (pos > 0 && raw.value[pos - 1] !== ' ' && raw.value[pos - 1] !== '\n') ? ' ' : '';
-                raw.value = raw.value.slice(0, pos) + prefix + ph + raw.value.slice(pos);
-                raw.selectionStart = raw.selectionEnd = pos + prefix.length + ph.length;
-                raw.focus();
-            } else {
-                if (typeof mf.insert === 'function') {
-                    mf.focus();
-                    for (let i = 0; i < 3; i++) {
-                        mf.executeCommand('moveAfterParent');
-                    }
-                    mf.insert(ph, {
-                        focus: true,
-                        selectionMode: 'after'
-                    });
-                } else {
-                    UTILS.setMathValue(mf, UTILS.getMathValue(mf) + ph);
-                }
-            }
-
-            setTimeout(() => {
-                syncPlaceholderState(item, item._inputTypesData);
-            }, 50);
-        });
 
         const scoringToggle = item.querySelector('[data-scoring-toggle]');
         scoringToggle?.addEventListener('change', () => {
-            syncPlaceholderState(item, item._inputTypesData);
+            const scoring = scoringToggle.checked;
+            const list = item.querySelector('[data-blank-answer-list]');
+            if (list) {
+                UTILS.toArray(list.querySelectorAll('[data-blank-answer-item]')).forEach(r => {
+                    r.querySelector('[data-blank-score-field]')?.classList.toggle('d-none', !scoring);
+                });
+            }
+            updateScoreSummary(item);
         });
 
         item.addEventListener('input', (e) => {
             if (e.target.matches('[data-blank-score]')) {
                 updateScoreSummary(item);
+                updateGroupScores(item);
             }
         });
 
@@ -430,6 +513,7 @@ window.QuestionEditorFITB = (() => {
             if (gEl) {
                 list.appendChild(gEl);
                 syncBlankGroupSegments(item);
+                refreshDependencyDropdowns(item);
             }
         });
     };
@@ -484,9 +568,29 @@ window.QuestionEditorFITB = (() => {
 
             if (blanks.length > 0) {
                 const nameElem = g.querySelector('[data-blank-group-name]');
+                const dependsSelect = g.querySelector('[data-blank-group-depends]');
+                const dependsVal = dependsSelect?.value || '';
+
+                let dependsOnGroupId = null;
+                let dependsOnGroupIndex = null;
+
+                if (dependsVal) {
+                    if (dependsVal.startsWith('__idx_')) {
+                        // New group reference by index
+                        dependsOnGroupIndex = parseInt(dependsVal.replace('__idx_', ''), 10);
+                        if (isNaN(dependsOnGroupIndex)) dependsOnGroupIndex = null;
+                    } else {
+                        // Existing group reference by DB ID
+                        dependsOnGroupId = parseInt(dependsVal, 10);
+                        if (isNaN(dependsOnGroupId)) dependsOnGroupId = null;
+                    }
+                }
+
                 groups.push({
                     groupAnswerId: parseInt(g.getAttribute('data-group-id')) || null,
                     name: nameElem?.value || 'Nhóm',
+                    dependsOnGroupId: dependsOnGroupId,
+                    dependsOnGroupIndex: dependsOnGroupIndex,
                     segmentIndices: selectedSegIdxs,
                     blankIndices: [...new Set(blanks)]
                 });
@@ -500,86 +604,113 @@ window.QuestionEditorFITB = (() => {
     };
 
     const setData = (item, data, inputTypesData) => {
-        const frameEditor = item.querySelector('[data-frame-editor]');
-        UTILS.setMathValue(frameEditor, data.frame || '');
+        if (item._frameEditor) {
+            item._frameEditor.setValue(data.frame || '');
+        }
 
-        setTimeout(() => {
+        // Wait for rows to be created, then set values
+        const waitForRowsAndSet = () => {
             syncPlaceholderState(item, inputTypesData);
 
-            setTimeout(() => {
-                let hasCustom = false;
-                data.answers?.forEach(ans => {
-                    const row = item.querySelector(`[data-blank-num="${ans.blankIndex}"]`);
-                    if (row) {
-                        if (ans.answerId) {
-                            row.setAttribute('data-answer-id', ans.answerId);
-                        }
+            const rows = item.querySelectorAll('[data-blank-answer-item]');
+            if (rows.length === 0 && data.answers?.length > 0) {
+                setTimeout(waitForRowsAndSet, 200);
+                return;
+            }
 
-                        const ansInp = row.querySelector('[data-blank-answer]');
-                        UTILS.setMathValue(ansInp, ans.correctAnswer || '');
-
-                        if (ans.inputTypeId) {
-                            const chip = row.querySelector(`.constraint-chip[data-input-type-id="${ans.inputTypeId}"]`);
-                            chip?.classList.add('active');
-                        }
-
-                        if (ans.point > 0) {
-                            const scoreInp = row.querySelector('[data-blank-score]');
-                            if (scoreInp) {
-                                scoreInp.value = ans.point;
-                            }
-                            hasCustom = true;
-                        }
+            // Apply answer values to rows
+            let hasCustom = false;
+            const answerPoints = [];
+            data.answers?.forEach(ans => {
+                const row = item.querySelector(`[data-blank-answer-item][data-blank-num="${ans.blankIndex}"]`);
+                if (row) {
+                    if (ans.answerId) {
+                        row.setAttribute('data-answer-id', ans.answerId);
                     }
-                });
 
-                if (hasCustom) {
-                    const st = item.querySelector('[data-scoring-toggle]');
-                    if (st) {
-                        st.checked = true;
-                        st.dispatchEvent(new Event('change'));
+                    const ansInp = row.querySelector('[data-blank-answer]');
+                    if (ansInp) {
+                        ansInp.value = ans.correctAnswer || '';
                     }
+
+                    if (ans.inputTypeId) {
+                        const chip = row.querySelector(`.constraint-chip[data-input-type-id="${ans.inputTypeId}"]`);
+                        chip?.classList.add('active');
+                    }
+
+                    const scoreInp = row.querySelector('[data-blank-score]');
+                    if (scoreInp && ans.point != null) {
+                        scoreInp.value = ans.point;
+                    }
+                    answerPoints.push(ans.point || 0);
                 }
+            });
 
-                data.blankGroups?.forEach(g => {
-                    const list = item.querySelector('[data-blank-group-list]');
-                    const gEl = createBlankGroupItem(item, list, g);
-                    if (gEl) {
-                        list.appendChild(gEl);
-                    }
-                });
+            // Detect custom scoring
+            if (answerPoints.length > 0) {
+                const equalPoint = Math.floor(100 / answerPoints.length);
+                hasCustom = answerPoints.some(p => p !== equalPoint && p !== equalPoint + 1);
+            }
 
-                syncBlankGroupSegments(item);
+            if (hasCustom) {
+                const st = item.querySelector('[data-scoring-toggle]');
+                if (st) {
+                    st.checked = true;
+                    st.dispatchEvent(new Event('change'));
+                }
+            }
 
-                setTimeout(() => {
-                    const gEls = item.querySelectorAll('[data-blank-group-item]');
-                    data.blankGroups?.forEach((g, i) => {
-                        const gEl = gEls[i];
-                        if (!gEl) {
-                            return;
-                        }
+            // Explicitly update score summary
+            updateScoreSummary(item);
 
-                        if (g.segmentIndices?.length > 0) {
-                            g.segmentIndices.forEach(si => {
+            // Set up blank groups
+            data.blankGroups?.forEach(g => {
+                const list = item.querySelector('[data-blank-group-list]');
+                const gEl = createBlankGroupItem(item, list, g);
+                if (gEl) {
+                    list.appendChild(gEl);
+                }
+            });
+
+            syncBlankGroupSegments(item);
+
+            setTimeout(() => {
+                const gEls = item.querySelectorAll('[data-blank-group-item]');
+                data.blankGroups?.forEach((g, i) => {
+                    const gEl = gEls[i];
+                    if (!gEl) return;
+
+                    if (g.segmentIndices?.length > 0) {
+                        g.segmentIndices.forEach(si => {
+                            const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
+                            segCard?.classList.add('selected');
+                        });
+                    } else {
+                        const segs = UTILS.parseLatexSegments(data.frame);
+                        g.blankIndices?.forEach(ph => {
+                            const si = segs.findIndex(s => UTILS.getNumberedPlaceholders(s.content).includes(ph));
+                            if (si !== -1) {
                                 const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
                                 segCard?.classList.add('selected');
-                            });
-                        } else {
-                            const segs = UTILS.parseLatexSegments(data.frame);
-                            g.blankIndices?.forEach(ph => {
-                                const si = segs.findIndex(s => {
-                                    return UTILS.getNumberedPlaceholders(s.content).includes(ph);
-                                });
-                                if (si !== -1) {
-                                    const segCard = gEl.querySelector(`[data-segment-index="${si}"]`);
-                                    segCard?.classList.add('selected');
-                                }
-                            });
-                        }
-                    });
-                }, 50);
-            }, 100);
-        }, 300);
+                            }
+                        });
+                    }
+                });
+
+                refreshDependencyDropdowns(item);
+                data.blankGroups?.forEach((g, i) => {
+                    const gEl = gEls[i];
+                    if (gEl && g.dependsOnGroupId) {
+                        const select = gEl.querySelector('[data-blank-group-depends]');
+                        if (select) select.value = String(g.dependsOnGroupId);
+                    }
+                });
+
+                updateGroupScores(item);
+            }, 50);
+        };
+
+        setTimeout(waitForRowsAndSet, 300);
     };
 
     return {
@@ -602,7 +733,9 @@ window.QuestionEditorFITB = (() => {
             }
         },
         init,
+        insertPlaceholder,
         getPayload,
         setData
     };
 })();
+

@@ -9,5 +9,11 @@ public partial class GroupAnswer
 
     public string Name { get; set; } = null!;
 
+    public int? DependsOnGroupId { get; set; }
+
+    public virtual GroupAnswer? DependsOnGroup { get; set; }
+
+    public virtual ICollection<GroupAnswer> InverseDependsOnGroup { get; set; } = new List<GroupAnswer>();
+
     public virtual ICollection<QuestionAnswer> QuestionAnswers { get; set; } = new List<QuestionAnswer>();
 }

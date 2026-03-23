@@ -92,36 +92,28 @@ window.QuestionEditor = (() => {
             MCQ.init(item);
             syncSubjectDropdown(item, item._subjectsData);
 
-            const stemEditor = item.querySelector('[data-question-stem]');
-            const stemRaw = item.querySelector('[data-stem-raw]');
-            const { setRenderMode: setStemMode } = UTILS.setupPairToggle(stemEditor, stemRaw);
+            const stemContainer = item.querySelector('[data-tabbed-editor="stem"]');
+            item._stemEditor = UTILS.setupTabbedEditor(stemContainer, {
+                onChange: () => {
+                    // Update any other logic if needed
+                }
+            });
 
-            const stemToggle = item.querySelector('[data-stem-render-toggle]');
-            stemToggle?.addEventListener('change', (e) => setStemMode(e.target.checked));
-            setStemMode(!!stemToggle?.checked);
-
-            const frameEditor = item.querySelector('[data-frame-editor]');
-            const frameRaw = item.querySelector('[data-frame-raw]');
-            const onFrameChange = () => FITB.syncPlaceholderState(item, item._inputTypesData);
-            const { setRenderMode: setFrameMode } = UTILS.setupPairToggle(frameEditor, frameRaw, onFrameChange);
-
-            const frameToggle = item.querySelector('[data-render-toggle]');
-            frameToggle?.addEventListener('change', (e) => setFrameMode(e.target.checked));
-            setFrameMode(!!frameToggle?.checked);
-
-            frameEditor?.addEventListener('selection-change', (e) => {
-                FITB.selectPlaceholderByPosition(item, e.target);
+            const frameContainer = item.querySelector('[data-tabbed-editor="frame"]');
+            item._frameEditor = UTILS.setupTabbedEditor(frameContainer, {
+                onChange: () => FITB.syncPlaceholderState(item, item._inputTypesData),
+                onInsertPlaceholder: () => FITB.insertPlaceholder(item)
             });
 
             syncUI();
+
         },
         collectPayload: (item) => {
             const typeSel = item.querySelector('[data-question-type-select]');
             const type = typeSel?.value;
 
-            const stemToggle = item.querySelector('[data-stem-render-toggle]');
-            const stemSelector = stemToggle?.checked ? '[data-question-stem]' : '[data-stem-raw]';
-            const stem = UTILS.getMathValue(item.querySelector(stemSelector));
+            const stem = item._stemEditor?.getValue() || '';
+
 
             const chapterSel = item.querySelector('[data-chapter-select]');
             const diffSel = item.querySelector('[data-difficulty-select]');
@@ -148,8 +140,10 @@ window.QuestionEditor = (() => {
             item.querySelector('[data-difficulty-select]').value = data.difficulty;
             item.querySelector('[data-explanation]').value = data.explanation || '';
 
-            const stemEditor = item.querySelector('[data-question-stem]');
-            UTILS.setMathValue(stemEditor, data.stem || '');
+            if (item._stemEditor) {
+                item._stemEditor.setValue(data.stem || '');
+            }
+
 
             syncSubjectDropdown(item, subjectsData);
 

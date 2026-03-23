@@ -8,5 +8,12 @@ namespace Frontend.Controllers
         {
             return View("assign_exam");
         }
+
+        public IActionResult ExamReview([FromQuery] int examId, [FromQuery] int? classId)
+        {
+            ViewBag.ExamId = examId;
+            ViewBag.ClassId = classId;
+            return View("ExamReview");
+        }
     }
 }

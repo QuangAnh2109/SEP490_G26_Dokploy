@@ -37,6 +37,7 @@ namespace Backend
             builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
             builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
             builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+            builder.Services.AddScoped<IAssignExamRepository, AssignExamRepository>();
 
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();

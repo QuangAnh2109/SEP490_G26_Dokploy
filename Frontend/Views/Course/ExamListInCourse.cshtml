@@ -35,8 +35,11 @@
     <!-- Main Content -->
     <main class="flex-grow-1 p-4">
 
-        <section class="mb-4">
-            <h2>Danh sách đề trong lớp</h2>
+        <section class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Danh sách đề trong lớp</h2>
+            <a id="btnCreateExam" class="btn btn-primary d-none" href="/Exam/AssignExam?classId=@classId">
+                <i class="fas fa-plus me-1"></i> Tạo đề
+            </a>
         </section>
 
         <!-- Filters -->
@@ -147,6 +150,10 @@
                 if (settingsMenu) settingsMenu.style.display = 'none';
                 const pendingMenu = document.getElementById("pendingMenuItem");
                 if (pendingMenu) pendingMenu.style.display = 'none';
+            }
+            if (role === "Teacher") {
+                const btnCreate = document.getElementById("btnCreateExam");
+                if (btnCreate) btnCreate.classList.remove("d-none");
             }
 
             await loadChapters();   // load chapter trước
@@ -279,8 +286,12 @@
 
                 const status = getExamStatus(exam.openAt, exam.closeAt);
 
+                const detailUrl = isTeacher
+                    ? `/Exam/ExamReview?examId=${exam.examId}`
+                    : `/StudentExam/ExamPreview?examId=${exam.examId}`;
+
                 let actions = `
-                    <a class="btn btn-sm btn-outline-secondary d-inline" href="/StudentExam/ExamPreview?examId=${exam.examId}">
+                    <a class="btn btn-sm btn-outline-secondary d-inline" href="${detailUrl}">
                         Chi tiết
                     </a>
                 `;

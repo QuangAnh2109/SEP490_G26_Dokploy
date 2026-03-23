@@ -1,4 +1,5 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -131,7 +132,7 @@ namespace Backend.Repositories.Implements
                         : e.Status,
                     ShowScore = e.ShowScore,
                     ShowAnswer = e.ShowAnswer,
-                    AllowLateSubmission = e.AllowLateSubmission
+                    AnswerTimingMode = e.AnswerTimingMode
                 })
                 .ToListAsync();
         }
@@ -208,7 +209,7 @@ namespace Backend.Repositories.Implements
         public async Task<bool> IsUserInClassAsync(int classId, int userId)
         {
             return await _context.ClassMembers
-                .AnyAsync(cm => cm.ClassId == classId && cm.StudentId == userId && cm.MemberStatus == 1);
+                .AnyAsync(cm => cm.ClassId == classId && cm.StudentId == userId && cm.MemberStatus == Backend.Constants.MemberStatus.Active);
         }
 
         public async Task JoinClassAsync(int classId, int userId)
@@ -343,6 +344,19 @@ namespace Backend.Repositories.Implements
             
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<SubjectOptionDto>> GetSubjectsAsync()
+        {
+            return await _context.Subjects
+                .AsNoTracking()
+                .Select(s => new SubjectOptionDto
+                {
+                    SubjectId = s.SubjectId,
+                    Name = s.Name,
+                    Code = s.Code
+                })
+                .ToListAsync();
         }
     }
 }

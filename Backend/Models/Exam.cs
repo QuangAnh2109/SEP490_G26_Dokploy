@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Backend.Models;
@@ -21,9 +21,9 @@ public partial class Exam
 
     public int Duration { get; set; }
 
-    public bool ShowScore { get; set; }
+    public int ShowScore { get; set; }
 
-    public bool ShowAnswer { get; set; }
+    public int ShowAnswer { get; set; }
 
     public int MaxAttempts { get; set; }
 
@@ -35,7 +35,7 @@ public partial class Exam
 
     public bool ShuffleQuestion { get; set; }
 
-    public bool AllowLateSubmission { get; set; }
+    public int AnswerTimingMode { get; set; }
 
     public int Status { get; set; }
 

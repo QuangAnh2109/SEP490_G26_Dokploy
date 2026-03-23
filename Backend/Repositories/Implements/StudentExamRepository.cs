@@ -202,6 +202,11 @@ namespace Backend.Repositories.Implements
                 SubjectCode = exam.Subject?.Code ?? string.Empty,
                 SubjectName = exam.Subject?.Name ?? string.Empty,
                 TeacherName = exam.Teacher?.FullName ?? string.Empty,
+                MaxAttempts = exam.MaxAttempts,
+                ShowScore = exam.ShowScore,
+                ShowAnswer = exam.ShowAnswer,
+                AnswerTimingMode = exam.AnswerTimingMode,
+                PaperCount = _context.Papers.Count(p => p.ExamId == examId)
             };
 
             // Dùng raw SQL để lấy ExamBlueprintId vì chưa được map trong EF model

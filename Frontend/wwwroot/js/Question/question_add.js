@@ -52,18 +52,13 @@
             i.value = '';
         });
 
-        const mathFields = clone.querySelectorAll('math-field');
-        toArray(mathFields).forEach(mf => {
-            mf.textContent = ''; // Clear internal text nodes
-            QE.setMathValue(mf, '');
-        });
-
         const emptyLists = clone.querySelectorAll('[data-blank-answer-list], [data-blank-group-list]');
         toArray(emptyLists).forEach(l => {
             while (l.firstChild) {
                 l.removeChild(l.firstChild);
             }
         });
+
 
         // Reset MCQ to default state (A, B)
         const ansList = clone.querySelector('[data-answer-list]');
@@ -76,21 +71,11 @@
             MCQ.syncMcqRows(ansList);
         }
 
-        // Reset visibility to Math Mode visibility
-        const toggles = clone.querySelectorAll('[data-stem-render-toggle], [data-render-toggle], [data-mcq-render-toggle]');
+        const toggles = clone.querySelectorAll('[data-mcq-render-toggle]');
         toArray(toggles).forEach(sw => {
             sw.checked = true;
         });
 
-        const mathEditors = clone.querySelectorAll('[data-question-stem], [data-frame-editor], [data-option-content]');
-        toArray(mathEditors).forEach(mf => {
-            mf.classList.remove('d-none');
-        });
-
-        const rawEditors = clone.querySelectorAll('[data-stem-raw], [data-frame-raw], [data-option-raw]');
-        toArray(rawEditors).forEach(raw => {
-            raw.classList.add('d-none');
-        });
 
         questionList.appendChild(clone);
         syncBatch();

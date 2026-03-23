@@ -39,7 +39,7 @@ public class SubmissionService : ISubmissionService
 
         bool isLate = now > deadline || (exam.CloseAt.HasValue && now > exam.CloseAt.Value);
 
-        if (isLate && !exam.AllowLateSubmission)
+        if (isLate)
             throw new InvalidOperationException(ErrorMessages.SubmissionLateNotAllowed);
 
         // ── 3. Validate QuestionAnswerIds thuộc Paper ────────────────────
