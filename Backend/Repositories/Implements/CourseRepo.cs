@@ -358,5 +358,25 @@ namespace Backend.Repositories.Implements
                 })
                 .ToListAsync();
         }
+
+        public async Task<User?> GetUserWithRoleByEmailAsync(string email)
+        {
+            return await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<ClassMember?> GetClassMemberAsync(int classId, int studentId)
+        {
+            return await _context.ClassMembers.FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == studentId);
+        }
+
+        public async Task UpdateClassMemberStatusAsync(int classId, int studentId, int status)
+        {
+            var membership = await _context.ClassMembers.FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == studentId);
+            if (membership != null)
+            {
+                membership.MemberStatus = status;
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

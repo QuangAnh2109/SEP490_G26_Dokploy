@@ -1,8 +1,8 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Backend.Constants;
 
 namespace Backend.Services.Implements
@@ -10,14 +10,12 @@ namespace Backend.Services.Implements
     public class CourseService : ICourseService
     {
         private readonly ICourseRepo _repo;
-        private readonly MtcaSep490G26Context _context;
         private readonly IEmailService _emailService;
         private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
 
-        public CourseService(ICourseRepo repo, MtcaSep490G26Context context, IEmailService emailService, Microsoft.Extensions.Configuration.IConfiguration config)
+        public CourseService(ICourseRepo repo, IEmailService emailService, Microsoft.Extensions.Configuration.IConfiguration config)
         {
             _repo = repo;
-            _context = context;
             _emailService = emailService;
             _config = config;
         }
@@ -119,7 +117,7 @@ namespace Backend.Services.Implements
                 throw new Exception("Lỗi khi thêm học sinh vào lớp.");
             }
 
-            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == studentEmail);
+            var user = await _repo.GetUserWithRoleByEmailAsync(studentEmail);
             if (user == null)
             {
                 throw new Exception("Học sinh chưa có tài khoản trong hệ thống.");
@@ -133,7 +131,7 @@ namespace Backend.Services.Implements
             var course = await _repo.GetByIdAsync(classId);
             if (course == null) throw new Exception("Không tìm thấy lớp học.");
 
-            var existingMembership = await _context.ClassMembers.FirstOrDefaultAsync(cm => cm.ClassId == classId && cm.StudentId == user.UserId);
+            var existingMembership = await _repo.GetClassMemberAsync(classId, user.UserId);
             if (existingMembership != null)
             {
                 if (existingMembership.MemberStatus == MemberStatus.Active)
@@ -147,13 +145,16 @@ namespace Backend.Services.Implements
                 else if (existingMembership.MemberStatus == MemberStatus.Pending)
                 {
                     // Action becomes auto-approval
-                    existingMembership.MemberStatus = MemberStatus.Active;
-                    await _context.SaveChangesAsync();
+                    await _repo.UpdateClassMemberStatusAsync(classId, user.UserId, MemberStatus.Active);
                     throw new Backend.Exceptions.AutoApprovePendingException("Học sinh đang ở trạng thái chờ duyệt và đã được phê duyệt thành công.");
                 }
             }
 
             var membership = await _repo.InviteStudentAsync(classId, user.UserId);
+            if (membership == null)
+            {
+                throw new Exception("Không thể tạo lời mời.");
+            }
 
             // Generate token: {classId}:{concurrencyStamp_base64}
             var stampBase64 = Convert.ToBase64String(membership.ConcurrencyStamp);
@@ -217,6 +218,11 @@ namespace Backend.Services.Implements
         {
             var success = await _repo.RejectStudentAsync(classId, studentId);
             if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
+        }
+
+        public async Task<List<SubjectOptionDto>> GetSubjectsAsync()
+        {
+            return await _repo.GetSubjectsAsync();
         }
     }
 }

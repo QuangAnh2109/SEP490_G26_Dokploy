@@ -1,4 +1,5 @@
 using Backend.DTOs.Course;
+using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -28,5 +29,6 @@ namespace Backend.Services.Interfaces
         Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
         Task ApproveStudentAsync(int classId, int studentId);
         Task RejectStudentAsync(int classId, int studentId);
+        Task<List<SubjectOptionDto>> GetSubjectsAsync();
     }
 }

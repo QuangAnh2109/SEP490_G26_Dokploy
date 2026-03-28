@@ -30,5 +30,9 @@ namespace Backend.Repositories.Interfaces
         Task LeaveClassAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
         Task<List<SubjectOptionDto>> GetSubjectsAsync();
+        
+        Task<User?> GetUserWithRoleByEmailAsync(string email);
+        Task<ClassMember?> GetClassMemberAsync(int classId, int studentId);
+        Task UpdateClassMemberStatusAsync(int classId, int studentId, int status);
     }
 }
