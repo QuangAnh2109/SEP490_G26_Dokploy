@@ -13,24 +13,11 @@ namespace Backend.Controllers
     public class CourseController : ControllerBase
     {
         private readonly ICourseService _service;
-        private readonly IChapterService _chapterService;
-        private readonly ILogger<CourseController> _logger;
-        private readonly MtcaSep490G26Context _context;
 
-        public CourseController(ICourseService service, IChapterService chapterService, ILogger<CourseController> logger, MtcaSep490G26Context context)
+        public CourseController(ICourseService service)
         {
             _service = service;
-            _chapterService = chapterService;
-            _logger = logger;
-            _context = context;
         }
-
-        // TEMPORARY for debugging only
-        //[HttpGet]
-        //public async Task<IActionResult> GetAll()
-        //{
-        //    return Ok(await _service.GetAllAsync());
-        //}
 
         [HttpGet("my")]
         [Authorize(Roles = "Teacher,Student")]
@@ -262,13 +249,9 @@ namespace Backend.Controllers
 
         [HttpGet("subjects")]
         [Authorize(Roles = "Teacher")]
-        public IActionResult GetSubjects()
+        public async Task<IActionResult> GetSubjects()
         {
-            // A simple endpoint to fetch subjects for the dropdown
-            // Ideally should be in ISubjectService, placing here for quick access matching the plan
-            var subjects = _context.Subjects
-                .Select(s => new { s.SubjectId, s.Name, s.Code })
-                .ToList();
+            var subjects = await _service.GetSubjectsAsync();
             return Ok(subjects);
         }
     }
