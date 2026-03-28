@@ -42,56 +42,86 @@ namespace Backend_UnitTest
             );
         }
 
-        #region Test cho GetAllAsync
         [Fact]
-        public async Task GetAllAsync_ShouldReturnList_WhenDataExists()
+        public async Task GetAllAsync_WhenDataExists_ShouldReturnFullList()
         {
-            // Arrange (Chuẩn bị dữ liệu giả)
-            var fakeCourses = new List<CourseDTO> {
-                new CourseDTO { ClassId = 1, ClassName = "Lớp .NET" },
-                new CourseDTO { ClassId = 2, ClassName = "Lớp React" }
+            // Arrange
+            var fakeData = new List<CourseDTO>
+            {
+                new CourseDTO { ClassId = 1, ClassName = "Course 1" },
+                new CourseDTO { ClassId = 2, ClassName = "Course 2" }
             };
-            _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(fakeCourses);
+            _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(fakeData);
 
-            // Act (Thực hiện hành động)
+            // Act
             var result = await _courseService.GetAllAsync();
 
-            // Assert (Kiểm chứng)
+            // Assert
             Assert.NotNull(result);
             Assert.Equal(2, result.Count);
-            Assert.Equal("Lớp .NET", result[0].ClassName);
         }
-        #endregion
+
         [Fact]
-        public async Task GetAll_Scenario_Collection()
+        public async Task GetAllAsync_WhenNoData_ShouldReturnEmptyList()
         {
-            // --- CASE 1: Happy Path ---
-            var data = new List<CourseDTO> { new CourseDTO { ClassId = 1 }, new CourseDTO { ClassId = 2 } };
-            _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(data);
-            var result1 = await _courseService.GetAllAsync();
-            Assert.Equal(2, result1.Count);
-
-            // --- CASE 2: Empty Data ---
+            // Arrange
             _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<CourseDTO>());
-            var result2 = await _courseService.GetAllAsync();
-            Assert.Empty(result2);
 
-            // --- CASE 3: Repository Error ---
-            _mockRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("DB Error"));
-            await Assert.ThrowsAsync<Exception>(() => _courseService.GetAllAsync());
+            // Act
+            var result = await _courseService.GetAllAsync();
 
-            // --- CASE 4: Data Mapping Check ---
-            var singleData = new List<CourseDTO> { new CourseDTO { ClassId = 10, ClassName = "Unit Test" } };
-            _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(singleData);
-            var result4 = await _courseService.GetAllAsync();
-            Assert.Equal("Unit Test", result4[0].ClassName);
+            // Assert
+            Assert.NotNull(result); // Không được null
+            Assert.Empty(result);   // Phải rỗng
+        }
 
-            // --- CASE 5: GetByUserId (User has no courses) ---
-            int userId = 999;
-            _mockRepo.Setup(r => r.GetCoursesForUserAsync(userId)).ReturnsAsync(new List<CourseDTO>());
-            var result5 = await _courseService.GetCoursesForUserAsync(userId);
-            Assert.NotNull(result5);
-            Assert.Empty(result5);
+        [Fact]
+        public async Task GetAllAsync_ShouldMapCorrectDataFields()
+        {
+            // Arrange
+            var fakeData = new List<CourseDTO>
+            {
+                new CourseDTO { ClassId = 99, ClassName = "Dotnet Testing" }
+            };
+            _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(fakeData);
+
+            // Act
+            var result = await _courseService.GetAllAsync();
+
+            // Assert
+            var firstCourse = result[0];
+            Assert.Equal(99, firstCourse.ClassId);
+            Assert.Equal("Dotnet Testing", firstCourse.ClassName);
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WhenRepoThrowsException_ShouldThrowSameException()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetAllAsync())
+                     .ThrowsAsync(new System.Exception("Database connection failed"));
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<System.Exception>(() =>
+                _courseService.GetAllAsync());
+
+            Assert.Equal("Database connection failed", exception.Message);
+        }
+
+        [Fact]
+        public async Task GetCoursesForUserAsync_WhenUserHasNoClass_ShouldReturnEmpty()
+        {
+            // Arrange
+            int nonExistentUserId = 888;
+            _mockRepo.Setup(r => r.GetCoursesForUserAsync(nonExistentUserId))
+                     .ReturnsAsync(new List<CourseDTO>());
+
+            // Act
+            var result = await _courseService.GetCoursesForUserAsync(nonExistentUserId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
         }
     }
 }
