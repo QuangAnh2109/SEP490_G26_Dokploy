@@ -36,7 +36,6 @@ namespace Backend_UnitTest
 
             _courseService = new CourseService(
                 _mockRepo.Object,
-                _context,
                 _mockEmail.Object,
                 _mockConfig.Object
             );
