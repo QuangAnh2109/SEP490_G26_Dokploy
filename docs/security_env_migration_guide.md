@@ -1,8 +1,8 @@
 # 🔐 Hướng dẫn chuyển dữ liệu bảo mật sang file .env
 
 > **Ngày tạo:** 2026-03-29  
-> **Trạng thái:** Cần thực hiện ngay  
-> **Mức độ nghiêm trọng:** 🔴 Cao — Dữ liệu bảo mật đang bị hardcode trong source code
+> **Trạng thái:** ✅ Đã hoàn thành (2026-03-29)  
+> **Mức độ nghiêm trọng:** 🔴 Cao — Dữ liệu bảo mật đã được chuyển sang .env
 
 ---
 
@@ -228,13 +228,13 @@ Thêm vào cuối file `.gitignore` ở thư mục gốc project:
 
 ### Checklist xác nhận:
 
-- [ ] File `.env` đã được tạo trong `Backend/` với giá trị thật
-- [ ] File `.env.example` đã được cập nhật với placeholder
-- [ ] File `appsettings.json` đã xóa hết secret values (chỉ còn chuỗi rỗng)
-- [ ] File `appsettings.Development.json` đã xóa Google ClientId
-- [ ] File `Program.cs` đã thêm code load `.env`
-- [ ] File `.gitignore` đã thêm rule ignore `.env`
-- [ ] Chạy `dotnet build` thành công
+- [x] File `.env` đã được tạo trong `Backend/` với giá trị thật
+- [x] File `.env.example` đã được cập nhật với placeholder
+- [x] File `appsettings.json` đã xóa hết secret values (chỉ còn chuỗi rỗng)
+- [x] File `appsettings.Development.json` đã xóa Google ClientId
+- [x] File `Program.cs` đã thêm code load `.env`
+- [x] File `.gitignore` đã thêm rule ignore `.env`
+- [x] Chạy `dotnet build` thành công (0 errors, 12 warnings)
 - [ ] Chạy `dotnet run` và test các chức năng (Login, JWT, Email, Google OAuth)
 
 ### Test nhanh:
@@ -278,9 +278,9 @@ Sau khi chuyển sang `.env`, hãy **đổi tất cả credentials** vì chúng 
 | File | Hành động |
 |------|-----------|
 | `Backend.csproj` | ✅ Đã thêm package `DotNetEnv 3.1.1` |
-| `Backend/.env` | 🔨 Cần tạo mới — chứa giá trị thật |
-| `Backend/.env.example` | 🔨 Cần cập nhật — chứa placeholder |
-| `Backend/appsettings.json` | 🔨 Cần xóa tất cả secret values |
-| `Backend/appsettings.Development.json` | 🔨 Cần xóa Google ClientId |
-| `Backend/Program.cs` | 🔨 Cần thêm code load `.env` |
-| `.gitignore` | 🔨 Cần thêm rule ignore `.env` |
+| `Backend/.env` | ✅ Đã tạo — chứa giá trị thật |
+| `Backend/.env.example` | ✅ Đã cập nhật — chứa placeholder |
+| `Backend/appsettings.json` | ✅ Đã xóa tất cả secret values |
+| `Backend/appsettings.Development.json` | ✅ Đã xóa Google ClientId |
+| `Backend/Program.cs` | ✅ Đã thêm code load `.env` |
+| `.gitignore` | ✅ Đã thêm rule ignore `.env` + exception cho `.env.example` |
