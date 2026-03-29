@@ -11,9 +11,9 @@ namespace Backend.Services.Implements
     {
         private readonly ICourseRepo _repo;
         private readonly IEmailService _emailService;
-        private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
+        private readonly IConfiguration _config;
 
-        public CourseService(ICourseRepo repo, IEmailService emailService, Microsoft.Extensions.Configuration.IConfiguration config)
+        public CourseService(ICourseRepo repo, IEmailService emailService, IConfiguration config)
         {
             _repo = repo;
             _emailService = emailService;
@@ -45,7 +45,7 @@ namespace Backend.Services.Implements
         public async Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto)
         {
             var normalizedSemester = dto.Semester?.Trim().ToUpper() ?? "";
-            
+
             // Kiểm tra trùng lặp
             var duplicateError = await _repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName, normalizedSemester, dto.SubjectId);
             if (duplicateError != null)
@@ -70,7 +70,7 @@ namespace Backend.Services.Implements
 
         public async Task JoinCourseAsync(int studentId, string inviteCode)
         {
-            if (string.IsNullOrWhiteSpace(inviteCode)) 
+            if (string.IsNullOrWhiteSpace(inviteCode))
             {
                 throw new Exception("Mã mời không thể trống.");
             }
@@ -97,7 +97,7 @@ namespace Backend.Services.Implements
 
         public async Task UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
         {
-            if (string.IsNullOrWhiteSpace(newName)) 
+            if (string.IsNullOrWhiteSpace(newName))
                 throw new Exception("Tên lớp không được để trống.");
 
             var success = await _repo.UpdateClassSettingsAsync(classId, newName, invitationStatus);
