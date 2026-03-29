@@ -22,92 +22,92 @@ public class AssignExamRepository : IAssignExamRepository
         return await _db.Users.AnyAsync(x => x.UserId == id && x.Status == 1, ct);
     }
 
-    public async Task<AssignExamFiltersResponseDto> GetAssignExamFilterOptionsAsync(int teacherId, CancellationToken ct)
-    {
-        var classes = await _db.Classes
-            .Include(x => x.Subject)
-            .Where(x => x.Status == 1 && x.TeacherId == teacherId)
-            .ToListAsync(ct);
+    //public async Task<AssignExamFiltersResponseDto> GetAssignExamFilterOptionsAsync(int teacherId, CancellationToken ct)
+    //{
+    //    var classes = await _db.Classes
+    //        .Include(x => x.Subject)
+    //        .Where(x => x.Status == 1 && x.TeacherId == teacherId)
+    //        .ToListAsync(ct);
 
-        var subjects = classes
-            .Select(x => x.Subject)
-            .Where(s => s != null)
-            .Select(s => new SubjectOptionDto(s.SubjectId, s.Code ?? "", s.Name))
-            .DistinctBy(x => x.SubjectId)
-            .OrderBy(x => x.Code)
-            .ThenBy(x => x.Name)
-            .ToList();
+    //    var subjects = classes
+    //        .Select(x => x.Subject)
+    //        .Where(s => s != null)
+    //        .Select(s => new SubjectOptionDto(s.SubjectId, s.Code ?? "", s.Name))
+    //        .DistinctBy(x => x.SubjectId)
+    //        .OrderBy(x => x.Code)
+    //        .ThenBy(x => x.Name)
+    //        .ToList();
 
-        var semesters = classes
-            .Where(x => !string.IsNullOrWhiteSpace(x.Semester))
-            .Select(x => x.Semester!)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
+    //    var semesters = classes
+    //        .Where(x => !string.IsNullOrWhiteSpace(x.Semester))
+    //        .Select(x => x.Semester!)
+    //        .Distinct()
+    //        .OrderBy(x => x)
+    //        .ToList();
 
-        return new AssignExamFiltersResponseDto(subjects, semesters);
-    }
+    //    return new AssignExamFiltersResponseDto(subjects, semesters);
+    //}
 
-    public async Task<(List<ClassWithCount> Items, int Total)> GetPagedClassesForTeacherAsync(
-        int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct)
-    {
-        var query = from c in _db.Classes
-                    join s in _db.Subjects on c.SubjectId equals s.SubjectId
-                    where c.Status == 1
-                    select new { c, s };
+    //public async Task<(List<ClassWithCount> Items, int Total)> GetPagedClassesForTeacherAsync(
+    //    int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct)
+    //{
+    //    var query = from c in _db.Classes
+    //                join s in _db.Subjects on c.SubjectId equals s.SubjectId
+    //                where c.Status == 1
+    //                select new { c, s };
 
-        if (teacherId.HasValue)
-        {
-            query = query.Where(x => x.c.TeacherId == teacherId.Value);
-        }
+    //    if (teacherId.HasValue)
+    //    {
+    //        query = query.Where(x => x.c.TeacherId == teacherId.Value);
+    //    }
 
-        if (!string.IsNullOrWhiteSpace(kw))
-        {
-            query = query.Where(x => x.c.Name.Contains(kw));
-        }
+    //    if (!string.IsNullOrWhiteSpace(kw))
+    //    {
+    //        query = query.Where(x => x.c.Name.Contains(kw));
+    //    }
 
-        if (!string.IsNullOrWhiteSpace(subj))
-        {
-            query = query.Where(x => x.s.Code == subj);
-        }
+    //    if (!string.IsNullOrWhiteSpace(subj))
+    //    {
+    //        query = query.Where(x => x.s.Code == subj);
+    //    }
 
-        if (!string.IsNullOrWhiteSpace(sem))
-        {
-            query = query.Where(x => x.c.Semester == sem);
-        }
+    //    if (!string.IsNullOrWhiteSpace(sem))
+    //    {
+    //        query = query.Where(x => x.c.Semester == sem);
+    //    }
 
-        int total = await query.CountAsync(ct);
+    //    int total = await query.CountAsync(ct);
 
-        var rows = await query
-            .OrderBy(x => x.c.Name)
-            .Skip((page - 1) * size)
-            .Take(size)
-            .Select(x => new {
-                x.c.ClassId,
-                x.c.Name,
-                x.c.Semester,
-                SubjectCode = x.s.Code ?? ""
-            })
-            .ToListAsync(ct);
+    //    var rows = await query
+    //        .OrderBy(x => x.c.Name)
+    //        .Skip((page - 1) * size)
+    //        .Take(size)
+    //        .Select(x => new {
+    //            x.c.ClassId,
+    //            x.c.Name,
+    //            x.c.Semester,
+    //            SubjectCode = x.s.Code ?? ""
+    //        })
+    //        .ToListAsync(ct);
 
-        var classIds = rows.Select(r => r.ClassId).ToList();
+    //    var classIds = rows.Select(r => r.ClassId).ToList();
 
-        var counts = await _db.ClassMembers
-            .Where(x => classIds.Contains(x.ClassId) && x.MemberStatus == 1)
-            .GroupBy(x => x.ClassId)
-            .Select(g => new { Key = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+    //    var counts = await _db.ClassMembers
+    //        .Where(x => classIds.Contains(x.ClassId) && x.MemberStatus == 1)
+    //        .GroupBy(x => x.ClassId)
+    //        .Select(g => new { Key = g.Key, Count = g.Count() })
+    //        .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
 
-        var items = rows.Select(x => new ClassWithCount(
-            x.ClassId,
-            x.Name,
-            x.Semester,
-            x.SubjectCode,
-            counts.GetValueOrDefault(x.ClassId, 0)
-        )).ToList();
+    //    var items = rows.Select(x => new ClassWithCount(
+    //        x.ClassId,
+    //        x.Name,
+    //        x.Semester,
+    //        x.SubjectCode,
+    //        counts.GetValueOrDefault(x.ClassId, 0)
+    //    )).ToList();
 
-        return (items, total);
-    }
+    //    return (items, total);
+    //}
 
     public async Task<List<BlueprintListItemDto>> GetBlueprintsAsync(int? teacherId, string? subj, string? kw, CancellationToken ct)
     {

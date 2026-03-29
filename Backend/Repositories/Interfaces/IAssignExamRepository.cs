@@ -8,10 +8,10 @@ public interface IAssignExamRepository
 {
     Task<bool> IsUserActiveAsync(int id, CancellationToken ct);
     
-    Task<AssignExamFiltersResponseDto> GetAssignExamFilterOptionsAsync(int teacherId, CancellationToken ct);
+    //Task<AssignExamFiltersResponseDto> GetAssignExamFilterOptionsAsync(int teacherId, CancellationToken ct);
     
-    Task<(List<ClassWithCount> Items, int Total)> GetPagedClassesForTeacherAsync(
-        int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct);
+    //Task<(List<ClassWithCount> Items, int Total)> GetPagedClassesForTeacherAsync(
+    //    int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct);
         
     Task<List<BlueprintListItemDto>> GetBlueprintsAsync(int? teacherId, string? subj, string? kw, CancellationToken ct);
     

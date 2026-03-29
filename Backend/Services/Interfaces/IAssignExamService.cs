@@ -4,18 +4,18 @@ namespace Backend.Services.Interfaces;
 
 public interface IAssignExamService
 {
-    Task<AssignExamFiltersResponseDto> GetFiltersAsync(
-        int? teacherId,
-        CancellationToken cancellationToken = default);
+    //Task<AssignExamFiltersResponseDto> GetFiltersAsync(
+    //    int? teacherId,
+    //    CancellationToken cancellationToken = default);
 
-    Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
-        int? teacherId,
-        string? keyword,
-        string? subjectCode,
-        string? semester,
-        int page,
-        int pageSize,
-        CancellationToken cancellationToken = default);
+    //Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
+    //    int? teacherId,
+    //    string? keyword,
+    //    string? subjectCode,
+    //    string? semester,
+    //    int page,
+    //    int pageSize,
+    //    CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<BlueprintListItemDto>> GetBlueprintsAsync(
         int? teacherId,

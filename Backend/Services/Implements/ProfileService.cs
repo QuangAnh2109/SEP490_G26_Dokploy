@@ -53,32 +53,32 @@ namespace Backend.Services.Implements
             return true;
         }
 
-        public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
-        {
-            var user = await _repo.GetUserByIdAsync(userId);
+        //public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
+        //{
+        //    var user = await _repo.GetUserByIdAsync(userId);
 
-            if (user == null) return false;
+        //    if (user == null) return false;
 
-            var result = _passwordHasher.VerifyHashedPassword(
-                user,
-                user.PasswordHash!,
-                dto.CurrentPassword
-            );
+        //    var result = _passwordHasher.VerifyHashedPassword(
+        //        user,
+        //        user.PasswordHash!,
+        //        dto.CurrentPassword
+        //    );
 
-            if (result == PasswordVerificationResult.Failed)
-                return false;
+        //    if (result == PasswordVerificationResult.Failed)
+        //        return false;
 
-            if (dto.NewPassword != dto.ConfirmPassword)
-                return false;
+        //    if (dto.NewPassword != dto.ConfirmPassword)
+        //        return false;
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+        //    user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
 
-            user.SecurityStamp = DateTime.UtcNow;
+        //    user.SecurityStamp = DateTime.UtcNow;
 
-            await _repo.UpdateUserAsync(user);
-            await _repo.SaveChangesAsync();
+        //    await _repo.UpdateUserAsync(user);
+        //    await _repo.SaveChangesAsync();
 
-            return true;
-        }
+        //    return true;
+        //}
     }
 }

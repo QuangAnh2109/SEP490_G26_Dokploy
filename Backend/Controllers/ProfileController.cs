@@ -67,39 +67,39 @@ namespace Backend.Controllers
         // PUT: api/profile/change-password
         // đổi mật khẩu
         // ===============================
-        [HttpPut("change-password")]
-        public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
-        {
-            int userId = GetUserId();
+        //[HttpPut("change-password")]
+        //public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
+        //{
+        //    int userId = GetUserId();
 
-            var profile = await _service.GetProfileAsync(userId);
+        //    var profile = await _service.GetProfileAsync(userId);
 
-            if (profile == null)
-                return NotFound("User not found");
+        //    if (profile == null)
+        //        return NotFound("User not found");
 
-            // nếu login bằng Google thì không cho đổi password
-            var user = await _service.GetProfileAsync(userId);
+        //    // nếu login bằng Google thì không cho đổi password
+        //    var user = await _service.GetProfileAsync(userId);
 
-            if (user == null)
-                return NotFound();
+        //    if (user == null)
+        //        return NotFound();
 
-            // logic kiểm tra google login
-            // giả sử PasswordHash null = Google account
-            if (await IsGoogleAccount(userId))
-            {
-                return BadRequest("Google account cannot change password");
-            }
+        //    // logic kiểm tra google login
+        //    // giả sử PasswordHash null = Google account
+        //    if (await IsGoogleAccount(userId))
+        //    {
+        //        return BadRequest("Google account cannot change password");
+        //    }
 
-            var result = await _service.ChangePasswordAsync(userId, dto);
+        //    var result = await _service.ChangePasswordAsync(userId, dto);
 
-            if (!result)
-                return BadRequest("Password change failed");
+        //    if (!result)
+        //        return BadRequest("Password change failed");
 
-            return Ok(new
-            {
-                message = "Password changed successfully"
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        message = "Password changed successfully"
+        //    });
+        //}
 
         // helper check google login
         private async Task<bool> IsGoogleAccount(int userId)
