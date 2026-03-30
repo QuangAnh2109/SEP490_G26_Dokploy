@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 
 using Backend.DTOs;
 using Backend.DTOs.Profile;
@@ -52,15 +52,18 @@ namespace Backend.Controllers
         {
             int userId = GetUserId();
 
-            var result = await _service.UpdateProfileAsync(userId, dto);
-
-            if (!result)
-                return BadRequest("Update failed");
-
-            return Ok(new
+            try
             {
-                message = "Profile updated successfully"
-            });
+                var result = await _service.UpdateProfileAsync(userId, dto);
+                if (!result)
+                    return BadRequest(new { message = "Update failed" });
+
+                return Ok(new { message = "Profile updated successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // ===============================

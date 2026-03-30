@@ -88,6 +88,28 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpPost("google-complete-profile")]
+        public async Task<IActionResult> GoogleCompleteProfile([FromBody] GoogleCompleteProfileRequest request)
+        {
+            try
+            {
+                var response = await _authService.GoogleCompleteProfileAsync(request);
+                return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ErrorMessages.GoogleRegistrationProcessingError, details = ex.Message });
+            }
+        }
+
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp([FromBody] RegisterRequest request)
         {

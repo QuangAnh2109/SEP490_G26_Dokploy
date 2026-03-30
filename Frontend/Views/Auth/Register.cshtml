@@ -44,6 +44,21 @@
 				<div id="formError" class="text-danger mb-3" style="font-size: 0.875rem; display: none;"></div>
 
 				<div class="mb-3">
+					<label for="FullName" class="form-label">Họ và tên</label>
+					<input id="FullName" type="text" class="form-control" placeholder="Nhập họ và tên " required />
+				</div>
+
+				<div class="mb-3">
+					<label for="PhoneNumber" class="form-label">Số điện thoại (không bắt buộc)</label>
+					<input id="PhoneNumber" type="tel" class="form-control" placeholder="Nhập số điện thoại" inputmode="numeric" />
+				</div>
+
+				<div class="mb-3 d-none" id="studentIdGroup">
+					<label for="StudentId" class="form-label">Mã sinh viên</label>
+					<input id="StudentId" type="text" class="form-control" placeholder="Nhập mã sinh viên " />
+				</div>
+
+				<div class="mb-3">
 					<label for="Email" class="form-label">Địa chỉ Email</label>
 					<input id="Email" type="email" class="form-control" placeholder="email@example.com" required />
 				</div>

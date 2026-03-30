@@ -5,6 +5,17 @@ namespace Backend.DTOs
 {
     public class RegisterRequest
     {
+        [Required(ErrorMessage = ValidationMessages.FullNameRequired)]
+        [StringLength(200, ErrorMessage = ValidationMessages.FullNameMaxLengthInvalid)]
+        [RegularExpression(@"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$", ErrorMessage = ValidationMessages.FullNameInvalid)]
+        public string FullName { get; set; } = string.Empty;
+
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = ValidationMessages.PhoneNumberInvalid)]
+        public string? PhoneNumber { get; set; }
+
+        [RegularExpression(@"^[A-Za-z]{2}\d{6}$", ErrorMessage = ValidationMessages.StudentIdInvalid)]
+        public string? StudentId { get; set; }
+
         [Required(ErrorMessage = ValidationMessages.EmailRequired)]
         [RegularExpression(@"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$", ErrorMessage = ValidationMessages.EmailFormatInvalid)]
         public string Email { get; set; } = string.Empty;

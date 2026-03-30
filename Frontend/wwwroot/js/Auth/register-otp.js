@@ -10,13 +10,56 @@ $(document).ready(function () {
     var roleName = roleId === "1" ? "Giáo viên" : "Học sinh";
     $('#roleDisplay').text(`Đăng ký tài khoản với vai trò: ${roleName}`);
 
+    // Show/Hide StudentId field based on role
+    var isStudent = roleId !== "1"; // current UX only has 1=Teacher, 2=Student
+    if (isStudent) {
+        $('#studentIdGroup').removeClass('d-none');
+        $('#StudentId').attr('required', true);
+    } else {
+        $('#studentIdGroup').addClass('d-none');
+        $('#StudentId').removeAttr('required');
+    }
+
     // 2. Handle Manual Form Registration -> OTP
     $('#registerForm').submit(function (e) {
         e.preventDefault();
 
+        var fullName = ($('#FullName').val() || '').toString().trim();
+        var phoneNumber = ($('#PhoneNumber').val() || '').toString().trim();
+        var studentId = ($('#StudentId').val() || '').toString().trim();
         var email = $('#Email').val();
         var password = $('#Password').val();
         var confirmPassword = $('#ConfirmPassword').val();
+
+        if (!fullName) {
+            showError("Vui lòng nhập họ và tên.");
+            return;
+        }
+        var fullNamePattern = /^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$/u;
+        if (!fullNamePattern.test(fullName)) {
+            showError("Họ và tên chỉ được chứa chữ cái và khoảng trắng.");
+            return;
+        }
+
+        if (phoneNumber) {
+            var phonePattern = /^0\d{9}$/;
+            if (!phonePattern.test(phoneNumber)) {
+                showError("Số điện thoại phải gồm 10 số và bắt đầu bằng 0.");
+                return;
+            }
+        }
+
+        if (isStudent && !studentId) {
+            showError("Vui lòng nhập mã sinh viên.");
+            return;
+        }
+        if (isStudent) {
+            var studentIdPattern = /^[A-Za-z]{2}\d{6}$/;
+            if (!studentIdPattern.test(studentId)) {
+                showError("Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).");
+                return;
+            }
+        }
 
         // Email Validation (RFC 5322 approximation)
         var emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
@@ -42,6 +85,9 @@ $(document).ready(function () {
         $('#formError').hide();
 
         var requestData = {
+            FullName: fullName,
+            PhoneNumber: phoneNumber || null,
+            StudentId: studentId || null,
             Email: email,
             Password: password,
             RoleId: parseInt(roleId)
@@ -88,6 +134,46 @@ function triggerGoogleRegister() {
 // This function is called by the Google GIS script after user selects their account
 function handleCredentialResponse(response) {
     var roleId = localStorage.getItem('pendingRegistrationRole');
+    var isStudent = roleId !== "1";
+
+    var fullName = ($('#FullName').val() || '').toString().trim();
+    var phoneNumber = ($('#PhoneNumber').val() || '').toString().trim();
+    var studentId = ($('#StudentId').val() || '').toString().trim();
+
+    if (!fullName) {
+        $('#loadingOverlay').hide();
+        showError("Vui lòng nhập họ và tên trước khi đăng ký bằng Google.");
+        return;
+    }
+    var fullNamePattern = /^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$/u;
+    if (!fullNamePattern.test(fullName)) {
+        $('#loadingOverlay').hide();
+        showError("Họ và tên chỉ được chứa chữ cái và khoảng trắng.");
+        return;
+    }
+
+    if (phoneNumber) {
+        var phonePattern = /^0\d{9}$/;
+        if (!phonePattern.test(phoneNumber)) {
+            $('#loadingOverlay').hide();
+            showError("Số điện thoại phải gồm 10 số và bắt đầu bằng 0.");
+            return;
+        }
+    }
+
+    if (isStudent && !studentId) {
+        $('#loadingOverlay').hide();
+        showError("Vui lòng nhập mã sinh viên trước khi đăng ký bằng Google.");
+        return;
+    }
+    if (isStudent) {
+        var studentIdPattern = /^[A-Za-z]{2}\d{6}$/;
+        if (!studentIdPattern.test(studentId)) {
+            $('#loadingOverlay').hide();
+            showError("Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).");
+            return;
+        }
+    }
 
     // Show a general loading state
     $('#loadingOverlay').find('p').text('Đang tạo tài khoản qua Google...');
@@ -95,7 +181,10 @@ function handleCredentialResponse(response) {
 
     var requestData = {
         IdToken: response.credential,
-        RoleId: parseInt(roleId)
+        RoleId: parseInt(roleId),
+        FullName: fullName,
+        PhoneNumber: phoneNumber || null,
+        StudentId: studentId || null
     };
 
     apiClient.post('/api/auth/google-register', requestData)

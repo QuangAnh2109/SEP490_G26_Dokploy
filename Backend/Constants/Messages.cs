@@ -38,5 +38,12 @@ namespace Backend.Constants
         public const string PasswordRequired = "Mật khẩu là bắt buộc.";
         public const string PasswordLengthInvalid = "Mật khẩu phải từ 8 đến 72 ký tự.";
         public const string PasswordComplexityInvalid = "Mật khẩu bắt buộc bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.";
+
+        public const string FullNameRequired = "Họ và tên là bắt buộc.";
+        public const string FullNameMaxLengthInvalid = "Họ và tên không được vượt quá 200 ký tự.";
+        public const string FullNameInvalid = "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
+        public const string PhoneNumberInvalid = "Số điện thoại phải gồm 10 số và bắt đầu bằng 0.";
+        public const string StudentIdRequiredForStudent = "Mã sinh viên là bắt buộc cho tài khoản học sinh.";
+        public const string StudentIdInvalid = "Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).";
     }
 }

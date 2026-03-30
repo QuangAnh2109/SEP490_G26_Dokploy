@@ -53,6 +53,11 @@ function handleCredentialResponse(response) {
                 localStorage.setItem('tempGoogleToken', requestData.IdToken);
                 localStorage.setItem('tempGoogleEmail', data.email);
                 window.location.href = '/Auth/GoogleRegister';
+            } else if (data.needsProfileCompletion) {
+                localStorage.setItem('tempGoogleToken', requestData.IdToken);
+                localStorage.setItem('tempGoogleEmail', data.email);
+                localStorage.setItem('tempGoogleNeedsCompletion', '1');
+                window.location.href = '/Auth/GoogleRegister';
             } else if (data.token) {
                 setToken(data.token);
                 const returnUrl = $('#returnUrl').val();

@@ -5,7 +5,7 @@ body {
     margin: 0;
     padding: 16px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     color: #0f172a;
 }
@@ -120,13 +120,13 @@ body {
 }
 
     .register-illustration-image img {
-        max-width: 320px;
+        max-width: 420px;
         width: 100%;
         height: auto;
         display: block;
         border-radius: 28px;
         background: #ffffff;
-        padding: 32px 28px;
+        padding: 22px 20px;
         box-shadow: 0 22px 45px rgba(15, 23, 42, 0.55);
     }
 
@@ -284,6 +284,7 @@ body {
 
     .register-page {
         flex-direction: row;
+        /* Stretch để không bị trống phần dưới */
         align-items: stretch;
         gap: 0;
     }
@@ -292,6 +293,14 @@ body {
         flex: 1.1;
         padding: 36px 32px;
         border-radius: 20px;
+        /* Không dùng space-between để tránh giãn quá lớn */
+        justify-content: flex-start;
+    }
+
+    .register-illustration-image {
+        /* Đẩy ảnh xuống đáy cột trái khi cột bị stretch */
+        margin-top: auto;
+        margin-bottom: 100px;
     }
 
     .register-container {
