@@ -2,6 +2,7 @@ using Backend.DTOs.Profile;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
+using Backend.Constants;
 using Moq;
 using Xunit;
 
@@ -132,8 +133,8 @@ namespace Backend_UnitTest
             _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Never);
         }
 
-        [Fact(DisplayName = "UpdateProfileAsync - UTCD03 - DTO có giá trị null ở field update => vẫn update null và save")]
-        public async Task UpdateProfileAsync_UTCD03_UserExists_DtoWithNullFields_ShouldUpdateNullsAndSave()
+        [Fact(DisplayName = "UpdateProfileAsync - UTCD03 - DTO FullName null/blank => throw FullNameRequired, không save")]
+        public async Task UpdateProfileAsync_UTCD03_UserExists_DtoWithNullFullName_ShouldThrowAndNotSave()
         {
             // Arrange
             var user = new User
@@ -155,21 +156,16 @@ namespace Backend_UnitTest
             };
 
             _mockRepo.Setup(r => r.GetUserByIdAsync(1)).ReturnsAsync(user);
-            _mockRepo.Setup(r => r.UpdateUserAsync(It.IsAny<User>())).Returns(Task.CompletedTask);
-            _mockRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
 
             // Act
-            var ok = await _service.UpdateProfileAsync(1, dto);
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateProfileAsync(1, dto));
 
             // Assert
-            Assert.True(ok);
-            Assert.Null(user.FullName);
-            Assert.Null(user.PhoneNumber);
-            Assert.Null(user.StudentId);
+            Assert.Equal(ValidationMessages.FullNameRequired, ex.Message);
 
             _mockRepo.Verify(r => r.GetUserByIdAsync(1), Times.Once);
-            _mockRepo.Verify(r => r.UpdateUserAsync(user), Times.Once);
-            _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Once);
+            _mockRepo.Verify(r => r.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+            _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Never);
         }
     }
 }

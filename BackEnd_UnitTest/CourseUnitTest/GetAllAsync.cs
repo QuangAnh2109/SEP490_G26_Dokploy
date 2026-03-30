@@ -1,12 +1,10 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
 using Backend.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Moq;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
@@ -18,8 +16,6 @@ namespace Backend_UnitTest
         private readonly Mock<ICourseRepo> _mockRepo;
         private readonly Mock<IEmailService> _mockEmail;
         private readonly Mock<IConfiguration> _mockConfig;
-        // Vì CourseService có dùng trực tiếp DbContext, ta dùng InMemoryDatabase cho nó
-        private readonly MtcaSep490G26Context _context;
         private readonly CourseService _courseService;
 
         public CourseUnitTest()
@@ -28,15 +24,8 @@ namespace Backend_UnitTest
             _mockEmail = new Mock<IEmailService>();
             _mockConfig = new Mock<IConfiguration>();
 
-            // Khởi tạo DbContext ảo (InMemory) để không chạm vào DB thật
-            var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<MtcaSep490G26Context>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .Options;
-            _context = new MtcaSep490G26Context(options);
-
             _courseService = new CourseService(
                 _mockRepo.Object,
-                _context,
                 _mockEmail.Object,
                 _mockConfig.Object
             );
