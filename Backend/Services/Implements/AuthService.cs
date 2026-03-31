@@ -407,7 +407,7 @@ namespace Backend.Services.Implements
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken)
+        protected virtual async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken)
         {
             var clientId = _configuration["Google:ClientId"];
             var settings = new GoogleJsonWebSignature.ValidationSettings();
