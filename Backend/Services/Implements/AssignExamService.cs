@@ -78,6 +78,8 @@ public class AssignExamService : IAssignExamService
     public async Task<IReadOnlyList<BlueprintListItemDto>> GetBlueprintsAsync(
         int? teacherId, string? subj, string? kw, CancellationToken ct = default)
     {
+        await EnsureUserActiveAsync(teacherId, ct);
+
         subj = subj?.Trim();
         kw = kw?.Trim();
 

@@ -57,9 +57,20 @@ public class AssignExamController : ControllerBase
         [FromQuery] string? keyword,
         CancellationToken cancellationToken = default)
     {
-        var result = await _assignExamService.GetBlueprintsAsync(
-            teacherId, subjectCode, keyword, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _assignExamService.GetBlueprintsAsync(
+                teacherId, subjectCode, keyword, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpGet("blueprints/{id:int}/detail")]
