@@ -94,6 +94,8 @@ public class AssignExamService : IAssignExamService
     public async Task<IReadOnlyList<QuestionListItemDto>> GetQuestionsAsync(
         int? teacherId, string? subj, int? ch, int? diff, CancellationToken ct = default)
     {
+        await EnsureUserActiveAsync(teacherId, ct);
+
         subj = subj?.Trim();
         return await _repo.GetQuestionsAsync(teacherId, subj, ch, diff, ActiveStatus, ct);
     }

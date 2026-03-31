@@ -90,9 +90,20 @@ public class AssignExamController : ControllerBase
         [FromQuery] int? difficulty,
         CancellationToken cancellationToken = default)
     {
-        var result = await _assignExamService.GetQuestionsAsync(
-            teacherId, subjectCode, chapterId, difficulty, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _assignExamService.GetQuestionsAsync(
+                teacherId, subjectCode, chapterId, difficulty, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpPost]

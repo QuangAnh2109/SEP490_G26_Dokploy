@@ -20,11 +20,11 @@ namespace Backend_UnitTest
         }
 
         // Sheet mapping (ảnh):
-        // - GetProfileAsync: UTCD01 (user tồn tại), UTCD02 (user không tồn tại)
-        // - UpdateProfileAsync: UTCD01 (DTO hợp lệ), UTCD02 (user không tồn tại), UTCD03 (DTO null ở field update)
+        // - GetProfileAsync: UTCID01 (user tồn tại), UTCID02 (user không tồn tại)
+        // - UpdateProfileAsync: UTCID01 (DTO hợp lệ), UTCID02 (user không tồn tại), UTCID03 (DTO null ở field update)
 
-        [Fact(DisplayName = "GetProfileAsync - UTCD01 - User tồn tại trong DB => trả UserProfileDTO")]
-        public async Task GetProfileAsync_UTCD01_UserExists_ShouldReturnMappedDto()
+        [Fact(DisplayName = "GetProfileAsync - UTCID01 - User tồn tại trong DB => trả UserProfileDTO")]
+        public async Task GetProfileAsync_UTCID01_UserExists_ShouldReturnMappedDto()
         {
             // Arrange
             var user = new User
@@ -56,8 +56,8 @@ namespace Backend_UnitTest
             _mockRepo.Verify(r => r.GetUserByIdAsync(1), Times.Once);
         }
 
-        [Fact(DisplayName = "GetProfileAsync - UTCD02 - User không tồn tại trong DB => trả null")]
-        public async Task GetProfileAsync_UTCD02_UserNotFound_ShouldReturnNull()
+        [Fact(DisplayName = "GetProfileAsync - UTCID02 - User không tồn tại trong DB => trả null")]
+        public async Task GetProfileAsync_UTCID02_UserNotFound_ShouldReturnNull()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetUserByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
@@ -70,8 +70,8 @@ namespace Backend_UnitTest
             _mockRepo.Verify(r => r.GetUserByIdAsync(999), Times.Once);
         }
 
-        [Fact(DisplayName = "UpdateProfileAsync - UTCD01 - DTO hợp lệ + user tồn tại => return true, DB updated")]
-        public async Task UpdateProfileAsync_UTCD01_UserExists_ValidDto_ShouldUpdateFieldsAndSave()
+        [Fact(DisplayName = "UpdateProfileAsync - UTCID01 - DTO hợp lệ + user tồn tại => return true, DB updated")]
+        public async Task UpdateProfileAsync_UTCID01_UserExists_ValidDto_ShouldUpdateFieldsAndSave()
         {
             // Arrange
             var user = new User
@@ -110,8 +110,8 @@ namespace Backend_UnitTest
             _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Once);
         }
 
-        [Fact(DisplayName = "UpdateProfileAsync - UTCD02 - User không tồn tại => return false, không save")]
-        public async Task UpdateProfileAsync_UTCD02_UserNotFound_ShouldReturnFalse_AndNotSave()
+        [Fact(DisplayName = "UpdateProfileAsync - UTCID02 - User không tồn tại => return false, không save")]
+        public async Task UpdateProfileAsync_UTCID02_UserNotFound_ShouldReturnFalse_AndNotSave()
         {
             // Arrange
             var dto = new UpdateProfileDTO
@@ -133,8 +133,8 @@ namespace Backend_UnitTest
             _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Never);
         }
 
-        [Fact(DisplayName = "UpdateProfileAsync - UTCD03 - DTO FullName null/blank => throw FullNameRequired, không save")]
-        public async Task UpdateProfileAsync_UTCD03_UserExists_DtoWithNullFullName_ShouldThrowAndNotSave()
+        [Fact(DisplayName = "UpdateProfileAsync - UTCID03 - DTO FullName null/blank => throw FullNameRequired, không save")]
+        public async Task UpdateProfileAsync_UTCID03_UserExists_DtoWithNullFullName_ShouldThrowAndNotSave()
         {
             // Arrange
             var user = new User
