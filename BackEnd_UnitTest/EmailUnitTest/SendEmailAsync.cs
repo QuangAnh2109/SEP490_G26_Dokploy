@@ -5,110 +5,171 @@ using System.Threading.Tasks;
 
 namespace BackEnd_UnitTest.EmailUnitTest
 {
-    public class EmailSendEmailUnitTest
+    namespace Backend_UnitTest
     {
-        private EmailService CreateServiceWithConfig(Dictionary<string, string?> settings)
+        public class EmailSendEmailUnitTest
         {
-            var inMemorySettings = new Dictionary<string, string?>(settings);
-            IConfiguration configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings!)
-                .Build();
-
-            return new EmailService(configuration);
-        }
-
-        private static Dictionary<string, string?> BuildValidSettings()
-        {
-            return new Dictionary<string, string?>
+            private EmailService CreateServiceWithConfig(Dictionary<string, string?> settings)
             {
-                ["EmailSettings:SmtpServer"] = "smtp.test.com",
-                ["EmailSettings:Port"] = "587",
-                ["EmailSettings:SenderEmail"] = "sender@test.com",
-                ["EmailSettings:SenderPassword"] = "password123"
-            };
-        }
+                var inMemorySettings = new Dictionary<string, string?>(settings);
+                IConfiguration configuration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(inMemorySettings!)
+                    .Build();
+                return new EmailService(configuration);
+            }
 
-        // UTCID01 - Mọi thông số đều đúng
-        [Fact]
-        public async Task SendEmailAsync_UTCID01_ValidEmailPasswordPort587_ShouldSendSuccessfully()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            // Đặt email ở dạng placeholder để không gửi mail thật (dev mode)
-            settings["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@test.com";
-            var service = CreateServiceWithConfig(settings);
+            private static Dictionary<string, string?> BuildValidSettings()
+            {
+                return new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "smtp.test.com",
+                    ["EmailSettings:Port"] = "587",
+                    ["EmailSettings:SenderEmail"] = "sender@test.com",
+                    ["EmailSettings:SenderPassword"] = "password123"
+                };
+            }
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
-        }
+            private static Dictionary<string, string?> BuildDevModeSettings()
+            {
+                return new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "smtp.test.com",
+                    ["EmailSettings:Port"] = "587",
+                    ["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@gmail.com",
+                    ["EmailSettings:SenderPassword"] = "YOUR_APP_PASSWORD_HERE"
+                };
+            }
 
-        // UTCID02 - SenderEmail = null -> log only
-        [Fact]
-        public async Task SendEmailAsync_UTCID02_SenderEmailIsNull_ShouldLogOnlyAndNotThrow()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            settings["EmailSettings:SenderEmail"] = null;
-            var service = CreateServiceWithConfig(settings);
+            // UTCID01 - Normal: Mọi thông số đều đúng (DEV mode - placeholder)
+            //           → Log only, không gửi mail thật
+            [Fact]
+            public async Task SendEmailAsync_UTCID01_ValidEmailPasswordPort587_ShouldSendSuccessfully()
+            {
+                // Arrange
+                var settings = BuildDevModeSettings();
+                var service = CreateServiceWithConfig(settings);
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
-        }
+                // Act & Assert - Không throw là thành công
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
 
-        // UTCID03 - SenderPassword = null -> log only
-        [Fact]
-        public async Task SendEmailAsync_UTCID03_SenderPasswordIsNull_ShouldLogOnlyAndNotThrow()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            settings["EmailSettings:SenderPassword"] = null;
-            var service = CreateServiceWithConfig(settings);
+            // UTCID02 - SenderEmail = null → isPlaceholder = true → DEV mode
+            //           → Log only, không throw
+            [Fact]
+            public async Task SendEmailAsync_UTCID02_SenderEmailIsNull_ShouldLogOnlyAndNotThrow()
+            {
+                // Arrange
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderEmail"] = null;
+                var service = CreateServiceWithConfig(settings);
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
-        }
+                // Act & Assert
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
 
-        // UTCID04 - Port = 587 hợp lệ
-        [Fact]
-        public async Task SendEmailAsync_UTCID04_Port587_ShouldSendSuccessfully()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            // Dùng placeholder để tránh gửi mail thật, nhưng vẫn để Port = 587
-            settings["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@test.com";
-            var service = CreateServiceWithConfig(settings);
+            // UTCID03 - SenderPassword = null → isPlaceholder = true → DEV mode
+            //           → Log only, không throw
+            [Fact]
+            public async Task SendEmailAsync_UTCID03_SenderPasswordIsNull_ShouldLogOnlyAndNotThrow()
+            {
+                // Arrange
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderPassword"] = null;
+                var service = CreateServiceWithConfig(settings);
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
-        }
+                // Act & Assert
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
 
-        // UTCID05 - Port = "abc" -> fallback 587 theo code hiện tại
-        [Fact]
-        public async Task SendEmailAsync_UTCID05_InvalidPortString_ShouldFallbackAndNotThrow()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            settings["EmailSettings:Port"] = "abc";
-            // Placeholder để không mở kết nối SMTP
-            settings["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@test.com";
-            var service = CreateServiceWithConfig(settings);
+            // UTCID04 - Cấu hình SMTP không hợp lệ (SmtpServer sai)
+            //           → SmtpException khi kết nối thật
+            [Fact]
+            public async Task SendEmailAsync_UTCID04_InvalidSmtpServer_ShouldThrowSmtpException()
+            {
+                // Arrange - Dùng email/password thật (không phải placeholder)
+                // để bypass DEV mode và chạm tới SmtpClient thật
+                var settings = new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "invalid.smtp.server.xyz",
+                    ["EmailSettings:Port"] = "587",
+                    ["EmailSettings:SenderEmail"] = "realemail@gmail.com",
+                    ["EmailSettings:SenderPassword"] = "realpassword"
+                };
+                var service = CreateServiceWithConfig(settings);
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
-        }
+                // Act & Assert - SmtpClient không kết nối được → throw
+                await Assert.ThrowsAnyAsync<Exception>(() =>
+                    service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>"));
+            }
 
-        // UTCID06 - Re-test dữ liệu hợp lệ
-        [Fact]
-        public async Task SendEmailAsync_UTCID06_ValidDataRetest_ShouldSendSuccessfully()
-        {
-            // Arrange
-            var settings = BuildValidSettings();
-            // Re-test vẫn dùng placeholder để test logic mà không gửi mail thật
-            settings["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@test.com";
-            var service = CreateServiceWithConfig(settings);
+            // UTCID05 - Port = "abc" (không hợp lệ) → fallback Port = 587
+            //           → DEV mode nên chỉ log, không throw
+            [Fact]
+            public async Task SendEmailAsync_UTCID05_InvalidPortString_ShouldFallbackAndNotThrow()
+            {
+                // Arrange
+                var settings = BuildDevModeSettings();
+                settings["EmailSettings:Port"] = "abc";
+                var service = CreateServiceWithConfig(settings);
 
-            // Act & Assert
-            await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+                // Act & Assert - DEV mode → log only, Port fallback = 587
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID06 - SMTP hợp lệ nhưng Password = null
+            //           → isPlaceholder = true → DEV mode → log only
+            [Fact]
+            public async Task SendEmailAsync_UTCID06_ValidSmtp_NullPassword_ShouldLogOnly()
+            {
+                // Arrange
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderPassword"] = null; // Password null → DEV mode
+                var service = CreateServiceWithConfig(settings);
+
+                // Act & Assert - isPlaceholder = true → không reach SmtpClient
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID07 - DEV mode: SenderEmail chứa "YOUR_GMAIL_HERE"
+            //           → isPlaceholder = true → log only
+            [Fact]
+            public async Task SendEmailAsync_UTCID07_DevMode_PlaceholderEmail_ShouldLogOnly()
+            {
+                // Arrange
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@gmail.com";
+                var service = CreateServiceWithConfig(settings);
+
+                // Act & Assert
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID08 - DEV mode: SenderPassword chứa "YOUR_APP_PASSWORD_HERE"
+            //           → isPlaceholder = true → log only
+            [Fact]
+            public async Task SendEmailAsync_UTCID08_DevMode_PlaceholderPassword_ShouldLogOnly()
+            {
+                // Arrange
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderPassword"] = "YOUR_APP_PASSWORD_HERE";
+                var service = CreateServiceWithConfig(settings);
+
+                // Act & Assert
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID09 - DEV mode: Cả Email và Password đều là placeholder
+            //           → isPlaceholder = true → log only
+            [Fact]
+            public async Task SendEmailAsync_UTCID09_DevMode_BothPlaceholders_ShouldLogOnly()
+            {
+                // Arrange
+                var settings = BuildDevModeSettings(); // Email + Password đều là placeholder
+                var service = CreateServiceWithConfig(settings);
+
+                // Act & Assert
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
         }
     }
 }
