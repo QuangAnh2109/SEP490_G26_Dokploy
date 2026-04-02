@@ -30,7 +30,7 @@ namespace Backend.Services.Implements
         public Task<List<CourseDTO>> GetAllAsync()
         {
             return _repo.GetAllAsync();
-        }
+        } //k test
 
         public Task<CourseDTO?> GetByIdAsync(int classId)
         {

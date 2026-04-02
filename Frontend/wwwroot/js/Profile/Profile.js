@@ -100,21 +100,41 @@ $(document).on("input", "#profileForm input", function () {
 
 // ================= UPDATE PROFILE =================
 $("#profileForm").on("submit", async function (e) {
-
     e.preventDefault();
 
+    const fullName = $("#fullName").val().trim();
+    const phoneNumber = $("#phoneNumber").val().trim();
+    const studentId = $("#studentId").val()?.trim();
+
+    // ===== VALIDATION =====
+    if (!fullName) {
+        showToast("Tên không được để trống", "error");
+        return;
+    }
+
+    // chỉ cho chữ cái + khoảng trắng (có hỗ trợ tiếng Việt)
+    const nameRegex = /^[A-Za-zÀ-ỹ\s]+$/;
+    if (!nameRegex.test(fullName)) {
+        showToast("Tên không được chứa số hoặc ký tự đặc biệt", "error");
+        return;
+    }
+
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+        showToast("SĐT phải gồm 10 số và bắt đầu bằng 0", "error");
+        return;
+    }
+
     const payload = {
-        fullName: $("#fullName").val(),
-        phoneNumber: $("#phoneNumber").val()
+        fullName,
+        phoneNumber
     };
 
-    // chỉ gửi studentId nếu có
-    if (!$("#studentIdGroup").attr("hidden")) {
-        payload.studentId = $("#studentId").val();
+    if (!$("#studentIdGroup").attr("hidden") && studentId) {
+        payload.studentId = studentId;
     }
 
     try {
-
         await apiClient.put("/api/profile", payload);
 
         showToast("Cập nhật thành công", "success");
@@ -198,9 +218,10 @@ $("#changePasswordForm").on("submit", function (e) {
         .prop("disabled", true)
         .html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
 
-    apiClient.post("/api/auth/change-password", {
+    apiClient.put("/api/profile/change-password", {
         oldPassword,
-        newPassword
+        newPassword,
+        confirmPassword
     })
         .then(() => {
 

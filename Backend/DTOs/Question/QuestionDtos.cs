@@ -7,9 +7,9 @@ namespace Backend.DTOs.Question
     public class QuestionDto
     {
         public string QuestionType { get; set; } = null!;
-        public string Stem { get; set; } = null!;
+        public string Stem { get; set; } = null!;// [QuestionContent]
         public string? Frame { get; set; }
-        public string? Explanation { get; set; }
+        public string? Explanation { get; set; }// KO SU DUNG
         public int ChapterId { get; set; }
         public int Difficulty { get; set; }
         public string Status { get; set; } = "Draft";
