@@ -66,7 +66,7 @@ namespace Backend_UnitTest.AnalyticsTests
         [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID02 - Không có class members -> lấy học sinh từ submissions")]
         public async Task GetExamSubmitResultsAsync_UTCID02_NoClassMembers_ShouldFallbackToStudentsFromSubmissions()
         {
-            int examId = 1;
+            int examId = 2;
             var exam = BuildExamWithoutClass(examId, maxAttempts: 1);
 
             _studentExamRepoMock.Setup(r => r.ForceSubmitOverdueExamsAsync(examId))
@@ -88,7 +88,7 @@ namespace Backend_UnitTest.AnalyticsTests
         [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID03 - MaxAttempts <= 0 -> fallback 999")]
         public async Task GetExamSubmitResultsAsync_UTCID03_MaxAttemptsInvalid_ShouldFallbackTo999()
         {
-            int examId = 1;
+            int examId = 3;
             var exam = BuildExamWithClass(examId, maxAttempts: 0);
             var classMembers = BuildClassMembers();
 
@@ -129,7 +129,7 @@ namespace Backend_UnitTest.AnalyticsTests
         [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID05 - ClassName null và fallback StudentCode/FullName/Duration")]
         public async Task GetExamSubmitResultsAsync_UTCID05_NullClassNameAndStudentFallbacks_ShouldReturnFallbackValues()
         {
-            int examId = 1;
+            int examId = 5;
 
             var inProgressStudent = new User
             {
