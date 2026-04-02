@@ -354,6 +354,272 @@ namespace Backend_UnitTest.AssignExamTests
             _repoMock.Verify(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
             _repoMock.VerifyAll();
         }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID09 - Blueprint không tồn tại => KeyNotFoundException")]
+        public async Task CreateAssignExamAsync_UTCID09_BlueprintNotFound_ShouldThrow()
+        {
+            var r = BaseRequest();
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+            _repoMock.Setup(x => x.GetBlueprintWithChaptersAsync(100, _ct)).ReturnsAsync((ExamBlueprint?)null);
+
+            var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("Blueprint not found.", ex.Message);
+            _repoMock.Verify(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID10 - Blueprint wrap bank + PaperCode=0 => tạo exam thành công")]
+        public async Task CreateAssignExamAsync_UTCID10_BlueprintWrapAroundAndPaperCodeZero_ShouldCreateExam()
+        {
+            var r = BaseRequest();
+            r.IsPublic = true;
+            r.ClassId = null;
+            r.PaperCode = 0;
+            r.PaperCount = 2;
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+
+            var bp = MakeBlueprint(
+                blueprintId: 100,
+                subjectId: 5,
+                MakeRow(chapterId: 10, difficulty: 2, totalQuestions: 2));
+
+            _repoMock.Setup(x => x.GetBlueprintWithChaptersAsync(100, _ct)).ReturnsAsync(bp);
+            _repoMock.Setup(x => x.GetAllQuestionIdsForBlueprintRowAsync(10, 2, It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<int> { 1, 2, 3 });
+
+            SetupTransaction(out var txMock);
+            SetupSaveExamAndPapers(r.PaperCount, startPaperId: 5000, examId: 900);
+
+            var res = await _service.CreateAssignExamAsync(r, _ct);
+
+            Assert.Equal(900, res.ExamId);
+            Assert.Equal(2, res.Papers.Count);
+            Assert.Equal(1, res.Papers[0].Code);
+            Assert.Equal(2, res.Papers[1].Code);
+            Assert.Equal(2, res.TotalQuestions);
+            txMock.Verify(t => t.CommitAsync(_ct), Times.Once);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID11 - Manual + shuffle + SubjectId null => tạo exam thành công")]
+        public async Task CreateAssignExamAsync_UTCID11_ManualShuffleWithNullSubjectId_ShouldCreateExam()
+        {
+            var r = BaseRequest();
+            r.IsPublic = true;
+            r.ClassId = null;
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = null;
+            r.ShuffleQuestion = true;
+            r.QuestionIds = new List<int> { 1, 2, 3 };
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+            _repoMock.Setup(x => x.GetQuestionsWithSubjectByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<QuestionSubjectDto>
+                     {
+                         new QuestionSubjectDto(1, 5),
+                         new QuestionSubjectDto(2, 5),
+                         new QuestionSubjectDto(3, 5),
+                     });
+
+            SetupTransaction(out var txMock);
+            SetupSaveExamAndPapers(r.PaperCount, startPaperId: 6000, examId: 901);
+
+            var res = await _service.CreateAssignExamAsync(r, _ct);
+
+            Assert.Equal(901, res.ExamId);
+            Assert.Equal(r.PaperCount, res.Papers.Count);
+            txMock.Verify(t => t.CommitAsync(_ct), Times.Once);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID12 - GenerationMode null và thời gian null => mặc định blueprint")]
+        public async Task CreateAssignExamAsync_UTCID12_NullGenerationModeAndNullDates_ShouldDefaultToBlueprint()
+        {
+            var r = BaseRequest();
+            r.IsPublic = true;
+            r.ClassId = null;
+            r.GenerationMode = null!;
+            r.VisibleFrom = null;
+            r.OpenAt = null;
+            r.CloseAt = null;
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+
+            var bp = MakeBlueprint(
+                blueprintId: 100,
+                subjectId: 5,
+                MakeRow(chapterId: 10, difficulty: 2, totalQuestions: 1));
+
+            _repoMock.Setup(x => x.GetBlueprintWithChaptersAsync(100, _ct)).ReturnsAsync(bp);
+            _repoMock.Setup(x => x.GetAllQuestionIdsForBlueprintRowAsync(10, 2, It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<int> { 1, 2, 3 });
+
+            SetupTransaction(out var txMock);
+            SetupSaveExamAndPapers(r.PaperCount, startPaperId: 7000, examId: 902);
+
+            var res = await _service.CreateAssignExamAsync(r, _ct);
+
+            Assert.Equal(902, res.ExamId);
+            txMock.Verify(t => t.CommitAsync(_ct), Times.Once);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID13 - Manual với QuestionIds null => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID13_ManualQuestionIdsNull_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = 5;
+            r.QuestionIds = null!;
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("QuestionIds required.", ex.Message);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID14 - Manual với QuestionIds rỗng => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID14_ManualQuestionIdsEmpty_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = 5;
+            r.QuestionIds = new List<int>();
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("QuestionIds required.", ex.Message);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID15 - Manual có question invalid/inactive => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID15_ManualInvalidQuestionIds_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = 5;
+            r.QuestionIds = new List<int> { 1, 2 };
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+            _repoMock.Setup(x => x.GetQuestionsWithSubjectByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<QuestionSubjectDto>
+                     {
+                         new QuestionSubjectDto(1, 5)
+                     });
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("One or more invalid or inactive questions.", ex.Message);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID16 - Manual khác subject => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID16_ManualDifferentSubjects_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = null;
+            r.QuestionIds = new List<int> { 1, 2 };
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+            _repoMock.Setup(x => x.GetQuestionsWithSubjectByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<QuestionSubjectDto>
+                     {
+                         new QuestionSubjectDto(1, 5),
+                         new QuestionSubjectDto(2, 6)
+                     });
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("Questions must belong to the same subject.", ex.Message);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID17 - Manual SubjectId mismatch => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID17_ManualSubjectMismatch_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.GenerationMode = "manual";
+            r.ExamBlueprintId = null;
+            r.SubjectId = 99;
+            r.QuestionIds = new List<int> { 1, 2 };
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+            _repoMock.Setup(x => x.GetQuestionsWithSubjectByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<QuestionSubjectDto>
+                     {
+                         new QuestionSubjectDto(1, 5),
+                         new QuestionSubjectDto(2, 5)
+                     });
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("Subject mismatch.", ex.Message);
+            _repoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID18 - OpenAt >= CloseAt => ArgumentException")]
+        public async Task CreateAssignExamAsync_UTCID18_OpenAtEqualsCloseAt_ShouldThrow()
+        {
+            var r = BaseRequest();
+            r.OpenAt = new DateTime(2026, 4, 1, 10, 0, 0);
+            r.CloseAt = new DateTime(2026, 4, 1, 10, 0, 0);
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("OpenAt >= CloseAt.", ex.Message);
+            _repoMock.Verify(x => x.IsUserActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact(DisplayName = "CreateAssignExamAsync - UTCID19 - Lỗi khi lưu paper => rollback transaction")]
+        public async Task CreateAssignExamAsync_UTCID19_SavePaperFails_ShouldRollback()
+        {
+            var r = BaseRequest();
+            r.IsPublic = true;
+            r.ClassId = null;
+
+            _repoMock.Setup(x => x.IsUserActiveAsync(r.TeacherId, _ct)).ReturnsAsync(true);
+
+            var bp = MakeBlueprint(
+                blueprintId: 100,
+                subjectId: 5,
+                MakeRow(chapterId: 10, difficulty: 2, totalQuestions: 1));
+
+            _repoMock.Setup(x => x.GetBlueprintWithChaptersAsync(100, _ct)).ReturnsAsync(bp);
+            _repoMock.Setup(x => x.GetAllQuestionIdsForBlueprintRowAsync(10, 2, It.IsAny<string[]>(), _ct))
+                     .ReturnsAsync(new List<int> { 1, 2, 3 });
+
+            SetupTransaction(out var txMock);
+
+            _repoMock.Setup(rp => rp.SaveExamAsync(It.IsAny<Exam>(), _ct))
+                     .ReturnsAsync((Exam e, CancellationToken _) =>
+                     {
+                         e.ExamId = 903;
+                         return e;
+                     });
+
+            _repoMock.Setup(rp => rp.SavePaperAsync(It.IsAny<Paper>(), _ct))
+                     .ThrowsAsync(new InvalidOperationException("save paper failed"));
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateAssignExamAsync(r, _ct));
+
+            Assert.Equal("save paper failed", ex.Message);
+            txMock.Verify(t => t.RollbackAsync(_ct), Times.Once);
+            txMock.Verify(t => t.CommitAsync(_ct), Times.Never);
+            _repoMock.VerifyAll();
+        }
     }
 }
 

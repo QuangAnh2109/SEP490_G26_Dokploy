@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -124,6 +124,162 @@ namespace Backend_UnitTest.AnalyticsTests
                 _service.GetStudentSubmissionAnalyticsAsync(examId, studentId));
 
             Assert.Equal($"Không tìm thấy bài thi với ID {examId}.", ex.Message);
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetStudentSubmissionAnalyticsAsync - UTCID06 - ShowAnswer = 0, có câu sai và chapter null -> hide đáp án và sinh recommendation")]
+        public async Task GetStudentSubmissionAnalyticsAsync_UTCID06_ShowAnswerZero_WithWeakAndMediumChapters_ShouldReturnRecommendations()
+        {
+            int examId = 6;
+            int studentId = 1;
+
+            var weakQuestion = CreateQuestion(201, "Weak Q", new Chapter { ChapterId = 10, SubjectId = 1, Name = "Will be null" }, 1);
+            weakQuestion.Chapter = null!;
+
+            var mediumQuestion1 = CreateQuestion(202, "Medium Q1", new Chapter { ChapterId = 20, SubjectId = 1, Name = "Chương 2" }, 2);
+            var mediumQuestion2 = CreateQuestion(203, "Medium Q2", new Chapter { ChapterId = 20, SubjectId = 1, Name = "Chương 2" }, 2);
+
+            var student = new User
+            {
+                UserId = 1,
+                Email = "s1@x.com",
+                FullName = "Student 1",
+                ConcurrencyStamp = Array.Empty<byte>()
+            };
+
+            var targetSubmission = CreateSubmission(
+                submissionId: 1,
+                studentId: 1,
+                paperId: 10,
+                updatedAtUtc: new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                totalPoints: 4m,
+                student: student,
+                answers: new List<StudentAnswer>
+                {
+                    CreateStudentAnswer(1, weakQuestion.QuestionAnswers.First(), "B"), // wrong
+                    CreateStudentAnswer(2, mediumQuestion1.QuestionAnswers.First(), "A") // correct
+                    // mediumQuestion2 intentionally unanswered
+                });
+
+            var otherSubmission = CreateSubmission(
+                submissionId: 2,
+                studentId: 2,
+                paperId: 10,
+                updatedAtUtc: new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
+                totalPoints: 7m,
+                student: new User
+                {
+                    UserId = 2,
+                    Email = "s2@x.com",
+                    FullName = "Student 2",
+                    ConcurrencyStamp = Array.Empty<byte>()
+                },
+                answers: new List<StudentAnswer>
+                {
+                    CreateStudentAnswer(3, mediumQuestion1.QuestionAnswers.First(), "A")
+                });
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                Title = "Hidden Answer Analytics",
+                ShowScore = 1,
+                ShowAnswer = 0,
+                Duration = 60,
+                MaxAttempts = 1,
+                AnswerTimingMode = 0,
+                Status = 0,
+                UpdatedAtUtc = DateTime.UtcNow,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = examId,
+                        Code = 1,
+                        Questions = new List<Question> { weakQuestion, mediumQuestion1, mediumQuestion2 },
+                        Submissions = new List<Submission> { targetSubmission, otherSubmission }
+                    }
+                }
+            };
+
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(examId)).ReturnsAsync(exam);
+
+            var result = await _service.GetStudentSubmissionAnalyticsAsync(examId, studentId);
+
+            Assert.Equal(0, result.ShowAnswer);
+            Assert.Equal(3, result.TotalQuestions);
+            Assert.Equal(1, result.CorrectCount);
+            Assert.Equal(2, result.WrongCount);
+            Assert.Contains(result.AnswerReview, x => x.ChapterName == "N/A");
+            Assert.All(result.AnswerReview.SelectMany(x => x.Options), option =>
+            {
+                Assert.Null(option.IsCorrect);
+                Assert.Null(option.CorrectAnswer);
+            });
+            Assert.NotNull(result.Recommendations);
+            Assert.Contains(result.Recommendations!, r => r.Contains("Cần ôn lại chương"));
+            Assert.Contains(result.Recommendations!, r => r.Contains("cần luyện thêm"));
+
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetStudentSubmissionAnalyticsAsync - UTCID07 - Paper có Questions = null -> trả DTO rỗng phần review")]
+        public async Task GetStudentSubmissionAnalyticsAsync_UTCID07_NullPaperQuestions_ShouldReturnEmptyReview()
+        {
+            int examId = 7;
+            int studentId = 1;
+
+            var submission = CreateSubmission(
+                submissionId: 1,
+                studentId: 1,
+                paperId: 10,
+                updatedAtUtc: new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                totalPoints: 6m,
+                student: new User
+                {
+                    UserId = 1,
+                    Email = "s1@x.com",
+                    FullName = "Student 1",
+                    ConcurrencyStamp = Array.Empty<byte>()
+                },
+                answers: new List<StudentAnswer>());
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                Title = "Null Questions Exam",
+                ShowScore = 1,
+                ShowAnswer = 1,
+                Duration = 60,
+                MaxAttempts = 1,
+                AnswerTimingMode = 0,
+                Status = 0,
+                UpdatedAtUtc = DateTime.UtcNow,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = examId,
+                        Code = 1,
+                        Questions = null!,
+                        Submissions = new List<Submission> { submission }
+                    }
+                }
+            };
+
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(examId)).ReturnsAsync(exam);
+
+            var result = await _service.GetStudentSubmissionAnalyticsAsync(examId, studentId);
+
+            Assert.Equal(0, result.TotalQuestions);
+            Assert.Empty(result.AnswerReview);
+            Assert.Equal(0, result.CorrectCount);
+            Assert.Equal(0, result.WrongCount);
+
             _analyticsRepoMock.VerifyAll();
         }
 

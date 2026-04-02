@@ -186,6 +186,40 @@ namespace Backend_UnitTest
         }
 
         [Fact]
+        public async Task UpdateProfileAsync_WhenStudentRole_WithNullPhoneAndNullStudentId_ShouldThrowStudentIdRequired()
+        {
+            // Arrange
+            int userId = 61;
+            var user = new User
+            {
+                UserId = userId,
+                Email = "student@y.com",
+                RoleId = 2,
+                Status = 1,
+                FullName = "Old Name",
+                PhoneNumber = "0123456789",
+                StudentId = "HE172047"
+            };
+            var dto = new UpdateProfileDTO
+            {
+                FullName = "Nguyen Van A",
+                PhoneNumber = null,
+                StudentId = null
+            };
+
+            _mockRepo.Setup(r => r.GetUserByIdAsync(userId)).ReturnsAsync(user);
+
+            // Act
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateProfileAsync(userId, dto));
+
+            // Assert
+            Assert.Equal(ValidationMessages.StudentIdRequiredForStudent, ex.Message);
+            _mockRepo.Verify(r => r.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+            _mockRepo.Verify(r => r.SaveChangesAsync(), Times.Never);
+            _mockRepo.VerifyAll();
+        }
+
+        [Fact]
         public async Task UpdateProfileAsync_WhenNonStudent_AndStudentIdProvidedInvalid_ShouldThrowStudentIdInvalid()
         {
             // Arrange

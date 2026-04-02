@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -66,7 +66,7 @@ namespace Backend_UnitTest.AnalyticsTests
         [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID02 - Không có class members -> lấy học sinh từ submissions")]
         public async Task GetExamSubmitResultsAsync_UTCID02_NoClassMembers_ShouldFallbackToStudentsFromSubmissions()
         {
-            int examId = 2;
+            int examId = 1;
             var exam = BuildExamWithoutClass(examId, maxAttempts: 1);
 
             _studentExamRepoMock.Setup(r => r.ForceSubmitOverdueExamsAsync(examId))
@@ -88,7 +88,7 @@ namespace Backend_UnitTest.AnalyticsTests
         [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID03 - MaxAttempts <= 0 -> fallback 999")]
         public async Task GetExamSubmitResultsAsync_UTCID03_MaxAttemptsInvalid_ShouldFallbackTo999()
         {
-            int examId = 3;
+            int examId = 1;
             var exam = BuildExamWithClass(examId, maxAttempts: 0);
             var classMembers = BuildClassMembers();
 
@@ -121,6 +121,121 @@ namespace Backend_UnitTest.AnalyticsTests
                 _service.GetExamSubmitResultsAsync(examId));
 
             Assert.Equal($"Không tìm thấy bài thi với ID {examId}.", ex.Message);
+
+            _studentExamRepoMock.VerifyAll();
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetExamSubmitResultsAsync - UTCID05 - ClassName null và fallback StudentCode/FullName/Duration")]
+        public async Task GetExamSubmitResultsAsync_UTCID05_NullClassNameAndStudentFallbacks_ShouldReturnFallbackValues()
+        {
+            int examId = 1;
+
+            var inProgressStudent = new User
+            {
+                UserId = 1,
+                Email = "fallback@email.com",
+                FullName = null,
+                StudentId = null,
+                ConcurrencyStamp = Array.Empty<byte>()
+            };
+
+            var submittedStudent = new User
+            {
+                UserId = 2,
+                Email = "s2@x.com",
+                FullName = "Student 2",
+                StudentId = "HE170002",
+                ConcurrencyStamp = Array.Empty<byte>()
+            };
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                ClassId = 100,
+                Class = null!,
+                Title = "Fallback Submit Results",
+                Duration = 60,
+                MaxAttempts = 1,
+                TeacherId = 99,
+                SubjectId = 1,
+                ShowScore = 1,
+                ShowAnswer = 1,
+                AnswerTimingMode = 0,
+                Status = 0,
+                UpdatedAtUtc = DateTime.UtcNow,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = examId,
+                        Code = 1,
+                        Questions = new List<Question>(),
+                        Submissions = new List<Submission>
+                        {
+                            new Submission
+                            {
+                                SubmissionId = 1,
+                                StudentId = 1,
+                                PaperId = 10,
+                                CreatedAtUtc = new DateTime(2026, 4, 1, 8, 0, 0, DateTimeKind.Utc),
+                                UpdatedAtUtc = new DateTime(2026, 4, 1, 8, 30, 0, DateTimeKind.Utc),
+                                TotalPoints = null,
+                                Status = SubmissionStatus.InProgress,
+                                Student = inProgressStudent,
+                                ConcurrencyStamp = Array.Empty<byte>()
+                            },
+                            new Submission
+                            {
+                                SubmissionId = 2,
+                                StudentId = 2,
+                                PaperId = 10,
+                                CreatedAtUtc = new DateTime(2026, 4, 1, 8, 0, 0, DateTimeKind.Utc),
+                                UpdatedAtUtc = new DateTime(2026, 4, 1, 8, 45, 0, DateTimeKind.Utc),
+                                TotalPoints = 8m,
+                                Status = SubmissionStatus.Submitted,
+                                Student = submittedStudent,
+                                ConcurrencyStamp = Array.Empty<byte>()
+                            }
+                        }
+                    }
+                }
+            };
+
+            var classMembers = new List<ClassMember>
+            {
+                new ClassMember { ClassId = 100, StudentId = 1, MemberStatus = 1, Student = inProgressStudent, ConcurrencyStamp = Array.Empty<byte>() },
+                new ClassMember { ClassId = 100, StudentId = 2, MemberStatus = 1, Student = submittedStudent, ConcurrencyStamp = Array.Empty<byte>() },
+                new ClassMember { ClassId = 100, StudentId = 3, MemberStatus = 1, Student = null!, ConcurrencyStamp = Array.Empty<byte>() }
+            };
+
+            _studentExamRepoMock.Setup(r => r.ForceSubmitOverdueExamsAsync(examId))
+                .Returns(Task.CompletedTask);
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(examId))
+                .ReturnsAsync(exam);
+            _analyticsRepoMock.Setup(r => r.GetClassMembersWithStudentsAsync(100))
+                .ReturnsAsync(classMembers);
+
+            var result = await _service.GetExamSubmitResultsAsync(examId);
+
+            Assert.Null(result.ClassName);
+            Assert.Equal(3, result.TotalStudents);
+
+            var inProgress = result.Students.Single(x => x.StudentId == 1);
+            Assert.Equal("#1", inProgress.StudentCode);
+            Assert.Equal("fallback@email.com", inProgress.FullName);
+            Assert.Null(inProgress.LastSubmitAt);
+            Assert.NotNull(inProgress.DurationFormatted);
+            Assert.Null(inProgress.LastScore);
+
+            var absent = result.Students.Single(x => x.StudentId == 3);
+            Assert.Equal("#3", absent.StudentCode);
+            Assert.Equal("Học sinh #3", absent.FullName);
+            Assert.Null(absent.LastSubmitAt);
+            Assert.Null(absent.DurationFormatted);
+            Assert.Equal("Vắng thi", absent.Status);
 
             _studentExamRepoMock.VerifyAll();
             _analyticsRepoMock.VerifyAll();

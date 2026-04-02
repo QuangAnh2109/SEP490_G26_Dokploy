@@ -7,7 +7,7 @@ using Backend.Services.Implements;
 using Moq;
 using Xunit;
 
-namespace BackEnd_UnitTest.AnalyticsUnitTest
+namespace BackEnd_UnitTest.AssignExamUnitTest
 {
     public class ApproveExamAsync_UTCID_Tests
     {

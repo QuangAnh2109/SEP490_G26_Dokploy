@@ -209,6 +209,67 @@ namespace Backend_UnitTest.AssignExamTests
             Assert.Equal("N/A", result.TeacherName);
             _repoMock.VerifyAll();
         }
+
+        [Fact(DisplayName = "GetExamReviewAsync - UTCID04 - Chapter null, Subject null, Teacher null, không có paper -> fallback đầy đủ")]
+        public async Task GetExamReviewAsync_UTCID04_NullChapterSubjectTeacherAndNoPapers_ShouldFallback()
+        {
+            int examId = 4;
+
+            var blueprint = new ExamBlueprint
+            {
+                ExamBlueprintId = 100,
+                SubjectId = 5,
+                Name = "BP",
+                TeacherId = 1,
+                UpdatedAtUtc = DateTime.UtcNow,
+                Status = 1,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                ExamBlueprintChapters = new List<ExamBlueprintChapter>
+                {
+                    new ExamBlueprintChapter
+                    {
+                        ExamBlueprintId = 100,
+                        ChapterId = 10,
+                        Chapter = null!,
+                        Difficulty = 4,
+                        TotalOfQuestions = 2,
+                        ConcurrencyStamp = Array.Empty<byte>()
+                    }
+                }
+            };
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                ClassId = null,
+                Title = "Exam",
+                Description = null,
+                Duration = 30,
+                OpenAt = null,
+                CloseAt = null,
+                UpdatedAtUtc = DateTime.UtcNow,
+                Status = 0,
+                Subject = null!,
+                Teacher = null!,
+                ExamBlueprint = blueprint,
+                Papers = new List<Paper>(),
+                ConcurrencyStamp = Array.Empty<byte>()
+            };
+
+            _repoMock.Setup(r => r.GetExamReviewDataAsync(examId, _ct))
+                     .ReturnsAsync(exam);
+
+            var result = await _service.GetExamReviewAsync(examId, _ct);
+
+            Assert.Equal("N/A", result.SubjectCode);
+            Assert.Equal("N/A", result.TeacherName);
+            Assert.Equal(0, result.TotalQuestions);
+            Assert.Single(result.BlueprintMatrix);
+            Assert.Equal("N/A", result.BlueprintMatrix[0].ChapterName);
+            Assert.Equal(2, result.BlueprintMatrix[0].AdvancedApply);
+            Assert.Empty(result.Papers);
+            _repoMock.VerifyAll();
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -389,6 +389,163 @@ namespace Backend_UnitTest.AnalyticsTests
 
             // Assert
             Assert.Equal($"Không tìm thấy bài thi với ID {examId}.", ex.Message);
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetExamAnalyticsDetailAsync - UTCID07 - Submission null answers, null question nav, null student info -> fallback đúng")]
+        public async Task GetExamAnalyticsDetailAsync_UTCID07_NullAnswersAndNullQuestionNavigation_ShouldFallbackCorrectly()
+        {
+            int examId = 7;
+
+            var chapter = new Chapter
+            {
+                ChapterId = 10,
+                SubjectId = 1,
+                Name = "Chương 1"
+            };
+
+            var q1 = CreateQuestion(101, "Q1", chapter, 1);
+            q1.QuestionAnswers.First().Question = null!;
+
+            var studentNoInfo = new User
+            {
+                UserId = 1,
+                Email = null!,
+                FullName = null,
+                ConcurrencyStamp = Array.Empty<byte>()
+            };
+
+            var nullAnswersSubmission = new Submission
+            {
+                SubmissionId = 1,
+                StudentId = 99,
+                PaperId = 10,
+                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-40),
+                UpdatedAtUtc = DateTime.UtcNow.AddMinutes(-20),
+                TotalPoints = 0m,
+                Status = 1,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Student = new User
+                {
+                    UserId = 99,
+                    Email = "ignored@x.com",
+                    FullName = "Ignored",
+                    ConcurrencyStamp = Array.Empty<byte>()
+                },
+                StudentAnswers = null!
+            };
+
+            var validSubmission = CreateSubmission(
+                submissionId: 2,
+                studentId: 1,
+                updatedAtUtc: DateTime.UtcNow,
+                totalPoints: 5m,
+                student: studentNoInfo,
+                answers: new List<StudentAnswer>
+                {
+                    CreateStudentAnswer(1, q1.QuestionAnswers.First(), "A")
+                });
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                Title = "Fallback Analytics",
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = examId,
+                        Code = 1,
+                        Questions = new List<Question> { q1 },
+                        Submissions = new List<Submission> { nullAnswersSubmission, validSubmission }
+                    }
+                },
+                ConcurrencyStamp = Array.Empty<byte>(),
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(examId))
+                              .ReturnsAsync(exam);
+
+            var result = await _service.GetExamAnalyticsDetailAsync(examId);
+
+            Assert.Equal(2, result.TotalSubmissions);
+            Assert.Single(result.StudentResults);
+            Assert.Equal("HS #1", result.StudentResults[0].StudentName);
+            Assert.NotEmpty(result.HardestQuestions);
+
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetExamAnalyticsDetailAsync - UTCID08 - Student null và QuestionAnswer null -> vẫn phân tích được phần hợp lệ")]
+        public async Task GetExamAnalyticsDetailAsync_UTCID08_NullStudentAndNullQuestionAnswer_ShouldCoverRemainingBranches()
+        {
+            int examId = 8;
+
+            var chapter = new Chapter
+            {
+                ChapterId = 10,
+                SubjectId = 1,
+                Name = "Chương 1"
+            };
+
+            var q1 = CreateQuestion(101, "Q1", chapter, 1);
+
+            var submission = new Submission
+            {
+                SubmissionId = 1,
+                StudentId = 1,
+                PaperId = 10,
+                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-30),
+                UpdatedAtUtc = DateTime.UtcNow,
+                TotalPoints = 6m,
+                Status = 1,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Student = null!,
+                StudentAnswers = new List<StudentAnswer>
+                {
+                    new StudentAnswer
+                    {
+                        StudentAnswerId = 1,
+                        SubmissionId = 1,
+                        QuestionAnswerId = 999,
+                        Response = "X",
+                        ConcurrencyStamp = Array.Empty<byte>(),
+                        QuestionAnswer = null!
+                    },
+                    CreateStudentAnswer(2, q1.QuestionAnswers.First(), "A")
+                }
+            };
+
+            var exam = new Exam
+            {
+                ExamId = examId,
+                Title = "Null Student Analytics",
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = examId,
+                        Code = 1,
+                        Questions = new List<Question> { q1 },
+                        Submissions = new List<Submission> { submission }
+                    }
+                },
+                ConcurrencyStamp = Array.Empty<byte>(),
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(examId))
+                              .ReturnsAsync(exam);
+
+            var result = await _service.GetExamAnalyticsDetailAsync(examId);
+
+            Assert.Single(result.StudentResults);
+            Assert.Equal("HS #1", result.StudentResults[0].StudentName);
+            Assert.NotEmpty(result.HardestQuestions);
+
             _analyticsRepoMock.VerifyAll();
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -141,6 +141,80 @@ namespace Backend_UnitTest.AnalyticsTests
                 _service.GetSubmissionBySubmissionIdAsync(submissionId));
 
             Assert.Equal("Không tìm thấy bài làm trong dữ liệu bài thi.", ex.Message);
+            _analyticsRepoMock.VerifyAll();
+        }
+
+        [Fact(DisplayName = "GetSubmissionBySubmissionIdAsync - UTCID05 - Submission có PaperId không khớp paper trong exam -> review rỗng")]
+        public async Task GetSubmissionBySubmissionIdAsync_UTCID05_MissingPaperForSubmission_ShouldReturnEmptyReview()
+        {
+            int submissionId = 5;
+
+            var submissionLookup = new Submission
+            {
+                SubmissionId = submissionId,
+                StudentId = 1,
+                PaperId = 999,
+                Paper = new Paper { PaperId = 999, ExamId = 1, Code = 99 }
+            };
+
+            var targetSubmission = new Submission
+            {
+                SubmissionId = submissionId,
+                StudentId = 1,
+                PaperId = 999,
+                CreatedAtUtc = new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
+                UpdatedAtUtc = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                TotalPoints = 5m,
+                Status = 2,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Student = new User
+                {
+                    UserId = 1,
+                    Email = "s1@x.com",
+                    FullName = "Student 1",
+                    ConcurrencyStamp = Array.Empty<byte>()
+                },
+                StudentAnswers = new List<StudentAnswer>()
+            };
+
+            var exam = new Exam
+            {
+                ExamId = 1,
+                Title = "Missing Paper Match",
+                ShowScore = 0,
+                ShowAnswer = 0,
+                Duration = 60,
+                MaxAttempts = 1,
+                AnswerTimingMode = 0,
+                Status = 0,
+                UpdatedAtUtc = DateTime.UtcNow,
+                ConcurrencyStamp = Array.Empty<byte>(),
+                Papers = new List<Paper>
+                {
+                    new Paper
+                    {
+                        PaperId = 10,
+                        ExamId = 1,
+                        Code = 1,
+                        Questions = new List<Question>(),
+                        Submissions = new List<Submission> { targetSubmission }
+                    }
+                }
+            };
+
+            _analyticsRepoMock.Setup(r => r.GetSubmissionByIdWithPaperAsync(submissionId))
+                .ReturnsAsync(submissionLookup);
+            _analyticsRepoMock.Setup(r => r.GetExamWithFullGraphAsync(1))
+                .ReturnsAsync(exam);
+
+            var result = await _service.GetSubmissionBySubmissionIdAsync(submissionId);
+
+            Assert.Equal(submissionId, result.SubmissionId);
+            Assert.Equal(0, result.TotalQuestions);
+            Assert.Empty(result.AnswerReview);
+            Assert.Equal(0, result.CorrectCount);
+            Assert.Equal(0, result.WrongCount);
+
             _analyticsRepoMock.VerifyAll();
         }
 
