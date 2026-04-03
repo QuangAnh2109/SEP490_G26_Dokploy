@@ -1,4 +1,4 @@
-﻿using Backend.Constants;
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -178,6 +178,39 @@ namespace BackEnd_UnitTest.AuthUnitTest
             Assert.Equal("email@gmail.com", result.Email);
             // RoleId sai → Role không load được → fallback "User"
             Assert.Equal("User", result.RoleName);
+        }
+
+        // UTCID06 - AddUser trả về user có Role.Name cụ thể → RoleName từ Role, không fallback "User"
+        [Fact]
+        public async Task GoogleRegisterAsync_UTCID06_ValidToken_UserWithRoleName_ShouldReturnRoleNameFromRole()
+        {
+            var fakePayload = new GoogleJsonWebSignature.Payload
+            {
+                Email = "roleuser@gmail.com"
+            };
+
+            _mockAuthRepo.Setup(r => r.GetUserByEmailAsync("roleuser@gmail.com"))
+                         .ReturnsAsync((User?)null);
+
+            _mockAuthRepo.Setup(r => r.AddUserAsync(It.IsAny<User>()))
+                         .ReturnsAsync((User u) =>
+                         {
+                             u.Role = new Role { Name = "Teacher" };
+                             return u;
+                         });
+
+            var service = CreateService(fakePayload: fakePayload);
+            var request = new GoogleRegisterRequest
+            {
+                IdToken = "valid-token",
+                RoleId = 1
+            };
+
+            var result = await service.GoogleRegisterAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal("Teacher", result.RoleName);
+            Assert.Equal("roleuser@gmail.com", result.Email);
         }
     }
 }

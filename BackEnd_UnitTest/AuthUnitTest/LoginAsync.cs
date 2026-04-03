@@ -1,4 +1,4 @@
-﻿using Backend.Constants;
+using Backend.Constants;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
@@ -191,6 +191,65 @@ namespace BackEnd_UnitTest.AuthUnitTest
                 _authService.LoginAsync(request));
 
             Assert.Equal(ErrorMessages.InvalidEmailOrPassword, exception.Message);
+        }
+
+        // UTCID07 - Normal: Role == null → RoleName fallback "User"
+        [Fact]
+        public async Task LoginAsync_UTCID07_ValidCredentials_RoleNull_ShouldDefaultRoleNameToUser()
+        {
+            var plainPassword = "12345678";
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+
+            var fakeUser = new User
+            {
+                Email = "norole@gmail.com",
+                PasswordHash = hashedPassword,
+                Role = null
+            };
+
+            var request = new LoginRequest
+            {
+                Email = "norole@gmail.com",
+                Password = plainPassword
+            };
+
+            _mockAuthRepo.Setup(r => r.GetUserByEmailAsync(request.Email))
+                         .ReturnsAsync(fakeUser);
+
+            var result = await _authService.LoginAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal("User", result.RoleName);
+            Assert.Equal("norole@gmail.com", result.Email);
+        }
+
+        // UTCID08 - Normal: Role != null nhưng Name == null → fallback "User"
+        [Fact]
+        public async Task LoginAsync_UTCID08_ValidCredentials_RoleNameNull_ShouldDefaultRoleNameToUser()
+        {
+            var plainPassword = "12345678";
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+
+            var fakeUser = new User
+            {
+                Email = "nullname@gmail.com",
+                PasswordHash = hashedPassword,
+                Role = new Role { Name = null! }
+            };
+
+            var request = new LoginRequest
+            {
+                Email = "nullname@gmail.com",
+                Password = plainPassword
+            };
+
+            _mockAuthRepo.Setup(r => r.GetUserByEmailAsync(request.Email))
+                         .ReturnsAsync(fakeUser);
+
+            var result = await _authService.LoginAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal("User", result.RoleName);
         }
     }
 }

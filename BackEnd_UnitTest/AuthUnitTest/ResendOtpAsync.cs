@@ -1,4 +1,4 @@
-﻿using Backend.Constants;
+using Backend.Constants;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
 using Backend.Services.Interfaces;
@@ -165,6 +165,34 @@ namespace Backend_UnitTest.AuthUnitTest
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 _authService.ResendOtpAsync(null));
         }
+
+        // UTCID06 - Normal: Cache hợp lệ + gửi email thành công → method hoàn tất (đóng async state machine)
+        [Fact]
+        public async Task ResendOtpAsync_UTCID06_ValidCache_EmailOk_ShouldComplete()
+        {
+            var fakeRegRequest = new RegisterRequest { Email = "ok@gmail.com" };
+            var fakeCacheData = new OtpCacheData { Request = fakeRegRequest, Otp = "111222" };
+
+            object cacheValue = fakeCacheData;
+            _mockCache.Setup(c => c.TryGetValue(
+                    It.Is<object>(k => k.ToString() == "OTP_ok@gmail.com"),
+                    out cacheValue))
+                .Returns(true);
+
+            _mockEmail.Setup(e => e.SendEmailAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
+            await _authService.ResendOtpAsync("ok@gmail.com");
+
+            _mockEmail.Verify(e => e.SendEmailAsync(
+                "ok@gmail.com",
+                It.IsAny<string>(),
+                It.IsAny<string>()), Times.Once);
+        }
+
         public class OtpCacheData
         {
             public RegisterRequest Request { get; set; }

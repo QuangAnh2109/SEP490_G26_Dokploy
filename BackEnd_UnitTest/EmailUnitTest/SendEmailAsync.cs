@@ -1,5 +1,6 @@
 using Backend.Services.Implements;
 using Microsoft.Extensions.Configuration;
+using Moq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -16,6 +17,23 @@ namespace BackEnd_UnitTest.EmailUnitTest
                     .AddInMemoryCollection(inMemorySettings!)
                     .Build();
                 return new EmailService(configuration);
+            }
+
+            /// <summary>
+            /// Moq giúp trả đúng null / chuỗi rõ ràng cho từng key (một số công cụ coverage phân nhánh chi tiết hơn InMemoryCollection).
+            /// </summary>
+            private static EmailService CreateServiceWithMoq(
+                string? smtpServer,
+                string? port,
+                string? senderEmail,
+                string? senderPassword)
+            {
+                var mock = new Mock<IConfiguration>();
+                mock.Setup(c => c["EmailSettings:SmtpServer"]).Returns(smtpServer);
+                mock.Setup(c => c["EmailSettings:Port"]).Returns(port);
+                mock.Setup(c => c["EmailSettings:SenderEmail"]).Returns(senderEmail);
+                mock.Setup(c => c["EmailSettings:SenderPassword"]).Returns(senderPassword);
+                return new EmailService(mock.Object);
             }
 
             private static Dictionary<string, string?> BuildValidSettings()
@@ -169,6 +187,151 @@ namespace BackEnd_UnitTest.EmailUnitTest
 
                 // Act & Assert
                 await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID10 - Không khai báo SmtpServer/Port → null → nhánh ?? "smtp.gmail.com" và ?? "587" (ảnh coverage)
+            //           Kèm placeholder → DEV mode, không gửi SMTP thật
+            [Fact]
+            public async Task SendEmailAsync_UTCID10_MissingSmtpServerAndPort_UsesDefaultsAndDevMode()
+            {
+                var settings = new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SenderEmail"] = "YOUR_GMAIL_HERE@gmail.com",
+                    ["EmailSettings:SenderPassword"] = "YOUR_APP_PASSWORD_HERE"
+                };
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID11 - SenderEmail = "" (chuỗi rỗng) → nhánh đầu của OR ở isPlaceholder (ảnh coverage)
+            [Fact]
+            public async Task SendEmailAsync_UTCID11_SenderEmailEmptyString_ShouldLogOnly()
+            {
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderEmail"] = "";
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID12 - SenderPassword = "" (chuỗi rỗng), email hợp lệ → nhánh thứ hai của OR (ảnh coverage)
+            [Fact]
+            public async Task SendEmailAsync_UTCID12_SenderPasswordEmptyString_ShouldLogOnly()
+            {
+                var settings = BuildValidSettings();
+                settings["EmailSettings:SenderPassword"] = "";
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID13 - Không có key SenderEmail (không gán null trong dict) → indexer trả null, IsNullOrEmpty true
+            [Fact]
+            public async Task SendEmailAsync_UTCID13_SenderEmailKeyAbsent_ShouldLogOnly()
+            {
+                var settings = new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "smtp.test.com",
+                    ["EmailSettings:Port"] = "587",
+                    ["EmailSettings:SenderPassword"] = "password123"
+                };
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID14 - Không có key SenderPassword → null, cần email không rỗng để thấy nhánh thứ hai của dòng 24
+            [Fact]
+            public async Task SendEmailAsync_UTCID14_SenderPasswordKeyAbsent_ShouldLogOnly()
+            {
+                var settings = new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "smtp.test.com",
+                    ["EmailSettings:Port"] = "587",
+                    ["EmailSettings:SenderEmail"] = "sender@test.com"
+                };
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID15 - Cả hai key email/password đều absent → cả hai IsNullOrEmpty true (chuỗi OR đầu)
+            [Fact]
+            public async Task SendEmailAsync_UTCID15_BothSenderKeysAbsent_ShouldLogOnly()
+            {
+                var settings = new Dictionary<string, string?>
+                {
+                    ["EmailSettings:SmtpServer"] = "smtp.test.com",
+                    ["EmailSettings:Port"] = "587"
+                };
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // UTCID16 - Port parse thành số khác 587 (TryParse true, nhánh khác default literal 587)
+            [Fact]
+            public async Task SendEmailAsync_UTCID16_Port465_ParseSuccess_DevMode()
+            {
+                var settings = BuildDevModeSettings();
+                settings["EmailSettings:Port"] = "465";
+                var service = CreateServiceWithConfig(settings);
+
+                await service.SendEmailAsync("to@test.com", "Subject", "<b>Message</b>");
+            }
+
+            // --- Moq: bao phủ từng nhánh IsNullOrEmpty + rút gọn OR trên dòng 24 ---
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_EmailNull_PasswordSet_ShortCircuitFirstCondition()
+            {
+                var service = CreateServiceWithMoq("smtp.test.com", "587", null, "secret");
+                await service.SendEmailAsync("to@test.com", "S", "b");
+            }
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_EmailEmpty_PasswordSet_ShortCircuitFirstCondition()
+            {
+                var service = CreateServiceWithMoq("smtp.test.com", "587", "", "secret");
+                await service.SendEmailAsync("to@test.com", "S", "b");
+            }
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_EmailSet_PasswordNull_SecondConditionTrue()
+            {
+                var service = CreateServiceWithMoq("smtp.test.com", "587", "a@test.com", null);
+                await service.SendEmailAsync("to@test.com", "S", "b");
+            }
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_EmailSet_PasswordEmpty_SecondConditionTrue()
+            {
+                var service = CreateServiceWithMoq("smtp.test.com", "587", "a@test.com", "");
+                await service.SendEmailAsync("to@test.com", "S", "b");
+            }
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_BothNonEmpty_Line24False_ThenPlaceholderSubstringTrue()
+            {
+                var service = CreateServiceWithMoq(
+                    "smtp.test.com",
+                    "587",
+                    "YOUR_GMAIL_HERE@gmail.com",
+                    "pwd");
+                await service.SendEmailAsync("to@test.com", "S", "b");
+            }
+
+            [Fact]
+            public async Task SendEmailAsync_Moq_BothNonEmpty_NoPlaceholder_Line24And25And26False()
+            {
+                var service = CreateServiceWithMoq(
+                    "invalid.smtp.server.xyz",
+                    "587",
+                    "realemail@gmail.com",
+                    "realpassword");
+                await Assert.ThrowsAnyAsync<Exception>(() =>
+                    service.SendEmailAsync("to@test.com", "S", "b"));
             }
         }
     }

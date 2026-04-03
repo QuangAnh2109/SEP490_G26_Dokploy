@@ -284,7 +284,8 @@ namespace Backend.Services.Implements
 
             var blueprint = new ExamBlueprint
             {
-                Name = (request.Name ?? string.Empty).Trim(),
+                // ValidateAndPrepareBlueprintAsync đã đảm bảo Name không null/không rỗng (không whitespace).
+                Name = request.Name!.Trim(),
                 Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
                 SubjectId = request.SubjectId,
                 TotalQuestions = request.TargetTotalQuestions,

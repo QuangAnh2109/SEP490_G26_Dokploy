@@ -1,4 +1,4 @@
-﻿using Backend.Constants;
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -195,6 +195,34 @@ namespace BackEnd_UnitTest.AuthUnitTest
                 service.GoogleLoginAsync(request));
 
             Assert.Equal(ErrorMessages.InvalidGoogleTokenSignature, exception.Message);
+        }
+
+        [Fact]
+        public async Task GoogleLoginAsync_UTCID06_ValidToken_RoleWithNullName_ShouldDefaultRoleNameToUser()
+        {
+            var fakePayload = new GoogleJsonWebSignature.Payload
+            {
+                Email = "nullname@gmail.com"
+            };
+
+            var fakeUser = new User
+            {
+                Email = "nullname@gmail.com",
+                PasswordHash = "someHash",
+                Role = new Role { Name = null! }
+            };
+
+            _mockAuthRepo.Setup(r => r.GetUserByEmailAsync("nullname@gmail.com"))
+                         .ReturnsAsync(fakeUser);
+
+            var service = CreateService(fakePayload: fakePayload);
+            var request = new GoogleLoginRequest { IdToken = "valid-token" };
+
+            var result = await service.GoogleLoginAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal("User", result.RoleName);
+            Assert.Equal("nullname@gmail.com", result.Email);
         }
     }
 }

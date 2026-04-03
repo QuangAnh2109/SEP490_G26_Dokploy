@@ -1,4 +1,4 @@
-﻿using Backend.Constants;
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -217,6 +217,35 @@ namespace Backend_UnitTest.AuthUnitTest
             Assert.Equal("User", result.RoleName); // fallback khi Role null
             Assert.Equal("email@gmail.com", result.Email);
             Assert.NotNull(result.Token);
+        }
+
+        // UTCID07 - Sau AddUser có Role.Name thật → RoleName khớp claim (không chỉ nhánh Role null)
+        [Fact]
+        public async Task VerifyOtpAndRegisterAsync_UTCID07_ValidOtp_UserWithRoleName_ShouldReturnRoleNameFromRole()
+        {
+            SetupValidCache("roleuser@gmail.com", "123456");
+
+            _mockAuthRepo.Setup(r => r.GetUserByEmailAsync("roleuser@gmail.com"))
+                         .ReturnsAsync((User?)null);
+
+            _mockAuthRepo.Setup(r => r.AddUserAsync(It.IsAny<User>()))
+                         .ReturnsAsync((User u) =>
+                         {
+                             u.Role = new Role { Name = "Teacher" };
+                             return u;
+                         });
+
+            var request = new VerifyOtpRequest
+            {
+                Email = "roleuser@gmail.com",
+                OtpCode = "123456"
+            };
+
+            var result = await _authService.VerifyOtpAndRegisterAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal("Teacher", result.RoleName);
+            Assert.Equal("roleuser@gmail.com", result.Email);
         }
 
         // UTCID06 - Normal: Email sai định dạng
