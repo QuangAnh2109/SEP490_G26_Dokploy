@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sep490_backend
+    ports:
+      - "7167:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://+:8080}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - EMAIL_SMTP_SERVER=${EMAIL_SMTP_SERVER}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend-app.rule=Host(`mtca.quanganh21.id.vn`)"
+      - "traefik.http.routers.backend-app.entrypoints=web" # Chỉ định dùng entrypoint port 80
+      - "traefik.http.services.backend-app.loadbalancer.server.port=8080" # Port thật của code bên trong container
+
+networks:
+  dokploy-network:
+    external: true

@@ -1,0 +1,32 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sep490_frontend
+    ports:
+      - "5124:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://+:8080}
+      - Backend__BaseUrl=${BACKEND_API_URL}
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    restart: unless-stopped
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.my-app.rule=Host(`mtca-api.quanganh21.id.vn`)"
+  - "traefik.http.routers.my-app.entrypoints=web" # Chỉ định dùng entrypoint port 80
+  - "traefik.http.services.my-app.loadbalancer.server.port=8080" # Port thật của code bên trong container
+
+networks:
+  dokploy-network:
+    external: true
