@@ -52,6 +52,9 @@ namespace Backend
             builder.Services.AddScoped<IProfileService, ProfileService>();
             // Add AnalyticsService
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+            // Add PracticeExam
+            builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
+            builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
 
 
             // =========================

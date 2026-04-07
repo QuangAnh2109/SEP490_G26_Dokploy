@@ -203,7 +203,7 @@ public class AnalyticsService : IAnalyticsService
         if (submission?.Paper == null)
             throw new KeyNotFoundException($"Không tìm thấy bài làm với ID {submissionId}.");
 
-        var examId = submission.Paper.ExamId;
+        var examId = submission.Paper.ExamId ?? 0;
         var studentId = submission.StudentId;
 
         var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);

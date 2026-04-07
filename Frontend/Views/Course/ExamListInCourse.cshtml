@@ -20,6 +20,12 @@
             <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action active">
                 <i class="fas fa-list me-2"></i> Danh sách đề
             </a>
+            <a href="/PracticeExam/Setup?classId=@classId" class="list-group-item list-group-item-action" id="practiceMenuItem">
+                <i class="fas fa-brain me-2"></i> Luyện tập
+            </a>
+            <a href="/PracticeExam/History?classId=@classId" class="list-group-item list-group-item-action" id="practiceHistoryMenuItem">
+                <i class="fas fa-history me-2"></i> Lịch sử luyện tập
+            </a>
             <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action">
                 <i class="fas fa-users me-2"></i> Danh sách học sinh
             </a>
@@ -154,6 +160,11 @@
             if (role === "Teacher") {
                 const btnCreate = document.getElementById("btnCreateExam");
                 if (btnCreate) btnCreate.classList.remove("d-none");
+                // Ẩn menu luyện tập cho giáo viên
+                const practiceMenu = document.getElementById("practiceMenuItem");
+                if (practiceMenu) practiceMenu.style.display = 'none';
+                const practiceHistoryMenu = document.getElementById("practiceHistoryMenuItem");
+                if (practiceHistoryMenu) practiceHistoryMenu.style.display = 'none';
             }
 
             await loadChapters();   // load chapter trước

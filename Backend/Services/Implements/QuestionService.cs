@@ -101,7 +101,7 @@ namespace Backend.Services.Implements
             if (q == null || q.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xem.");
 
             var (stem, frame) = ParseContent(q.QuestionContent);
-            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem, Frame = frame };
+            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem ?? string.Empty, Frame = frame, QuestionPurpose = q.QuestionPurpose };
 
             dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
@@ -159,6 +159,7 @@ namespace Backend.Services.Implements
             q.QuestionType = item.QuestionType;
             q.ChapterId = item.ChapterId;
             q.Difficulty = item.Difficulty;
+            q.QuestionPurpose = item.QuestionPurpose;
             q.Status = item.Status;
             q.UpdatedAtUtc = DateTime.UtcNow;
             q.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
@@ -220,6 +221,8 @@ namespace Backend.Services.Implements
                 ChapterName = "",
                 UpdatedAt = question.UpdatedAtUtc,
                 Status = question.Status,
+                QuestionPurpose = question.QuestionPurpose,
+                QuestionPurposeLabel = Constants.QuestionPurpose.GetLabel(question.QuestionPurpose),
                 AnswerCount = question.QuestionAnswers?.Count ?? 0
             };
         }
@@ -320,6 +323,7 @@ namespace Backend.Services.Implements
             if (string.IsNullOrWhiteSpace(item.Stem)) errs.Add($"{prefix}: Đề bài không được để trống.");
             if (!DifficultyLevel.IsValid(item.Difficulty)) errs.Add($"{prefix}: Mức độ phải từ 1 đến 4.");
             if (!QuestionStatus.IsValid(item.Status)) errs.Add($"{prefix}: Trạng thái không hợp lệ.");
+            if (!Constants.QuestionPurpose.IsValid(item.QuestionPurpose)) errs.Add($"{prefix}: Mục đích câu hỏi không hợp lệ (1=Kiểm tra, 2=Luyện tập).");
             if (!await _questionRepository.ChapterExistsAsync(item.ChapterId)) errs.Add($"{prefix}: Chương không tồn tại.");
             if (!(item.Answers?.Any() ?? false)) return new() { $"{prefix}: Phải có ít nhất 1 đáp án." };
 

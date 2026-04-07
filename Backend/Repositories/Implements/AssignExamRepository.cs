@@ -1,3 +1,4 @@
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -200,7 +201,8 @@ public class AssignExamRepository : IAssignExamRepository
     public async Task<List<int>> GetQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, int count, string[] activeStatus, CancellationToken ct)
     {
         return await _db.Questions
-            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
+            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty
+                     && q.QuestionPurpose == QuestionPurpose.Exam)
             .OrderBy(q => Guid.NewGuid())
             .Take(count)
             .Select(q => q.QuestionId)
@@ -210,7 +212,8 @@ public class AssignExamRepository : IAssignExamRepository
     public async Task<List<int>> GetAllQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, string[] activeStatus, CancellationToken ct)
     {
         return await _db.Questions
-            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
+            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty
+                     && q.QuestionPurpose == QuestionPurpose.Exam)
             .Select(q => q.QuestionId)
             .ToListAsync(ct);
     }
@@ -326,7 +329,7 @@ public class AssignExamRepository : IAssignExamRepository
         // Delete old question from all papers that have it
         var idsStr = string.Join(",", paperIdsToProcess);
         await _db.Database.ExecuteSqlRawAsync(
-            $"DELETE FROM PaperQuestion WHERE PaperId IN ({idsStr}) AND QuestionId = {{0}}",
+            "DELETE FROM PaperQuestion WHERE PaperId IN (" + idsStr + ") AND QuestionId = {0}",
             oldQuestionId);
 
         // Find which papers ALREADY have the NEW question
@@ -340,9 +343,10 @@ public class AssignExamRepository : IAssignExamRepository
 
         if (targetIds.Count > 0)
         {
-            var insertBatch = string.Join(",", targetIds.Select(pid => $"({pid}, {newQuestionId})"));
+            var insertBatch = string.Join(",", targetIds.Select(pid => $"({pid}, @p0)"));
             await _db.Database.ExecuteSqlRawAsync(
-                $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {insertBatch}");
+                "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES " + insertBatch,
+                newQuestionId);
         }
     }
 
@@ -381,6 +385,7 @@ public class AssignExamRepository : IAssignExamRepository
                join c in _db.Chapters on q.ChapterId equals c.ChapterId
                join s in _db.Subjects on c.SubjectId equals s.SubjectId
                where activeStatus.Contains(q.Status)
+                  && q.QuestionPurpose == QuestionPurpose.Exam
                select new QuestionQueryRow { q = q, c = c, s = s };
     }
 }

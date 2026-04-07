@@ -18,6 +18,16 @@
         'Archived': 'badge-status-archived'
     };
 
+    const purposeLabels = {
+        1: 'Kiểm tra',
+        2: 'Luyện tập'
+    };
+
+    const purposeBadgeClass = {
+        1: 'bg-info text-dark',
+        2: 'bg-warning text-dark'
+    };
+
     const difficultyBadgeClass = {
         1: 'badge-diff-1',
         2: 'badge-diff-2',
@@ -117,6 +127,9 @@
 
         const status = document.getElementById('filterStatus')?.value;
         if (status) params.set('status', status);
+
+        const purpose = document.getElementById('filterPurpose')?.value;
+        if (purpose) params.set('questionPurpose', purpose);
 
         return params.toString();
     };
@@ -316,6 +329,12 @@
             statusSpan.className = `badge ${statusClass} rounded-1 py-2 px-2 fw-medium`;
             statusSpan.innerHTML = `<i class="bi bi-${q.status === 'Active' ? 'check-circle' : q.status === 'Archived' ? 'archive' : 'pencil-square'} me-1"></i>${statusLabel}`;
 
+            const purposeSpan = row.querySelector('[data-field-purpose]');
+            const purposeClass = purposeBadgeClass[q.questionPurpose] || 'bg-secondary';
+            const purposeLabel = q.questionPurposeLabel || purposeLabels[q.questionPurpose] || 'N/A';
+            purposeSpan.className = `badge ${purposeClass} rounded-1 py-2 px-2 fw-medium`;
+            purposeSpan.textContent = purposeLabel;
+
             tbody.appendChild(row);
         });
 
@@ -481,6 +500,8 @@
         document.getElementById('filterStatus').value = '';
         if (filterSubject) filterSubject.value = '';
         if (filterChapter) filterChapter.value = '';
+        const filterPurpose = document.getElementById('filterPurpose');
+        if (filterPurpose) filterPurpose.value = '';
         currentPage = 1;
         loadQuestions(1);
     };

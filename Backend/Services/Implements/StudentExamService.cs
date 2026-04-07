@@ -132,7 +132,7 @@ namespace Backend.Services.Implements
                 ExamId = paper.Exam.ExamId.ToString(),
                 SubmissionId = activeSubmission.SubmissionId.ToString(),
                 Duration = paper.Exam.Duration,
-                Code = paper.Code,
+                Code = paper.Code ?? 0,
                 Questions = questions
             };
         }

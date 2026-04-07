@@ -55,6 +55,11 @@ namespace Backend.Repositories.Implements
                 q = q.Where(x => x.Status == query.Status);
             }
 
+            if (query.QuestionPurpose.HasValue)
+            {
+                q = q.Where(x => x.QuestionPurpose == query.QuestionPurpose.Value);
+            }
+
             var totalCount = await q.CountAsync();
 
             var pageSize = 10;
@@ -75,9 +80,16 @@ namespace Backend.Repositories.Implements
                     ChapterName = x.Chapter.Name,
                     UpdatedAt = x.UpdatedAtUtc,
                     Status = x.Status,
+                    QuestionPurpose = x.QuestionPurpose,
                     AnswerCount = x.QuestionAnswers.Count
                 })
                 .ToListAsync();
+
+            // Compute labels after materialization (can't use custom methods in LINQ-to-SQL)
+            foreach (var item in items)
+            {
+                item.QuestionPurposeLabel = QuestionPurpose.GetLabel(item.QuestionPurpose);
+            }
 
             return (items, totalCount);
         }
@@ -163,9 +175,10 @@ namespace Backend.Repositories.Implements
             // We check both VisibleFrom and OpenAt. If either is in the past, students are seeing it.
             return await _dbContext.Questions
                 .Where(q => q.QuestionId == questionId)
-                .AnyAsync(q => q.Papers.Any(p => 
+                .AnyAsync(q => q.Papers.Any(p =>
+                    p.Exam != null && (
                     (p.Exam.VisibleFrom != null && p.Exam.VisibleFrom <= now) || 
-                    (p.Exam.OpenAt != null && p.Exam.OpenAt <= now)
+                    (p.Exam.OpenAt != null && p.Exam.OpenAt <= now))
                 ));
         }
 

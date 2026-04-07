@@ -279,7 +279,7 @@ public class AssignExamService : IAssignExamService
 
                 await _repo.AddPaperQuestionsAsync(paper.PaperId, orderedQuestionIds, ct);
 
-                createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code));
+                createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code ?? 0));
             }
 
             await tx.CommitAsync(ct);
@@ -321,7 +321,7 @@ public class AssignExamService : IAssignExamService
 
         var papers = e.Papers.Select(p => new PaperReviewDto(
             p.PaperId,
-            p.Code,
+            p.Code ?? 0,
             p.Questions.Select(q => new QuestionReviewDto(
                 q.QuestionId,
                 q.QuestionType,
@@ -365,6 +365,8 @@ public class AssignExamService : IAssignExamService
 
         var currentIds = p.Questions.Select(q => q.QuestionId).ToList();
 
+        if (p.Exam == null) throw new InvalidOperationException("Paper has no associated exam.");
+
         return await _repo.GetAlternativeQuestionsAsync(
             p.Exam.SubjectId,
             old.ChapterId,
@@ -391,7 +393,7 @@ public class AssignExamService : IAssignExamService
 
         if (r.SwapGlobal)
         {
-            await _repo.SwapExamQuestionGloballyAsync(p.ExamId, r.OldQuestionId, r.NewQuestionId, ct);
+            await _repo.SwapExamQuestionGloballyAsync(p.ExamId ?? 0, r.OldQuestionId, r.NewQuestionId, ct);
         }
         else
         {

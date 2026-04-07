@@ -37,11 +37,15 @@ namespace Backend.Repositories.Implements
         public async Task<Submission?> GetAnyActiveSubmissionAsync(int studentId)
         {
             // Status 1 = Active / In Progress
+            // Chỉ check submission bài thi chính thức (Paper.ExamId != null)
+            // Submission luyện tập (Paper.ExamId == null) KHÔNG block bài thi chính thức
             return await _context.Submissions
                 .Include(s => s.StudentAnswers)
                 .Include(s => s.Paper)
                     .ThenInclude(p => p.Exam)
-                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
+                .FirstOrDefaultAsync(s => s.StudentId == studentId
+                                       && s.Status == 1
+                                       && s.Paper.ExamId != null);
         }
 
         public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId)
