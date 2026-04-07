@@ -1,6 +1,6 @@
 @inject IConfiguration Configuration
 @{
-    var url = Configuration["BackendApiUrl"] ?? Configuration["Backend:BaseUrl"] ?? "https://localhost:7167";
+    var url = Configuration["Backend:BaseUrl"] ?? "https://localhost:7167";
     url = url.TrimEnd('/');
 }
 <script>window.API_BASE_URL = '@Html.Raw(url)';</script>

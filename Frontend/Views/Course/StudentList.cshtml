@@ -68,7 +68,7 @@
     <script>
         const classId = @classId;
         const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
-        const API_BASE = "https://localhost:7167";
+        const API_BASE = window.API_BASE_URL;
 
         function initBreadcrumb(name) {
             setBreadcrumb([

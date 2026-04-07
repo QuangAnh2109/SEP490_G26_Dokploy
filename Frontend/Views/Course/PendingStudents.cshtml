@@ -81,7 +81,7 @@
 @section Scripts {
     <script>
         const classId = @classId;
-        const API_BASE = "https://localhost:7167";
+        const API_BASE = window.API_BASE_URL;
         let allPendingStudents = [];
 
         async function loadPendingStudents() {
