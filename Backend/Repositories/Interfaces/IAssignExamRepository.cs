@@ -53,6 +53,10 @@ public interface IAssignExamRepository
     
     Task UpdateExamStatusAsync(int id, int status, CancellationToken ct);
     
+    Task UpdateQuestionsToInprogressAsync(IEnumerable<int> questionIds, CancellationToken ct);
+    
+    Task<List<int>> GetAllQuestionIdsInExamAsync(int examId, CancellationToken ct);
+    
     Task SaveChangesAsync(CancellationToken ct);
 }
 

@@ -379,6 +379,26 @@ public class AssignExamRepository : IAssignExamRepository
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task UpdateQuestionsToInprogressAsync(IEnumerable<int> questionIds, CancellationToken ct)
+    {
+        var ids = questionIds.ToList();
+        if (ids.Count == 0) return;
+
+        await _db.Questions
+            .Where(q => ids.Contains(q.QuestionId) && q.Status == QuestionStatus.Active)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, QuestionStatus.Inprogress), ct);
+    }
+
+    public async Task<List<int>> GetAllQuestionIdsInExamAsync(int examId, CancellationToken ct)
+    {
+        return await _db.Papers
+            .Where(p => p.ExamId == examId)
+            .SelectMany(p => p.Questions)
+            .Select(q => q.QuestionId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
     private IQueryable<QuestionQueryRow> BuildQuestionQuery(string[] activeStatus)
     {
         return from q in _db.Questions

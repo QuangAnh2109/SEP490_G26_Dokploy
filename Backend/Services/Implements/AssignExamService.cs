@@ -404,6 +404,9 @@ public class AssignExamService : IAssignExamService
     public async Task ApproveExamAsync(int id, CancellationToken ct = default)
     {
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+
+        var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
+        await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
     }
 
 
