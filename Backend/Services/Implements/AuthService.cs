@@ -98,8 +98,6 @@ namespace Backend.Services.Implements
                     MissingFields = missing
                 };
             }
-            // đảm bảo token nhận diện là google
-            user.PasswordHash = null;
             var token = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshTokenAsJwt(user);
 
@@ -147,8 +145,6 @@ namespace Backend.Services.Implements
             user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
             await _authRepository.UpdateUserAsync(user);
 
-            // ensure google provider
-            user.PasswordHash = null;
             var token = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshTokenAsJwt(user);
             return new LoginResponse

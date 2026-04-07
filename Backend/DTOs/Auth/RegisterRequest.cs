@@ -1,15 +1,17 @@
 using System.ComponentModel.DataAnnotations;
 using Backend.Constants;
+using System.ComponentModel;
 
 namespace Backend.DTOs
 {
     public class RegisterRequest
     {
+        [DefaultValue("Nguyen Van A")]
         [Required(ErrorMessage = ValidationMessages.FullNameRequired)]
         [StringLength(200, ErrorMessage = ValidationMessages.FullNameMaxLengthInvalid)]
         [RegularExpression(@"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$", ErrorMessage = ValidationMessages.FullNameInvalid)]
         public string FullName { get; set; } = string.Empty;
-
+        [DefaultValue("0989123456")]
         [RegularExpression(@"^0\d{9}$", ErrorMessage = ValidationMessages.PhoneNumberInvalid)]
         public string? PhoneNumber { get; set; }
 
@@ -18,6 +20,8 @@ namespace Backend.DTOs
 
         [Required(ErrorMessage = ValidationMessages.EmailRequired)]
         [RegularExpression(@"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$", ErrorMessage = ValidationMessages.EmailFormatInvalid)]
+
+        [DefaultValue("test.email@example.com")]
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = ValidationMessages.PasswordRequired)]

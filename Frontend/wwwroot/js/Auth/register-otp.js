@@ -133,73 +133,51 @@ function triggerGoogleRegister() {
 
 // This function is called by the Google GIS script after user selects their account
 function handleCredentialResponse(response) {
-    var roleId = localStorage.getItem('pendingRegistrationRole');
-    var isStudent = roleId !== "1";
-
-    var fullName = ($('#FullName').val() || '').toString().trim();
-    var phoneNumber = ($('#PhoneNumber').val() || '').toString().trim();
-    var studentId = ($('#StudentId').val() || '').toString().trim();
-
-    if (!fullName) {
-        $('#loadingOverlay').hide();
-        showError("Vui lòng nhập họ và tên trước khi đăng ký bằng Google.");
-        return;
-    }
-    var fullNamePattern = /^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$/u;
-    if (!fullNamePattern.test(fullName)) {
-        $('#loadingOverlay').hide();
-        showError("Họ và tên chỉ được chứa chữ cái và khoảng trắng.");
-        return;
-    }
-
-    if (phoneNumber) {
-        var phonePattern = /^0\d{9}$/;
-        if (!phonePattern.test(phoneNumber)) {
-            $('#loadingOverlay').hide();
-            showError("Số điện thoại phải gồm 10 số và bắt đầu bằng 0.");
-            return;
-        }
-    }
-
-    if (isStudent && !studentId) {
-        $('#loadingOverlay').hide();
-        showError("Vui lòng nhập mã sinh viên trước khi đăng ký bằng Google.");
-        return;
-    }
-    if (isStudent) {
-        var studentIdPattern = /^[A-Za-z]{2}\d{6}$/;
-        if (!studentIdPattern.test(studentId)) {
-            $('#loadingOverlay').hide();
-            showError("Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).");
-            return;
-        }
-    }
-
-    // Show a general loading state
-    $('#loadingOverlay').find('p').text('Đang tạo tài khoản qua Google...');
+    $('#formError').hide();
+    $('#loadingOverlay').find('p').text('Đang xác thực với Google...');
     $('#loadingOverlay').css('display', 'flex');
 
     var requestData = {
-        IdToken: response.credential,
-        RoleId: parseInt(roleId),
-        FullName: fullName,
-        PhoneNumber: phoneNumber || null,
-        StudentId: studentId || null
+        IdToken: response.credential
     };
 
-    apiClient.post('/api/auth/google-register', requestData)
+    apiClient.post('/api/auth/google-login', requestData)
         .then(function (data) {
-            if (data.token) {
-                localStorage.setItem('jwtToken', data.token);
-                localStorage.removeItem('pendingRegistrationRole');
-                window.location.href = '/';
-            } else {
-                $('#loadingOverlay').hide();
-                showError("Đăng ký thành công nhưng thiếu thông tin đăng nhập.");
+            localStorage.setItem('tempGoogleToken', requestData.IdToken);
+
+            if (data.email) {
+                localStorage.setItem('tempGoogleEmail', data.email);
             }
+
+            if (data.needsRegistration) {
+                localStorage.removeItem('tempGoogleNeedsCompletion');
+                window.location.href = '/Auth/GoogleRegister';
+                return;
+            }
+
+            if (data.needsProfileCompletion) {
+                localStorage.setItem('tempGoogleNeedsCompletion', '1');
+                window.location.href = '/Auth/GoogleRegister';
+                return;
+            }
+
+            if (data.token) {
+                setToken(data.token);
+                localStorage.removeItem('tempGoogleToken');
+                localStorage.removeItem('tempGoogleEmail');
+                localStorage.removeItem('tempGoogleNeedsCompletion');
+                window.location.href = '/';
+                return;
+            }
+
+            $('#loadingOverlay').hide();
+            showError("Đăng nhập Google thất bại. Vui lòng thử lại.");
         })
         .catch(function (err) {
             $('#loadingOverlay').hide();
-            showError("Lỗi đăng ký Google: " + err.message);
+            localStorage.removeItem('tempGoogleToken');
+            localStorage.removeItem('tempGoogleEmail');
+            localStorage.removeItem('tempGoogleNeedsCompletion');
+            showError("Lỗi đăng nhập Google: " + err.message);
         });
 }
