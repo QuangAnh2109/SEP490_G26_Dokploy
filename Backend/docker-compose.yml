@@ -29,11 +29,11 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.backend-app.rule=Host(`mtca-api.quanganh21.id.vn`)"
-        - "traefik.http.routers.backend-app.entrypoints=web" # Chỉ định dùng entrypoint port 80
-        - "traefik.http.services.backend-app.loadbalancer.server.port=8080" # Port thật của code bên trong container
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend-app.rule=Host(`mtca-api.quanganh21.id.vn`)"
+      - "traefik.http.routers.backend-app.entrypoints=web" # Chỉ định dùng entrypoint port 80
+      - "traefik.http.services.backend-app.loadbalancer.server.port=8080" # Port thật của code bên trong container
     restart: unless-stopped
 
 networks:
