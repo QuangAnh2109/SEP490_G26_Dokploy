@@ -9,6 +9,7 @@
 	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 	<link rel="stylesheet" href="~/Frontend.styles.css" asp-append-version="true" />
 	@await RenderSectionAsync("Styles", required: false)
+	@await Html.PartialAsync("_ApiConfig")
 </head>
 <body>
 	@await Html.PartialAsync("_Header")
