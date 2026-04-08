@@ -1,4 +1,3 @@
-﻿const API_BASE = "https://localhost:7167"; // chỉnh đúng port backend của m
 
 
 function getAuthToken() {
@@ -19,11 +18,11 @@ function loadClassExams(classId) {
 
     const token = getAuthToken();
 
-    console.log("Calling API:", `${API_BASE}/api/course/${classId}/exams`);
+    console.log("Calling API:", `${API_BASE_URL}/api/course/${classId}/exams`);
     console.log("Token:", token);
 
     $.ajax({
-        url: `${API_BASE}/api/course/${classId}/exams`,
+        url: `${API_BASE_URL}/api/course/${classId}/exams`,
         method: 'GET',
         headers: token
             ? { 'Authorization': `Bearer ${token}` }
@@ -56,10 +55,10 @@ function loadClassChapters(classId) {
 
     const token = getAuthToken();
 
-    console.log("Calling API:", `${API_BASE}/api/course/${classId}/chapters`);
+    console.log("Calling API:", `${API_BASE_URL}/api/course/${classId}/chapters`);
 
     $.ajax({
-        url: `${API_BASE}/api/course/${classId}/chapters`,
+        url: `${API_BASE_URL}/api/course/${classId}/chapters`,
         method: 'GET',
         headers: token
             ? { 'Authorization': `Bearer ${token}` }

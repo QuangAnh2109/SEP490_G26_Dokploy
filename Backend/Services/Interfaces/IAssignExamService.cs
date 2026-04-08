@@ -45,4 +45,12 @@ public interface IAssignExamService
     Task SwapPaperQuestionAsync(SwapQuestionRequestDto request, CancellationToken cancellationToken = default);
 
     Task ApproveExamAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task CancelExamAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task RestoreExamAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task DeleteExamAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task UpdateExamInfoAsync(int examId, UpdateExamInfoRequest request, CancellationToken cancellationToken = default);
 }

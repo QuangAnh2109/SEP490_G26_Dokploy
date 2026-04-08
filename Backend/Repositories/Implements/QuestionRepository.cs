@@ -160,6 +160,12 @@ namespace Backend.Repositories.Implements
                 .ToListAsync();
         }
 
+        public Task DeleteQuestionAsync(Question question)
+        {
+            _dbContext.Questions.Remove(question);
+            return Task.CompletedTask;
+        }
+
         public async Task<bool> IsQuestionUsedAsync(int questionId)
         {
             var now = DateTime.UtcNow;

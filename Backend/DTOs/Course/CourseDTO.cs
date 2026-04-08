@@ -1,4 +1,4 @@
-﻿using Backend.Models;
+using Backend.Models;
 
 namespace Backend.DTOs.Course
 {
@@ -22,6 +22,7 @@ namespace Backend.DTOs.Course
         public int StudentCount { get; set; }
 
         public int ExamCount { get; set; }
+        public int Status { get; set; }
 
         public string Role { get; set; } = null!;
         public List<ChapterDTO> Chapters { get; set; } = new();

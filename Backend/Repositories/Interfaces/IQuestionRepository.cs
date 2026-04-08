@@ -16,6 +16,7 @@ namespace Backend.Repositories.Interfaces
         Task<Question?> GetQuestionWithAnswersAsync(int id);
         Task<List<Question>> GetQuestionsByIdsAsync(IEnumerable<int> ids);
         Task DeleteQuestionAnswersAsync(IEnumerable<QuestionAnswer> answers);
+        Task DeleteQuestionAsync(Question question);
         Task<bool> IsQuestionUsedAsync(int questionId);
         Task SaveChangesAsync();
     }

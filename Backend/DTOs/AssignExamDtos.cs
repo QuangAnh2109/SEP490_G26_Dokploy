@@ -122,6 +122,7 @@ public record ExamReviewDto(
     string? Description,
     int TotalQuestions,
     int Duration,
+    DateTime? VisibleFrom,
     DateTime? OpenAt,
     DateTime? CloseAt,
     string TeacherName,
@@ -130,6 +131,14 @@ public record ExamReviewDto(
     List<BlueprintRowDto> BlueprintMatrix,
     IReadOnlyList<PaperReviewDto> Papers
 );
+
+public class UpdateExamInfoRequest
+{
+    public string? Title { get; set; }
+    public DateTime? VisibleFrom { get; set; }
+    public DateTime? OpenAt { get; set; }
+    public DateTime? CloseAt { get; set; }
+}
 
 // Reuse or define BlueprintRowDto if not available in this namespace
 public record BlueprintRowDto

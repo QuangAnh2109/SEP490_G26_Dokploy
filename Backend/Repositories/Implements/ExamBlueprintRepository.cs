@@ -210,6 +210,11 @@ namespace Backend.Repositories.Implements
             return blueprint;
         }
 
+        public async Task<bool> IsBlueprintUsedAsync(int blueprintId)
+        {
+            return await _context.Exams.AnyAsync(e => e.ExamBlueprintId == blueprintId);
+        }
+
         public async Task<ExamBlueprint?> UpdateBlueprintAsync(int id, int currentUserId, ExamBlueprint blueprint, IEnumerable<ExamBlueprintChapter> rows)
         {
             var entity = await _context.ExamBlueprints
@@ -217,11 +222,6 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync(b => b.ExamBlueprintId == id && b.TeacherId == currentUserId);
 
             if (entity == null) return null;
-
-            if (entity.Status == ExamBlueprintStatus.Archived)
-            {
-                throw new InvalidOperationException("Không thể sửa ma trận đề đã lưu trữ.");
-            }
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -270,6 +270,20 @@ namespace Backend.Repositories.Implements
 
             await _context.SaveChangesAsync();
             return entities.Count;
+        }
+
+        public async Task DeleteBlueprintAsync(int blueprintId, int currentUserId)
+        {
+            var entity = await _context.ExamBlueprints
+                .Include(b => b.ExamBlueprintChapters)
+                .FirstOrDefaultAsync(b => b.ExamBlueprintId == blueprintId && b.TeacherId == currentUserId);
+
+            if (entity != null)
+            {
+                _context.ExamBlueprintChapters.RemoveRange(entity.ExamBlueprintChapters);
+                _context.ExamBlueprints.Remove(entity);
+                await _context.SaveChangesAsync();
+            }
         }
 
         private static string GetDifficultyLabel(int difficulty)

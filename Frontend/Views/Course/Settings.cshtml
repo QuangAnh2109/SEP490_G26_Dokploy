@@ -8,6 +8,7 @@
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
     <style>
         .form-switch .form-check-input {
             width: 3em;
@@ -16,33 +17,42 @@
     </style>
 }
 
-<div class="d-flex" style="min-height: 100vh;">
+<div class="course-wrapper">
     <!-- Sidebar -->
-    <aside class="bg-light border-end" style="width: 250px;">
-        <div class="p-3 border-bottom">
-            <h5 class="mb-0">Quản lý lớp học</h5>
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
-        <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action">
-                <i class="fas fa-list me-2"></i> Danh sách đề
-            </a>
-            <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action">
-                <i class="fas fa-users me-2"></i> Danh sách học sinh
-            </a>
-            <a href="/Course/PendingStudents/@classId@classNameParam" class="list-group-item list-group-item-action">
-                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
-            </a>
-            <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action active">
-                <i class="fas fa-cog me-2"></i> Cài đặt
-            </a>
-        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link">
+            <i class="fas fa-history"></i> Lịch sử luyện tập
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="sidebar-link active">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 p-4">
+    <main class="course-content">
 
         <section class="mb-4">
-            <h2>Cài đặt lớp học</h2>
+            <h2 class="fw-bold">Cài đặt lớp học</h2>
         </section>
 
         <section class="card p-4 mx-auto" style="max-width: 800px;">
@@ -100,6 +110,22 @@
                         <input type="email" class="form-control" id="inviteEmailInput" placeholder="Nhập địa chỉ email học sinh...">
                         <button class="btn btn-success" type="button" onclick="inviteStudentByEmail()" id="btnInviteEmail">
                             Gửi lời mời <i class="fas fa-paper-plane ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Trạng thái lớp học -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-danger">Trạng thái lớp học</label>
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded border" id="classStatusContainer">
+                        <div>
+                            <h6 class="mb-1 fw-bold" id="classStatusTitle">Đang hoạt động</h6>
+                            <p class="text-muted mb-0 small" id="classStatusDesc">Học sinh có thể làm bài. Giáo viên có thể chỉnh sửa cài đặt và quản lý lớp.</p>
+                        </div>
+                        <button class="btn btn-outline-danger" type="button" id="btnToggleClassStatus" onclick="toggleClassStatus()">
+                            Đóng lớp học
                         </button>
                     </div>
                 </div>
@@ -167,209 +193,6 @@
 
 @section Scripts {
     <script src="~/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const classId = @classId;
-        const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
-        const API_BASE = "https://localhost:7167";
-        let currentInviteLink = "";
-
-        function initBreadcrumb(name) {
-            setBreadcrumb([
-                { text: "Khóa học", url: "/Course/CourseList" },
-                { text: name, url: "/Course/ExamListInCourse/" + classId + (name ? "?className=" + encodeURIComponent(name) : "") },
-                { text: "Cài đặt", url: null }
-            ]);
-        }
-
-        async function loadSettings() {
-            const token = getToken();
-            if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            const role = getUserRole();
-            if (role === "Student") {
-                showToast("Bạn không có quyền truy cập trang này.", "error");
-                window.location.href = `/Course/ExamListInCourse/${classId}`;
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (response.status === 401) {
-                    window.location.href = "/Auth/Login";
-                    return;
-                }
-
-                if (!response.ok) {
-                    throw new Error("Không thể tải thông tin lớp học.");
-                }
-
-                const data = await response.json();
-
-                // Breadcrumb
-                initBreadcrumb(classNameFromServer || data.className || "Lớp " + classId);
-                
-                // Binding dữ liệu
-                document.getElementById("classNameInput").value = data.className;
-                document.getElementById("subjectInput").value = (data.subjectCode ? data.subjectCode + ' - ' : '') + data.subjectName;
-                document.getElementById("semesterInput").value = data.semester;
-                document.getElementById("inviteCodeInput").value = data.invitationCode;
-                
-                // Generate link
-                const baseUrl = window.location.origin;
-                currentInviteLink = `${baseUrl}/Course/Join?code=${data.invitationCode}`;
-
-                const statusSwitch = document.getElementById("invitationStatusSwitch");
-                if (statusSwitch) {
-                    statusSwitch.checked = data.invitationCodeStatus !== 0;
-                    toggleInviteVisibility();
-                }
-
-            } catch (error) {
-                console.error(error);
-                showToast("Lỗi khi tải dữ liệu cài đặt lớp.", "error");
-            }
-        }
-
-        document.getElementById("settingsForm").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const token = getToken();
-            const saveBtn = document.getElementById("saveButton");
-
-            const className = document.getElementById("classNameInput").value;
-            const status = document.getElementById("invitationStatusSwitch").checked ? 1 : 0;
-
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Đang lưu...';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/settings`, {
-                    method: 'PUT',
-                    headers: { 
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        className: className,
-                        invitationCodeStatus: status
-                    })
-                });
-
-                if (response.ok) {
-                    showToast("Lưu cài đặt thành công!", "success");
-                } else {
-                    const err = await response.text();
-                    showToast(err || "Lỗi khi lưu cài đặt", "error");
-                }
-            } catch (error) {
-                showToast("Đã xảy ra lỗi mạng.", "error");
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i> Lưu thay đổi';
-            }
-        });
-
-        function copyToClipboard(elementId) {
-            const el = document.getElementById(elementId);
-            el.select();
-            el.setSelectionRange(0, 99999);
-            document.execCommand("copy");
-            
-            showToast("Đã sao chép vào clipboard!", "info");
-        }
-
-        function toggleInviteVisibility() {
-            const isChecked = document.getElementById("invitationStatusSwitch").checked;
-            const contentArea = document.getElementById("inviteContentArea");
-            if (contentArea) {
-                contentArea.style.display = isChecked ? "block" : "none";
-            }
-        }
-
-        function showInviteDetails() {
-            const code = document.getElementById("inviteCodeInput").value;
-            if (!code || !currentInviteLink) return;
-
-            document.getElementById("modalCodeInput").value = code;
-            document.getElementById("modalLinkInput").value = currentInviteLink;
-            
-            // Generate QR Code via API
-            const qrImg = document.getElementById("qrCodeImage");
-            const qrLoading = document.getElementById("qrLoading");
-            
-            qrImg.style.display = "none";
-            qrLoading.style.display = "inline-block";
-            
-            qrImg.onload = function() {
-                qrLoading.style.display = "none";
-                qrImg.style.display = "block";
-            };
-            
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentInviteLink)}`;
-            
-            // Initialize and show modal
-            const modalElement = document.getElementById("inviteDetailsModal");
-            if (window.bootstrap && window.bootstrap.Modal) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            } else {
-                // Fallback config
-                const myModal = new bootstrap.Modal(document.getElementById('inviteDetailsModal'));
-                myModal.show();
-            }
-        }
-
-        async function inviteStudentByEmail() {
-            const emailInput = document.getElementById("inviteEmailInput");
-            const btn = document.getElementById("btnInviteEmail");
-            const email = emailInput.value.trim();
-
-            if (!email) {
-                showToast("Vui lòng nhập địa chỉ email.", "warning");
-                return;
-            }
-
-            const token = getToken();
-            btn.disabled = true;
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang gửi...';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/invite`, {
-                    method: 'POST',
-                    headers: { 
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ email: email })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    showToast(data.message || "Đã gửi lời mời thành công!", "success");
-                    emailInput.value = "";
-                } else {
-                    const err = await response.text();
-                    showToast(err || "Lỗi khi gửi lời mời", "error");
-                }
-            } catch (error) {
-                showToast("Đã xảy ra lỗi mạng.", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        }
-
-
-        document.addEventListener("DOMContentLoaded", function () {
-            if (classNameFromServer) initBreadcrumb(classNameFromServer);
-            loadSettings();
-        });
-    </script>
+    <div id="courseData" data-class-id="@classId" data-class-name="@className" style="display: none;"></div>
+    <script src="~/js/Course/settings.js" asp-append-version="true"></script>
 }

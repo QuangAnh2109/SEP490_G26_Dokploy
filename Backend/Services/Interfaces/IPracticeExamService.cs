@@ -20,6 +20,11 @@ namespace Backend.Services.Interfaces
         Task<SubmitPracticeExamResponse> SubmitPracticeExamAsync(int studentId, SubmitPracticeExamRequest request);
 
         /// <summary>
+        /// Lưu câu trả lời giữa chừng (không nộp bài) — giữ trạng thái InProgress.
+        /// </summary>
+        Task SavePracticeAnswersAsync(int studentId, SubmitPracticeExamRequest request);
+
+        /// <summary>
         /// Resume bài luyện tập đang làm dở — trả lại câu hỏi + câu trả lời đã lưu.
         /// </summary>
         Task<ResumePracticeExamResponse> ResumePracticeExamAsync(int submissionId, int studentId);

@@ -205,7 +205,7 @@
   const validate = (s) => {
     if (s === 1) {
       const ok = !!ui.title?.value?.trim() && !!state.selClassId;
-      if (ui.title) ui.title.parentElement.classList.toggle('is-invalid', !ui.title.value?.trim());
+      if (ui.title) ui.title.classList.toggle('is-invalid', !ui.title.value?.trim());
       return ok;
     }
     if (s === 2) {

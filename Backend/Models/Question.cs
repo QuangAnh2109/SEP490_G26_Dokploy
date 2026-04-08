@@ -23,6 +23,8 @@ public partial class Question
 
     public byte[] ConcurrencyStamp { get; set; } = null!;
 
+    public byte QuestionPurpose { get; set; }
+
     public virtual Chapter Chapter { get; set; } = null!;
 
     public virtual User CreatedByUser { get; set; } = null!;

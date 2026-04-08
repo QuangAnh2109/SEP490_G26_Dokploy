@@ -3,7 +3,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/teacher_analytics.css" />
+    <link rel="stylesheet" href="~/css/Analytics/teacher_analytics.css" />
 }
 
 <main class="container-fluid px-3 px-md-4 py-4" id="analyticsRoot" data-exam-id="@ViewBag.ExamId">
@@ -34,11 +34,11 @@
             <div id="quickStats" class="d-flex gap-4">
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-primary" id="totalSubmissions">—</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Lượt nộp</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Lượt nộp</small>
                 </div>
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-success" id="avgScoreQuick">—</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Điểm TB</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Điểm TB</small>
                 </div>
             </div>
         </header>
@@ -204,3 +204,4 @@
     <script defer src="https://unpkg.com/mathlive"></script>
     <script src="~/js/Analytics/exam_analytics.js"></script>
 }
+

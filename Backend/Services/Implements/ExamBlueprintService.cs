@@ -109,7 +109,7 @@ namespace Backend.Services.Implements
                 errors.Add("Môn học không hợp lệ.");
             }
 
-            if (request.TargetStatus != ExamBlueprintStatus.NotStarted && request.TargetStatus != ExamBlueprintStatus.Approved)
+            if (request.TargetStatus != ExamBlueprintStatus.Draft && request.TargetStatus != ExamBlueprintStatus.Active)
             {
                 errors.Add("Trạng thái mục tiêu không hợp lệ.");
             }
@@ -168,7 +168,7 @@ namespace Backend.Services.Implements
 
             var rowTotal = rows.Sum(r => r.TotalQuestions);
 
-            if (request.TargetStatus == ExamBlueprintStatus.Approved)
+            if (request.TargetStatus == ExamBlueprintStatus.Active)
             {
                 if (rows.Count == 0)
                 {
@@ -213,7 +213,7 @@ namespace Backend.Services.Implements
                 if (row.TotalQuestions > available)
                 {
                     var message = $"Số câu vượt ngân hàng câu hỏi cho '{chapterNameMap[row.ChapterId]}' - {GetDifficultyLabel(row.Difficulty)} (yêu cầu {row.TotalQuestions}, hiện có {available}).";
-                    if (request.TargetStatus == ExamBlueprintStatus.Approved)
+                    if (request.TargetStatus == ExamBlueprintStatus.Active)
                     {
                         errors.Add(message);
                     }
@@ -262,7 +262,7 @@ namespace Backend.Services.Implements
                 Status = created.Status,
                 StatusLabel = ExamBlueprintStatus.GetLabel(created.Status),
                 UpdatedAtUtc = created.UpdatedAtUtc == default ? now : created.UpdatedAtUtc,
-                Message = created.Status == ExamBlueprintStatus.Approved
+                Message = created.Status == ExamBlueprintStatus.Active
                     ? "Tạo và xuất bản ma trận đề thành công."
                     : "Lưu nháp ma trận đề thành công.",
                 Warnings = warnings
@@ -282,6 +282,11 @@ namespace Backend.Services.Implements
                 throw new ExamBlueprintValidationException(errors);
             }
 
+            var existing = await _examBlueprintRepository.GetBlueprintDetailAsync(id, currentUserId);
+            if (existing == null) throw new KeyNotFoundException("Không tìm thấy ma trận đề.");
+
+            var isUsed = await _examBlueprintRepository.IsBlueprintUsedAsync(id);
+
             var blueprint = new ExamBlueprint
             {
                 Name = (request.Name ?? string.Empty).Trim(),
@@ -298,10 +303,22 @@ namespace Backend.Services.Implements
                 TotalOfQuestions = r.TotalQuestions
             }).ToList();
 
-            var updated = await _examBlueprintRepository.UpdateBlueprintAsync(id, currentUserId, blueprint, rowEntities);
-            if (updated == null)
+            ExamBlueprint updated;
+
+            if (existing.Status == ExamBlueprintStatus.Inprogress || existing.Status == ExamBlueprintStatus.Archived || isUsed)
             {
-                throw new KeyNotFoundException("Không tìm thấy ma trận đề.");
+                await _examBlueprintRepository.UpdateBlueprintStatusAsync(new List<int> { id }, currentUserId, ExamBlueprintStatus.Archived);
+                blueprint.TeacherId = currentUserId;
+                blueprint.UpdatedAtUtc = DateTime.UtcNow;
+                updated = await _examBlueprintRepository.CreateBlueprintAsync(blueprint, rowEntities);
+            }
+            else
+            {
+                updated = await _examBlueprintRepository.UpdateBlueprintAsync(id, currentUserId, blueprint, rowEntities);
+                if (updated == null)
+                {
+                    throw new KeyNotFoundException("Không tìm thấy ma trận đề.");
+                }
             }
 
             return new CreateExamBlueprintResponse
@@ -310,7 +327,7 @@ namespace Backend.Services.Implements
                 Status = updated.Status,
                 StatusLabel = ExamBlueprintStatus.GetLabel(updated.Status),
                 UpdatedAtUtc = updated.UpdatedAtUtc,
-                Message = updated.Status == ExamBlueprintStatus.Approved
+                Message = updated.Status == ExamBlueprintStatus.Active
                     ? "Cập nhật và xuất bản ma trận đề thành công."
                     : "Cập nhật nháp ma trận đề thành công.",
                 Warnings = warnings
@@ -336,7 +353,7 @@ namespace Backend.Services.Implements
             if (request.SubjectId <= 0)
                 errors.Add("Môn học không hợp lệ.");
 
-            if (request.TargetStatus != ExamBlueprintStatus.NotStarted && request.TargetStatus != ExamBlueprintStatus.Approved)
+            if (request.TargetStatus != ExamBlueprintStatus.Draft && request.TargetStatus != ExamBlueprintStatus.Active)
                 errors.Add("Trạng thái mục tiêu không hợp lệ.");
 
             if (request.TargetTotalQuestions < 0)
@@ -368,7 +385,7 @@ namespace Backend.Services.Implements
 
             var rowTotal = rows.Sum(r => r.TotalQuestions);
 
-            if (request.TargetStatus == ExamBlueprintStatus.Approved)
+            if (request.TargetStatus == ExamBlueprintStatus.Active)
             {
                 if (rows.Count == 0) errors.Add("Xuất bản yêu cầu ít nhất một dòng ma trận.");
                 if (request.TargetTotalQuestions <= 0) errors.Add("Xuất bản yêu cầu tổng số câu mục tiêu lớn hơn 0.");
@@ -388,7 +405,7 @@ namespace Backend.Services.Implements
                 if (row.TotalQuestions > available)
                 {
                     var message = $"Số câu vượt ngân hàng câu hỏi cho '{chapterNameMap[row.ChapterId]}' - {GetDifficultyLabel(row.Difficulty)} (yêu cầu {row.TotalQuestions}, hiện có {available}).";
-                    if (request.TargetStatus == ExamBlueprintStatus.Approved)
+                    if (request.TargetStatus == ExamBlueprintStatus.Active)
                         errors.Add(message);
                     else
                         warnings.Add(new ValidationWarningDto { Code = "INSUFFICIENT_QUESTION_BANK", Message = message, ChapterId = row.ChapterId, Difficulty = row.Difficulty });
@@ -410,6 +427,33 @@ namespace Backend.Services.Implements
 
             return await _examBlueprintRepository.UpdateBlueprintStatusAsync(ids, currentUserId, status);
         }
+
+        public async Task DeleteBlueprintAsync(int id, int currentUserId)
+        {
+            var existing = await _examBlueprintRepository.GetBlueprintDetailAsync(id, currentUserId);
+            if (existing == null)
+            {
+                throw new KeyNotFoundException("Không tìm thấy ma trận đề hoặc bạn không có quyền xóa.");
+            }
+
+            if (existing.Status != ExamBlueprintStatus.Draft && existing.Status != ExamBlueprintStatus.Active)
+            {
+                throw new ExamBlueprintValidationException(new[] { "Chỉ có thể xóa ma trận đề ở trạng thái Bản nháp hoặc Đang hoạt động." });
+            }
+
+            // Chỉ Active mới cần kiểm tra — Draft chưa xuất bản nên không thể nằm trong bài kiểm tra nào
+            if (existing.Status == ExamBlueprintStatus.Active)
+            {
+                var isUsed = await _examBlueprintRepository.IsBlueprintUsedAsync(id);
+                if (isUsed)
+                {
+                    throw new ExamBlueprintValidationException(new[] { "Ma trận này đang nằm trong bài kiểm tra chưa được duyệt. Bạn phải xóa bài kiểm tra đó trước khi xóa ma trận." });
+                }
+            }
+
+            await _examBlueprintRepository.DeleteBlueprintAsync(id, currentUserId);
+        }
+
 
         private static string GetDifficultyLabel(int difficulty)
         {

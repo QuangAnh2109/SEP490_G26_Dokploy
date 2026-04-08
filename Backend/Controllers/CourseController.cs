@@ -45,10 +45,12 @@ namespace Backend.Controllers
                 return Unauthorized();
 
             var myCourses = await _service.GetCoursesForUserAsync(userId);
-            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+            var myRole = myCourses.FirstOrDefault(c => c.ClassId == id);
+            if (myRole == null || myRole.Role == "Pending")
                 return Forbid();
 
-            var exams = await _service.GetExamsByClassAsync(id);
+            var isTeacher = myRole.Role == "Teacher";
+            var exams = await _service.GetExamsByClassAsync(id, isTeacher);
             return Ok(exams);
         }
 
@@ -244,6 +246,42 @@ namespace Backend.Controllers
                 return Ok();
             } catch (Exception ex) {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpDelete("{id}/students/{studentId}/remove")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> RemoveStudent(int id, int studentId)
+        {
+            try {
+                await _service.RemoveStudentAsync(id, studentId);
+                return Ok(new { message = "Đã xóa học sinh khỏi lớp." });
+            } catch (Exception ex) {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/close")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> CloseClass(int id)
+        {
+            try {
+                await _service.CloseClassAsync(id);
+                return Ok(new { message = "Đã đóng lớp học." });
+            } catch (Exception ex) {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/reopen")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> ReopenClass(int id)
+        {
+            try {
+                await _service.ReopenClassAsync(id);
+                return Ok(new { message = "Đã mở lại lớp học." });
+            } catch (Exception ex) {
+                return BadRequest(new { message = ex.Message });
             }
         }
 

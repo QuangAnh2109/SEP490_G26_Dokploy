@@ -83,7 +83,11 @@ function renderAnalytics(rawData) {
     DOM.submissions.textContent = data.totalSubmissions;
 
     if (data.totalSubmissions === 0) {
-        DOM.recBox.innerHTML = '<div class="alert alert-info">Chưa có dữ liệu bài làm để phân tích năng lực.</div>';
+        var alertDiv = document.createElement("div");
+        alertDiv.className = "alert alert-info";
+        alertDiv.textContent = "Chưa có dữ liệu bài làm để phân tích năng lực.";
+        DOM.recBox.innerHTML = "";
+        DOM.recBox.appendChild(alertDiv);
         return;
     }
 
@@ -249,7 +253,10 @@ function fillStudentRow(row, s, i) {
 function renderRecList(recs, box, template) {
     box.innerHTML = "";
     if (!recs || recs.length === 0) {
-        box.innerHTML = '<div class="text-center py-4 text-muted small">Cần thêm dữ liệu để hệ thống đưa ra lời khuyên.</div>';
+        var emptyDiv = document.createElement("div");
+        emptyDiv.className = "text-center py-4 text-muted small";
+        emptyDiv.textContent = "Cần thêm dữ liệu để hệ thống đưa ra lời khuyên.";
+        box.appendChild(emptyDiv);
         return;
     }
     recs.forEach(function (rec) {
@@ -259,7 +266,14 @@ function renderRecList(recs, box, template) {
         var iconStr = (rec.includes("🚨") || rec.includes("CẢNH BÁO")) ? "bi-patch-exclamation-fill" :
                       ((rec.includes("⚠️") || rec.includes("cần")) ? "bi-exclamation-triangle-fill" : "bi-stars");
 
-        div.innerHTML = '<i class="bi ' + iconStr + '"></i><span>' + rec + '</span>';
+        var icon = document.createElement("i");
+        icon.className = "bi " + iconStr;
+        var span = document.createElement("span");
+        span.textContent = rec;
+
+        div.innerHTML = ""; // Clear existing
+        div.appendChild(icon);
+        div.appendChild(span);
         div.classList.add(getRecClass(rec));
         box.appendChild(item);
     });

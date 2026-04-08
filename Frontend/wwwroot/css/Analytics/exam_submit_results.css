@@ -1,0 +1,26 @@
+body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; }
+.table { font-size: 16px; color: #212529; }
+.table > :not(caption) > * > * { padding: 16px; vertical-align: middle; }
+.btn-outline-custom { background-color: #fff; }
+.btn-outline-custom:hover { background-color: #f8f9fa; color: #212529 !important; }
+.input-group-search:focus-within { border-radius: 0.375rem; }
+.input-group-search:focus-within .input-group-text,
+.input-group-search:focus-within .form-control { border-color: #86b7fe; }
+.sub-table th, .sub-table td { padding: 12px 16px !important; }
+.bg-primary-subtle { background-color: rgba(13, 110, 253, 0.08); }
+#paginationList .page-link { border-radius: 0.25rem; margin: 0 2px; }
+
+.error-icon { font-size: 3rem; }
+.back-link { font-size: 0.95rem; }
+.search-width { width: 250px; }
+.filter-width { width: 160px; }
+.col-checkbox { width: 40px; }
+.col-code { width: 110px; }
+.col-last-submit { width: 170px; }
+.col-duration { width: 150px; }
+.col-score { width: 130px; }
+.col-attempts { width: 110px; }
+.col-status { width: 110px; }
+.col-action { width: 60px; }
+.history-padding { padding-left: 60px; padding-right: 30px; }
+.history-title { font-size: 0.9rem; }

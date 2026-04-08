@@ -119,65 +119,82 @@
         var end = Math.min(start + PAGE_SIZE, filteredStudents.length);
         var pageStudents = filteredStudents.slice(start, end);
 
+        var rowTemplate = document.getElementById("student-row-template");
+        var historyRowTemplate = document.getElementById("history-row-template");
+
         pageStudents.forEach(function (s, idx) {
-            var tr = document.createElement("tr");
-            tr.className = "student-row";
-            tr.dataset.studentId = s.studentId || s.StudentId;
-            tr.dataset.status = s.status || s.Status || "";
-            tr.dataset.keyword = ((s.studentCode || s.StudentCode || "") + " " + (s.fullName || s.FullName || "")).toLowerCase();
+            var tr;
+            if (rowTemplate) {
+                tr = rowTemplate.content.cloneNode(true).querySelector("tr");
+                tr.dataset.studentId = s.studentId || s.StudentId;
+                tr.dataset.status = s.status || s.Status || "";
+                tr.dataset.keyword = ((s.studentCode || s.StudentCode || "") + " " + (s.fullName || s.FullName || "")).toLowerCase();
 
-            var lastSubmit = s.lastSubmitAt || s.LastSubmitAt;
-            var duration = s.durationFormatted || s.DurationFormatted || "-";
-            var score = s.lastScore ?? s.LastScore;
-            var attempts = s.attemptCount ?? s.AttemptCount ?? 0;
-            var maxAttempts = apiData.maxAttempts ?? apiData.MaxAttempts ?? 999;
-            var status = s.status || s.Status || "Vắng thi";
+                var lastSubmit = s.lastSubmitAt || s.LastSubmitAt;
+                var durationStr = s.durationFormatted || s.DurationFormatted || "-";
+                var score = s.lastScore ?? s.LastScore;
+                var attempts = s.attemptCount ?? s.AttemptCount ?? 0;
+                var maxAttempts = apiData.maxAttempts ?? apiData.MaxAttempts ?? 999;
+                var status = s.status || s.Status || "Vắng thi";
 
-            var scoreText = score != null ? String(score) : "-";
-            var attemptsText = attempts + "/" + maxAttempts;
+                var scoreText = score != null ? String(score) : "-";
+                var attemptsText = attempts + "/" + maxAttempts;
 
-            var hasHistory = (s.history || s.History || []).length > 0;
-            var expandBtn = hasHistory
-                ? '<button type="button" class="btn btn-link text-dark p-0 expand-btn"><i class="bi bi-chevron-down"></i></button>'
-                : '<button type="button" class="btn btn-link text-secondary p-0" disabled><i class="bi bi-chevron-down"></i></button>';
+                tr.querySelector(".col-code").textContent = s.studentCode || s.StudentCode || "-";
+                tr.querySelector(".col-name").textContent = s.fullName || s.FullName || "-";
+                tr.querySelector(".col-last-submit").textContent = formatDateVN(lastSubmit);
+                tr.querySelector(".col-duration").textContent = durationStr;
+                tr.querySelector(".col-score").textContent = scoreText;
+                tr.querySelector(".col-attempts").textContent = attemptsText;
 
-            tr.innerHTML =
-                '<td><input class="form-check-input row-checkbox" type="checkbox"></td>' +
-                '<td>' + (s.studentCode || s.StudentCode || "-") + '</td>' +
-                '<td>' + (s.fullName || s.FullName || "-") + '</td>' +
-                '<td>' + formatDateVN(lastSubmit) + '</td>' +
-                '<td>' + duration + '</td>' +
-                '<td class="fw-bold">' + scoreText + '</td>' +
-                '<td>' + attemptsText + '</td>' +
-                '<td>' + getStatusHtml(status) + '</td>' +
-                '<td class="text-center">' + expandBtn + '</td>';
+                var statusSpan = document.createElement("span");
+                if (status === "Đã nộp") statusSpan.className = "text-success";
+                else if (status === "Đang làm") statusSpan.className = "text-primary";
+                else if (status === "Vắng thi") statusSpan.className = "text-danger";
+                statusSpan.textContent = status;
+                tr.querySelector(".col-status").appendChild(statusSpan);
 
-            tbody.appendChild(tr);
+                var hasHistory = (s.history || s.History || []).length > 0;
+                var actionCol = tr.querySelector(".col-action");
+                if (hasHistory) {
+                    var expandBtn = document.createElement("button");
+                    expandBtn.type = "button";
+                    expandBtn.className = "btn btn-link text-dark p-0 expand-btn";
+                    expandBtn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    actionCol.appendChild(expandBtn);
+                } else {
+                    var disabledBtn = document.createElement("button");
+                    disabledBtn.type = "button";
+                    disabledBtn.className = "btn btn-link text-secondary p-0";
+                    disabledBtn.disabled = true;
+                    disabledBtn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    actionCol.appendChild(disabledBtn);
+                }
 
-            if (hasHistory) {
-                var historyRow = document.createElement("tr");
-                historyRow.className = "history-row d-none";
-                historyRow.dataset.studentId = s.studentId || s.StudentId;
-                var history = s.history || s.History || [];
-                historyRow.innerHTML = '<td colspan="9" class="border-top-0 pt-0 pb-4 px-0">' +
-                    buildHistoryHtml(s.fullName || s.FullName || "Học sinh", history) +
-                    '</td>';
-                tbody.appendChild(historyRow);
+                tbody.appendChild(tr);
+
+                if (hasHistory && historyRowTemplate) {
+                    var historyRow = historyRowTemplate.content.cloneNode(true).querySelector("tr");
+                    historyRow.dataset.studentId = s.studentId || s.StudentId;
+                    historyRow.querySelector(".history-title").textContent = "Lịch sử làm bài (" + (s.fullName || s.FullName || "Học sinh") + ")";
+                    
+                    var historyTbody = historyRow.querySelector(".history-tbody");
+                    var historyRecords = s.history || s.History || [];
+                    buildHistoryHtml(historyRecords, historyTbody);
+                    
+                    tbody.appendChild(historyRow);
+                }
             }
         });
 
         bindRowEvents();
     }
 
-    function getStatusHtml(status) {
-        if (status === "Đã nộp") return '<span class="text-success">Đã nộp</span>';
-        if (status === "Đang làm") return '<span class="text-primary">Đang làm</span>';
-        if (status === "Vắng thi") return '<span class="text-danger">Vắng thi</span>';
-        return status;
-    }
+    function buildHistoryHtml(historyList, historyTbody) {
+        var recordTemplate = document.getElementById("history-record-template");
+        if (!recordTemplate) return;
 
-    function buildHistoryHtml(studentName, history) {
-        var rows = (history || []).map(function (h, i) {
+        (historyList || []).forEach(function (h, i) {
             var attemptNum = h.attemptNumber ?? h.AttemptNumber ?? (i + 1);
             var submittedAt = h.submittedAt || h.SubmittedAt;
             var duration = h.durationFormatted || h.DurationFormatted || "-";
@@ -185,28 +202,31 @@
             var isLast = h.isLast ?? h.IsLast;
             var submissionId = h.submissionId ?? h.SubmissionId;
 
-            var rowClass = isLast ? "bg-primary-subtle bg-opacity-10" : "";
-            var scoreHtml = score != null ? (isLast ? '<span class="fw-bold text-dark">' + score + '</span>' : score) : "-";
+            var recTr = recordTemplate.content.cloneNode(true).querySelector("tr");
+            if (isLast) recTr.classList.add("bg-primary-subtle", "bg-opacity-10");
+
             var attemptLabel = isLast ? "Lần " + attemptNum + " (Cuối)" : "Lần " + attemptNum;
+            recTr.querySelector(".col-attempt").textContent = attemptLabel;
+            recTr.querySelector(".col-submitted").textContent = formatDateVN(submittedAt);
+            recTr.querySelector(".col-duration").textContent = duration;
 
-            return '<tr class="' + rowClass + '">' +
-                '<td>' + attemptLabel + '</td>' +
-                '<td>' + formatDateVN(submittedAt) + '</td>' +
-                '<td>' + duration + '</td>' +
-                '<td>' + scoreHtml + '</td>' +
-                '<td class="text-center">' +
-                '<a href="/Analytics/ViewSubmission?submissionId=' + submissionId + '&examId=' + (apiData.examId || apiData.ExamId || examId) + '&classId=' + (classId || '') + '" class="btn btn-outline-primary btn-sm px-3 py-1 fw-medium" title="Xem chi tiết bài làm">Xem bài</a>' +
-                '</td></tr>';
-        }).join("");
+            if (score != null) {
+                if (isLast) {
+                    var sEl = document.createElement("span");
+                    sEl.className = "fw-bold text-dark";
+                    sEl.textContent = score;
+                    recTr.querySelector(".col-score").appendChild(sEl);
+                } else {
+                    recTr.querySelector(".col-score").textContent = score;
+                }
+            } else {
+                recTr.querySelector(".col-score").textContent = "-";
+            }
 
-        return '<div style="padding-left: 60px; padding-right: 30px;">' +
-            '<h6 class="fw-bold mb-3 text-secondary" style="font-size: 0.9rem;">Lịch sử làm bài (' + studentName + ')</h6>' +
-            '<div class="row"><div class="col-md-9">' +
-            '<table class="table table-sm table-bordered bg-white mb-0 sub-table">' +
-            '<thead class="table-light text-secondary">' +
-            '<tr><th class="fw-medium">Lần thi</th><th class="fw-medium">Thời gian nộp</th><th class="fw-medium">Thời gian làm</th><th class="fw-medium">Điểm số</th><th class="fw-medium text-center" style="width: 120px;">Hành động</th></tr>' +
-            '</thead><tbody>' + rows + '</tbody></table>' +
-            '</div></div></div>';
+            recTr.querySelector(".btn-view").href = '/Analytics/ViewSubmission?submissionId=' + submissionId + '&examId=' + (apiData.examId || apiData.ExamId || examId) + '&classId=' + (classId || '');
+
+            historyTbody.appendChild(recTr);
+        });
     }
 
     function bindRowEvents() {
@@ -295,10 +315,7 @@
 
         if (totalPages <= 1) return;
 
-        var prevLi = document.createElement("li");
-        prevLi.className = "page-item" + (currentPage <= 1 ? " disabled" : "");
-        prevLi.innerHTML = '<a class="page-link" href="#" data-page="prev" aria-label="Trước"><i class="bi bi-chevron-left"></i></a>';
-        listEl.appendChild(prevLi);
+        var pageItemTemplate = document.getElementById("pagination-item-template");
 
         var maxVisible = 5;
         var half = Math.floor(maxVisible / 2);
@@ -306,17 +323,36 @@
         var lastPage = Math.min(totalPages, firstPage + maxVisible - 1);
         if (lastPage - firstPage < maxVisible - 1) firstPage = Math.max(1, lastPage - maxVisible + 1);
 
-        for (var p = firstPage; p <= lastPage; p++) {
-            var li = document.createElement("li");
-            li.className = "page-item" + (p === currentPage ? " active" : "");
-            li.innerHTML = '<a class="page-link" href="#" data-page="' + p + '">' + p + '</a>';
-            listEl.appendChild(li);
-        }
+        if (pageItemTemplate) {
+            var prevLi = pageItemTemplate.content.cloneNode(true).querySelector("li");
+            if (currentPage <= 1) prevLi.classList.add("disabled");
+            var prevLink = prevLi.querySelector("a");
+            prevLink.dataset.page = "prev";
+            prevLink.setAttribute("aria-label", "Trước");
+            var prevIcon = document.createElement("i");
+            prevIcon.className = "bi bi-chevron-left";
+            prevLink.appendChild(prevIcon);
+            listEl.appendChild(prevLi);
 
-        var nextLi = document.createElement("li");
-        nextLi.className = "page-item" + (currentPage >= totalPages ? " disabled" : "");
-        nextLi.innerHTML = '<a class="page-link" href="#" data-page="next" aria-label="Sau"><i class="bi bi-chevron-right"></i></a>';
-        listEl.appendChild(nextLi);
+            for (var p = firstPage; p <= lastPage; p++) {
+                var li = pageItemTemplate.content.cloneNode(true).querySelector("li");
+                if (p === currentPage) li.classList.add("active");
+                var a = li.querySelector("a");
+                a.dataset.page = String(p);
+                a.textContent = p;
+                listEl.appendChild(li);
+            }
+
+            var nextLi = pageItemTemplate.content.cloneNode(true).querySelector("li");
+            if (currentPage >= totalPages) nextLi.classList.add("disabled");
+            var nextLink = nextLi.querySelector("a");
+            nextLink.dataset.page = "next";
+            nextLink.setAttribute("aria-label", "Sau");
+            var nextIcon = document.createElement("i");
+            nextIcon.className = "bi bi-chevron-right";
+            nextLink.appendChild(nextIcon);
+            listEl.appendChild(nextLi);
+        }
 
         listEl.querySelectorAll(".page-link").forEach(function (a) {
             a.addEventListener("click", function (e) {

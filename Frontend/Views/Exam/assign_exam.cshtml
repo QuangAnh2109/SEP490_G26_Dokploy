@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Giao đề thi</title>
   <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/css/assign_exam.css">
+  <link rel="stylesheet" href="/css/Exam/assign_exam.css">
 </head>
 <body>
   <main class="page-shell py-4">
@@ -47,7 +47,7 @@
           <div class="row g-2">
             <div class="col-12 col-md-8">
               <label class="form-label">Tiêu đề đề thi *</label>
-              <input class="form-control" id="examTitleInput" value="MAE - SP26 - SE1711">
+              <input class="form-control" id="examTitleInput" value="" placeholder="Ví dụ: Kiểm tra giữa kỳ 1">
               <div class="invalid-feedback">Vui lòng nhập tiêu đề đề thi.</div>
             </div>
           </div>
@@ -57,7 +57,7 @@
           <div class="row g-2">
             <div class="col-12">
               <label class="form-label">Mô tả</label>
-              <textarea class="form-control" id="examDescriptionInput" rows="3">No materials allowed. System auto-submits at timeout.</textarea>
+              <textarea class="form-control" id="examDescriptionInput" rows="3" placeholder="Nhập mô tả hoặc quy định thi..."></textarea>
             </div>
           </div>
           <div id="preSelectedClassInfo" class="mt-4">
@@ -404,6 +404,7 @@
   <script type="module" src="https://unpkg.com/mathlive"></script>
   <script src="/js/Shared/validation_shared.js"></script>
   <script src="/js/Validations/assign_exam_val.js"></script>
-  <script src="/js/assign_exam.js"></script>
+  <script src="/js/Exam/assign_exam.js"></script>
 </body>
 </html>
+

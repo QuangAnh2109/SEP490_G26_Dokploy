@@ -345,6 +345,7 @@ public class AssignExamService : IAssignExamService
             e.Description,
             e.Papers.FirstOrDefault()?.Questions.Count ?? 0,
             e.Duration,
+            e.VisibleFrom,
             e.OpenAt,
             e.CloseAt,
             e.Teacher?.FullName ?? "N/A",
@@ -407,8 +408,88 @@ public class AssignExamService : IAssignExamService
 
         var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
         await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
+        
+        await _repo.UpdateBlueprintToInprogressAsync(id, ct);
     }
 
+    public async Task CancelExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        // Chỉ cho phép hủy khi đề đang ở trạng thái Published
+        if (exam.Status != ExamStatus.Published)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể hủy đề thi đang ở trạng thái Published.");
+        }
+
+        // Kiểm tra xem đã có học sinh nào làm bài chưa
+        bool hasSubmissions = await _repo.HasSubmissionsForExamAsync(id, ct);
+        if (hasSubmissions)
+        {
+            // Đã có học sinh làm → chuyển sang InProgress, không cho hủy
+            await _repo.UpdateExamStatusAsync(id, ExamStatus.InProgress, ct);
+            throw new InvalidOperationException(
+                "Đề thi đã có học sinh làm bài. Trạng thái đã được chuyển sang InProgress.");
+        }
+
+
+        // Tất cả điều kiện đều thỏa → hủy đề thi
+        await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
+    }
+
+    public async Task RestoreExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (exam.Status != ExamStatus.Cancelled)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể khôi phục đề thi đang ở trạng thái Cancelled.");
+        }
+
+        await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+    }
+
+    public async Task DeleteExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        // Chỉ cho phép xóa cứng khi ở trạng thái Ready hoặc Cancelled
+        if (exam.Status != ExamStatus.Ready && exam.Status != ExamStatus.Cancelled)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể xóa đề thi ở trạng thái Ready hoặc Cancelled.");
+        }
+
+        await _repo.HardDeleteExamAsync(id, ct);
+    }
+
+    public async Task UpdateExamInfoAsync(int id, UpdateExamInfoRequest request, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (exam.Status == ExamStatus.Cancelled)
+        {
+            // Trạng thái Cancelled: chỉ cho phép điều chỉnh 3 mốc thời gian
+            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
+            await _repo.UpdateExamInfoAsync(id, null, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
+        }
+        else if (exam.Status == ExamStatus.Ready)
+        {
+            // Trạng thái Ready: cho phép sửa đầy đủ (Title + thời gian)
+            await _repo.UpdateExamInfoAsync(id, request.Title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể chỉnh sửa thông tin đề thi khi đang ở trạng thái Chờ duyệt hoặc Đã hủy.");
+        }
+    }
 
     private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
     {

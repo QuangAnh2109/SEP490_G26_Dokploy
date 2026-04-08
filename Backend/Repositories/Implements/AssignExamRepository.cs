@@ -379,6 +379,21 @@ public class AssignExamRepository : IAssignExamRepository
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task UpdateBlueprintToInprogressAsync(int examId, CancellationToken ct)
+    {
+        var exam = await _db.Exams.FindAsync(new object[] { examId }, ct);
+        if (exam != null && exam.ExamBlueprintId.HasValue)
+        {
+            var bp = await _db.ExamBlueprints.FindAsync(new object[] { exam.ExamBlueprintId.Value }, ct);
+            if (bp != null)
+            {
+                bp.Status = ExamBlueprintStatus.Inprogress;
+                bp.UpdatedAtUtc = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+    }
+
     public async Task UpdateQuestionsToInprogressAsync(IEnumerable<int> questionIds, CancellationToken ct)
     {
         var ids = questionIds.ToList();
@@ -397,6 +412,57 @@ public class AssignExamRepository : IAssignExamRepository
             .Select(q => q.QuestionId)
             .Distinct()
             .ToListAsync(ct);
+    }
+
+    public async Task<Exam?> GetExamByIdAsync(int id, CancellationToken ct)
+    {
+        return await _db.Exams.FindAsync(new object[] { id }, ct);
+    }
+
+    public async Task<bool> HasSubmissionsForExamAsync(int examId, CancellationToken ct)
+    {
+        return await _db.Submissions
+            .AnyAsync(s => s.Paper.ExamId == examId, ct);
+    }
+
+    public async Task HardDeleteExamAsync(int examId, CancellationToken ct)
+    {
+        var paperIds = await _db.Papers
+            .Where(p => p.ExamId == examId)
+            .Select(p => p.PaperId)
+            .ToListAsync(ct);
+
+        if (paperIds.Count > 0)
+        {
+            // 1. Xóa PaperQuestion (many-to-many join table)
+            var idsStr = string.Join(",", paperIds);
+            await _db.Database.ExecuteSqlRawAsync(
+                "DELETE FROM PaperQuestion WHERE PaperId IN (" + idsStr + ")", ct);
+
+            // 2. Xóa Papers
+            await _db.Papers
+                .Where(p => p.ExamId == examId)
+                .ExecuteDeleteAsync(ct);
+        }
+
+        // 3. Xóa Exam
+        await _db.Exams
+            .Where(e => e.ExamId == examId)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task UpdateExamInfoAsync(int examId, string? title, DateTime? visibleFrom, DateTime? openAt, DateTime? closeAt, CancellationToken ct)
+    {
+        var exam = await _db.Exams.FindAsync(new object[] { examId }, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (title != null) exam.Title = title;
+        exam.VisibleFrom = visibleFrom;
+        exam.OpenAt = openAt;
+        exam.CloseAt = closeAt;
+        exam.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
     }
 
     private IQueryable<QuestionQueryRow> BuildQuestionQuery(string[] activeStatus)

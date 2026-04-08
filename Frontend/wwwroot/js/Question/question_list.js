@@ -7,9 +7,10 @@
     };
 
     const statusLabels = {
-        'Active': 'Đã duyệt',
-        'Draft': 'Bản nháp',
-        'Archived': 'Đã lưu trữ'
+        'Active': 'Active',
+        'Draft': 'Draft',
+        'Archived': 'Archived',
+        'Inprogress': 'Inprogress'
     };
 
     const statusBadgeClass = {
@@ -231,11 +232,30 @@
         if (editBtn) {
             editBtn.onclick = () => { window.location.href = `/Question/Edit/${detailRow.dataset.questionId}`; };
         }
+        
+        const deleteBtn = detailRow.querySelector('.btn-delete');
+        if (deleteBtn) {
+            // Only Draft or Active statuses should be deletable based on UI, but we can verify in API.
+            // We can also disable it here if we want, but let's let backend or modal trigger.
+            if (qDetail.status !== 'Draft' && qDetail.status !== 'Active') {
+                deleteBtn.style.display = 'none';
+            } else {
+                deleteBtn.onclick = () => {
+                    const id = parseInt(detailRow.dataset.questionId, 10);
+                    if (id) showDeleteConfirm(id);
+                };
+            }
+        }
+
         if (archiveBtn) {
-            archiveBtn.onclick = () => {
-                const id = parseInt(detailRow.dataset.questionId, 10);
-                if (id) showArchiveConfirm([id]);
-            };
+            if (qDetail.status !== 'Inprogress') {
+                archiveBtn.style.display = 'none';
+            } else {
+                archiveBtn.onclick = () => {
+                    const id = parseInt(detailRow.dataset.questionId, 10);
+                    if (id) showArchiveConfirm([id]);
+                };
+            }
         }
     };
 
@@ -272,6 +292,39 @@
         if (archiveModal) archiveModal.show();
     };
 
+    let pendingDeleteId = null;
+    const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    let deleteModal = null;
+
+    if (deleteConfirmModal) {
+        deleteModal = new bootstrap.Modal(deleteConfirmModal);
+    }
+
+    const showDeleteConfirm = (id) => {
+        pendingDeleteId = id;
+        if (deleteModal) deleteModal.show();
+    };
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.onclick = async () => {
+            if (!pendingDeleteId) return;
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'Đang xử lý...';
+            try {
+                await apiClient.delete(`/api/questions/${pendingDeleteId}`);
+                if (deleteModal) deleteModal.hide();
+                showToast('Đã xóa câu hỏi thành công!');
+                loadQuestions(currentPage);
+            } catch (err) {
+                showToast(err.message || 'Đã xảy ra lỗi khi xóa câu hỏi.', 'error');
+            } finally {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.textContent = 'Xóa vĩnh viễn';
+            }
+        };
+    }
+
     const bindRowActions = (rows) => {
         rows.forEach(row => {
             const expandBtn = row.querySelector('.expand-btn');
@@ -307,6 +360,7 @@
         items.forEach(q => {
             const row = rowTemplate.content.cloneNode(true).firstElementChild;
             row.dataset.questionId = q.questionId;
+            row.dataset.status = q.status;
 
             const diffClass = difficultyBadgeClass[q.difficulty] || 'badge-diff-1';
             const statusClass = statusBadgeClass[q.status] || 'badge-status-draft';
@@ -395,12 +449,26 @@
     if (bulkArchiveBtn) {
         bulkArchiveBtn.onclick = () => {
             const checked = Array.from(tbody.querySelectorAll('.question-item-checkbox:checked'));
+            let invalidStatus = false;
             const ids = checked.map(cb => {
                 const row = cb.closest('.question-row');
-                return row ? parseInt(row.dataset.questionId, 10) : null;
+                if (row) {
+                    const id = parseInt(row.dataset.questionId, 10);
+                    const status = row.dataset.status;
+                    if (status !== 'Inprogress') {
+                        invalidStatus = true;
+                    }
+                    return id;
+                }
+                return null;
             }).filter(id => id != null);
+            
             if (ids.length === 0) {
                 showToast('Vui lòng chọn ít nhất một câu hỏi.', 'info');
+                return;
+            }
+            if (invalidStatus) {
+                showToast('Chức năng Lưu trữ hàng loạt chỉ áp dụng với những câu hỏi ở trạng thái Inprogress.', 'warning');
                 return;
             }
             showArchiveConfirm(ids);

@@ -66,7 +66,6 @@ namespace Backend.Services.Implements
         {
             var existing = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
             if (existing == null || existing.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền sửa.");
-            if (existing.Status == QuestionStatus.Archive) throw new QuestionValidationException(new[] { "Không thể sửa câu hỏi đã lưu trữ (Archive)." });
 
             var errors = await ValidateQuestionItemAsync(request, "Câu hỏi");
             if (errors.Any()) throw new QuestionValidationException(errors);
@@ -74,10 +73,11 @@ namespace Backend.Services.Implements
             var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
             Question result;
 
-            if (existing.Status == QuestionStatus.Inprogress || isUsed)
+            if (existing.Status == QuestionStatus.Inprogress || existing.Status == QuestionStatus.Archive || isUsed)
             {
                 existing.Status = QuestionStatus.Archive;
-                if (request.Status == QuestionStatus.Inprogress) request.Status = QuestionStatus.Active;
+                if (request.Status == QuestionStatus.Inprogress || request.Status == QuestionStatus.Archive) 
+                    request.Status = QuestionStatus.Active;
                 result = MapToQuestionEntity(request, userId);
                 await _questionRepository.CreateQuestionsAsync(new List<Question> { result });
                 _logger.LogInformation("Cloned question {OldId} into {NewId} (Used={IsUsed}).", questionId, result.QuestionId, isUsed);
@@ -151,6 +151,31 @@ namespace Backend.Services.Implements
             }
 
             return updatedCount;
+        }
+
+        public async Task DeleteQuestionAsync(int questionId, int userId)
+        {
+            var existing = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
+            if (existing == null || existing.CreatedByUserId != userId)
+            {
+                throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xóa.");
+            }
+
+            if (existing.Status != QuestionStatus.Draft && existing.Status != QuestionStatus.Active)
+            {
+                throw new QuestionValidationException(new[] { "Chỉ có thể xóa câu hỏi ở trạng thái Draft hoặc Active." });
+            }
+
+            var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
+            if (isUsed)
+            {
+                throw new QuestionValidationException(new[] { "Không thể xóa câu hỏi đã được sử dụng trong bài thi." });
+            }
+
+            await _questionRepository.DeleteQuestionAsync(existing);
+            await _questionRepository.SaveChangesAsync();
+            
+            _logger.LogInformation("Nhà giáo viên {UserId} đã xóa câu hỏi {QuestionId}.", userId, questionId);
         }
 
         private Question MapToQuestionEntity(QuestionDto item, int userId, Question? existing = null)

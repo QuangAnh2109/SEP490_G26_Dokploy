@@ -4,8 +4,8 @@ namespace Backend.Constants
     {
         public const string Draft = "Draft";
         public const string Active = "Active";
-        public const string Archive = "Archive"; // Changed from Archived to Archive
-        public const string Inprogress = "Inprogress"; // Added Inprogress
+        public const string Archive = "Archive"; 
+        public const string Inprogress = "Inprogress"; 
 
         public static bool IsValid(string status)
         {

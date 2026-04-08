@@ -6,7 +6,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/student_result.css" />
+    <link rel="stylesheet" href="~/css/Analytics/student_result.css" />
 }
 
 <main class="container-fluid px-3 px-md-4 py-4" id="analyticsRoot" data-submission-id="@submissionId" data-exam-id="@(examId ?? "")" data-class-id="@(classId ?? "")">
@@ -23,7 +23,7 @@
 
     <div id="analyticsContent" hidden>
         <div class="mb-3">
-            <a href="#" id="backToResults" class="text-decoration-none text-secondary" style="font-size: 0.95rem;">
+            <a href="#" id="backToResults" class="text-decoration-none text-secondary back-link">
                 <i class="bi bi-arrow-left"></i> Quay lại thống kê nộp bài
             </a>
         </div>
@@ -35,11 +35,11 @@
             <div id="quickStats" class="d-flex gap-4">
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-primary" id="miniScore">—</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Điểm số</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Điểm số</small>
                 </div>
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-success" id="miniCorrect">0</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Câu đúng</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Câu đúng</small>
                 </div>
             </div>
         </header>
@@ -170,3 +170,4 @@
     <script defer src="https://unpkg.com/mathlive"></script>
     <script src="~/js/Analytics/view_submission.js" asp-append-version="true"></script>
 }
+

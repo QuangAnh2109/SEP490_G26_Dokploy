@@ -306,6 +306,67 @@ namespace Backend.Services.Implements
         }
 
         // ════════════════════════════════════════════════════════
+        //  LƯU CÂU TRẢ LỜI GIỮA CHỪNG (không nộp bài)
+        // ════════════════════════════════════════════════════════
+        public async Task SavePracticeAnswersAsync(int studentId, SubmitPracticeExamRequest request)
+        {
+            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId, studentId);
+            if (submission == null)
+                throw new KeyNotFoundException("Không tìm thấy bài luyện tập hoặc bạn không có quyền.");
+
+            if (submission.Status != SubmissionStatus.InProgress)
+                throw new InvalidOperationException("Bài luyện tập này đã được nộp rồi.");
+
+            var paper = submission.Paper;
+            if (paper == null)
+                throw new InvalidOperationException("Không tìm thấy đề luyện tập.");
+
+            // Validate QuestionAnswerIds thuộc Paper
+            var validQAIds = paper.Questions
+                .SelectMany(q => q.QuestionAnswers)
+                .Select(qa => qa.QuestionAnswerId)
+                .ToHashSet();
+
+            foreach (var sa in request.StudentAnswers)
+            {
+                if (!validQAIds.Contains(sa.QuestionAnswerId))
+                    throw new ArgumentException($"QuestionAnswerId {sa.QuestionAnswerId} không hợp lệ.");
+            }
+
+            // Xử lý StudentAnswers: update existing hoặc thêm mới
+            var existingAnswers = submission.StudentAnswers.ToList();
+
+            foreach (var dto in request.StudentAnswers)
+            {
+                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId);
+                if (existing != null)
+                {
+                    existing.Response = dto.Response;
+                }
+                else
+                {
+                    submission.StudentAnswers.Add(new StudentAnswer
+                    {
+                        SubmissionId = submission.SubmissionId,
+                        QuestionAnswerId = dto.QuestionAnswerId,
+                        Response = dto.Response
+                    });
+                }
+            }
+
+            // Xóa answers không còn trong request
+            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId).ToHashSet();
+            var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
+            foreach (var sa in toRemove)
+                submission.StudentAnswers.Remove(sa);
+
+            // Giữ nguyên Status = InProgress, chỉ cập nhật thời gian
+            submission.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _repo.SaveChangesAsync();
+        }
+
+        // ════════════════════════════════════════════════════════
         //  RESUME BÀI LUYỆN TẬP ĐANG LÀM DỎ
         // ════════════════════════════════════════════════════════
         public async Task<ResumePracticeExamResponse> ResumePracticeExamAsync(int submissionId, int studentId)

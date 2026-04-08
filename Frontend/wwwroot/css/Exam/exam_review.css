@@ -165,6 +165,9 @@
 
 .badge-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 .badge-public { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.badge-inprogress { background-color: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; }
+.badge-cancelled { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
+.badge-closed { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
 .badge-unknown { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
 
 .difficulty-badge {

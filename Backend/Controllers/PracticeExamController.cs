@@ -130,6 +130,43 @@ namespace Backend.Controllers
         }
 
         // ════════════════════════════════════════════════════════
+        //  POST /api/practice/save
+        //  Lưu câu trả lời giữa chừng (không nộp bài)
+        // ════════════════════════════════════════════════════════
+        /// <summary>
+        /// Lưu câu trả lời giữa chừng — không nộp bài, giữ trạng thái InProgress.
+        /// </summary>
+        [HttpPost("save")]
+        public async Task<IActionResult> SavePracticeAnswers([FromBody] SubmitPracticeExamRequest request)
+        {
+            var studentId = GetStudentId();
+            if (studentId == 0) return Unauthorized(new { message = "Token không hợp lệ." });
+
+            try
+            {
+                await _practiceService.SavePracticeAnswersAsync(studentId, request);
+                return Ok(new { message = "Đã lưu câu trả lời." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving practice answers. SubmissionId={SubmissionId}", request.SubmissionId);
+                return StatusCode(500, new { message = "Lỗi hệ thống khi lưu câu trả lời." });
+            }
+        }
+
+        // ════════════════════════════════════════════════════════
         //  GET /api/practice/resume/{submissionId}
         //  Quay lại bài luyện tập đang làm dở
         // ════════════════════════════════════════════════════════

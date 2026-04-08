@@ -3,7 +3,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/student_result.css" />
+    <link rel="stylesheet" href="~/css/Analytics/student_result.css" />
 }
 
 <main class="container-fluid px-3 px-md-4 py-4" id="analyticsRoot" data-exam-id="@ViewBag.ExamId">
@@ -34,11 +34,11 @@
             <div id="quickStats" class="d-flex gap-4">
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-primary" id="miniScore">—</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Điểm số</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Điểm số</small>
                 </div>
                 <div class="text-center">
                     <div class="h3 fw-bold mb-0 text-success" id="miniCorrect">0</div>
-                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Câu đúng</small>
+                    <small class="text-muted text-uppercase fw-bold stat-quick-label">Câu đúng</small>
                 </div>
             </div>
         </header>
@@ -149,10 +149,10 @@
         <div id="noScoreNotice" class="analytics-card mb-5" hidden>
             <div class="card-body text-center py-5">
                 <div class="mb-4">
-                    <i class="bi bi-lock-fill text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                    <i class="bi bi-lock-fill text-muted notice-icon"></i>
                 </div>
                 <h3 class="fw-bold text-dark">Kết quả đang được xử lý</h3>
-                <p class="text-muted mx-auto" style="max-width: 500px;">
+                <p class="text-muted mx-auto notice-text">
                     Giáo viên chưa cho phép hiển thị điểm số và phân tích chi tiết. 
                     Em vẫn có thể xem lại nội dung các câu hỏi mình đã thực hiện bên dưới.
                 </p>
@@ -212,3 +212,4 @@
     <script defer src="https://unpkg.com/mathlive"></script>
     <script src="~/js/Analytics/student_result.js"></script>
 }
+
