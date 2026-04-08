@@ -50,11 +50,12 @@
                             <th>Họ tên</th>
                             <th>Email</th>
                             <th>Ngày tham gia</th>
+                            <th id="studentActionHeader" style="display: none;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
                         <tr>
-                            <td colspan="5" class="text-center">Đang tải...</td>
+                            <td colspan="6" class="text-center">Đang tải...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -69,6 +70,15 @@
         const classId = @classId;
         const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
         const API_BASE = "https://localhost:7167";
+
+        function isTeacherView() {
+            const role = getUserRole();
+            return role === "Teacher" || role === "Giáo viên";
+        }
+
+        function getTableColspan() {
+            return isTeacherView() ? 6 : 5;
+        }
 
         function initBreadcrumb(name) {
             setBreadcrumb([
@@ -109,6 +119,11 @@
 
             try {
                 const role = getUserRole();
+                const actionHeader = document.getElementById("studentActionHeader");
+                if (actionHeader) {
+                    actionHeader.style.display = isTeacherView() ? "" : "none";
+                }
+
                 if (role === "Student") {
                     const settingsMenu = document.getElementById("settingsMenuItem");
                     if (settingsMenu) settingsMenu.style.display = 'none';
@@ -137,7 +152,7 @@
                 console.error(error);
                 document.getElementById("studentTableBody").innerHTML = `
                     <tr>
-                        <td colspan="5" class="text-center text-danger">Có lỗi xảy ra khi tải danh sách.</td>
+                        <td colspan="${getTableColspan()}" class="text-center text-danger">Có lỗi xảy ra khi tải danh sách.</td>
                     </tr>
                 `;
             }
@@ -150,12 +165,13 @@
 
         function renderStudents(students) {
             const tbody = document.getElementById("studentTableBody");
+            const canManageStudents = isTeacherView();
             tbody.innerHTML = "";
 
             if (!students || students.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="text-center">
+                        <td colspan="${getTableColspan()}" class="text-center">
                             Chưa có học sinh nào tham gia lớp này.
                         </td>
                     </tr>
@@ -174,8 +190,51 @@
                     <td>${formatDateTime(student.joinedAtUtc)}</td>
                 `;
 
+                if (canManageStudents) {
+                    const actionCell = document.createElement("td");
+                    const removeBtn = document.createElement("button");
+                    removeBtn.className = "btn btn-sm btn-outline-danger";
+                    removeBtn.type = "button";
+                    removeBtn.textContent = "Xóa khỏi lớp";
+                    removeBtn.addEventListener("click", function () {
+                        removeStudent(student.studentId, student.fullName || student.email || "học sinh");
+                    });
+                    actionCell.appendChild(removeBtn);
+                    row.appendChild(actionCell);
+                }
+
                 tbody.appendChild(row);
             });
+        }
+
+        async function removeStudent(studentId, studentName) {
+            const token = getToken();
+            if (!token) {
+                showToast("Bạn chưa đăng nhập", "error");
+                window.location.href = "/Auth/Login";
+                return;
+            }
+
+            const confirmed = window.confirm(`Bạn có chắc muốn xóa ${studentName} khỏi lớp không?`);
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                const data = await response.json().catch(() => null);
+                if (!response.ok) {
+                    throw new Error(data?.message || "Không thể xóa học sinh khỏi lớp.");
+                }
+
+                showToast(data?.message || "Đã xóa học sinh khỏi lớp.");
+                await loadStudents();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || "Có lỗi xảy ra khi xóa học sinh.", "error");
+            }
         }
 
         document.addEventListener("DOMContentLoaded", function () {

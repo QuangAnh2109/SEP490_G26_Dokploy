@@ -247,6 +247,25 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpDelete("{id}/students/{studentId}")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> RemoveStudentFromClass(int id, int studentId)
+        {
+            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var teacherId))
+                return Unauthorized();
+
+            try
+            {
+                await _service.RemoveStudentFromClassAsync(teacherId, id, studentId);
+                return Ok(new { message = "Đã xóa học sinh khỏi lớp." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("subjects")]
         [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> GetSubjects()

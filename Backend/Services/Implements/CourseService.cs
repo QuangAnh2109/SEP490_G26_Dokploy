@@ -220,6 +220,25 @@ namespace Backend.Services.Implements
             if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
         }
 
+        public async Task RemoveStudentFromClassAsync(int teacherUserId, int classId, int studentId)
+        {
+            var isTeacherOfClass = await _repo.IsTeacherOfClassAsync(classId, teacherUserId);
+            if (!isTeacherOfClass)
+                throw new Exception("Bạn không có quyền quản lý lớp này.");
+
+            var member = await _repo.GetClassMemberAsync(classId, studentId);
+            if (member == null || member.MemberStatus != MemberStatus.Active)
+                throw new Exception("Học sinh không thuộc lớp hoặc không ở trạng thái đang học.");
+
+            var hasActiveSubmission = await _repo.StudentHasInProgressSubmissionInClassAsync(classId, studentId);
+            if (hasActiveSubmission)
+                throw new Exception("Không thể xóa học sinh đang làm dở một bài kiểm tra trong lớp.");
+
+            var success = await _repo.RemoveActiveStudentFromClassAsync(classId, studentId);
+            if (!success)
+                throw new Exception("Không thể xóa học sinh khỏi lớp.");
+        }
+
         public async Task<List<SubjectOptionDto>> GetSubjectsAsync()
         {
             return await _repo.GetSubjectsAsync();
