@@ -229,15 +229,15 @@ $("#changePasswordForm").on("submit", function (e) {
 
     clearFieldError();
 
-    const oldPassword = $("#currentPassword").val();
+    const currentPassword = $("#currentPassword").val();
     const newPassword = $("#newPassword").val();
     const confirmPassword = $("#confirmPassword").val();
 
-    const error = validateChangePassword(oldPassword, newPassword, confirmPassword);
+    const error = validateChangePassword(currentPassword, newPassword, confirmPassword);
 
     if (error) {
 
-        if (!oldPassword) showFieldError("#currentPassword");
+        if (!currentPassword) showFieldError("#currentPassword");
         if (!newPassword) showFieldError("#newPassword");
         if (!confirmPassword) showFieldError("#confirmPassword");
 
@@ -253,8 +253,8 @@ $("#changePasswordForm").on("submit", function (e) {
         .prop("disabled", true)
         .html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
 
-    apiClient.post("/api/auth/change-password", {
-        oldPassword,
+    apiClient.put("/api/profile/change-password", {
+        currentPassword,
         newPassword
     })
         .then(() => {

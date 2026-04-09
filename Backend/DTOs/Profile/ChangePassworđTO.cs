@@ -15,8 +15,4 @@ public class ChangePasswordDTO
         ErrorMessage = "Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt"
     )]
     public string NewPassword { get; set; } = null!;
-
-    [Required(ErrorMessage = "Vui lòng xác nhận mật khẩu")]
-    [Compare("NewPassword", ErrorMessage = "Xác nhận mật khẩu không khớp")]
-    public string ConfirmPassword { get; set; } = null!;
 }

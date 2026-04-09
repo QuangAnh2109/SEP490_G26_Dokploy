@@ -5,19 +5,14 @@ using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using Backend.Constants;
 
-using Microsoft.AspNetCore.Identity;
-
 namespace Backend.Services.Implements
 {
     public class ProfileService : IProfileService
     {
         private readonly IProfileRepository _repo;
-        private readonly PasswordHasher<User> _passwordHasher;
-
         public ProfileService(IProfileRepository repo)
         {
             _repo = repo;
-            _passwordHasher = new PasswordHasher<User>();
         }
 
         public async Task<UserProfileDTO?> GetProfileAsync(int userId)
@@ -83,32 +78,26 @@ namespace Backend.Services.Implements
             return true;
         }
 
-        //public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
-        //{
-        //    var user = await _repo.GetUserByIdAsync(userId);
+        public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
+        {
+            var user = await _repo.GetUserByIdAsync(userId);
 
-        //    if (user == null) return false;
+            if (user == null) return false;
 
-        //    var result = _passwordHasher.VerifyHashedPassword(
-        //        user,
-        //        user.PasswordHash!,
-        //        dto.CurrentPassword
-        //    );
+            if (string.IsNullOrEmpty(user.PasswordHash))
+                return false;
 
-        //    if (result == PasswordVerificationResult.Failed)
-        //        return false;
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+                return false;
 
-        //    if (dto.NewPassword != dto.ConfirmPassword)
-        //        return false;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
 
-        //    user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+            user.SecurityStamp = DateTime.UtcNow;
 
-        //    user.SecurityStamp = DateTime.UtcNow;
+            await _repo.UpdateUserAsync(user);
+            await _repo.SaveChangesAsync();
 
-        //    await _repo.UpdateUserAsync(user);
-        //    await _repo.SaveChangesAsync();
-
-        //    return true;
-        //}
+            return true;
+        }
     }
 }

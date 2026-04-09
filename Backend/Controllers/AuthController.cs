@@ -225,32 +225,32 @@ namespace Backend.Controllers
             }
         }
 
-        [HttpPost("change-password")]
-        [Authorize]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
-        {
-            try
-            {
-                var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId) || userId <= 0)
-                    return Unauthorized(new { message = "Token không hợp lệ." });
+        //[HttpPost("change-password")]
+        //[Authorize]
+        //public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        //{
+        //    try
+        //    {
+        //        var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId) || userId <= 0)
+        //            return Unauthorized(new { message = "Token không hợp lệ." });
 
-                await _authService.ChangePasswordAsync(userId, request);
-                return Ok(new { message = "Mật khẩu đã được thay đổi thành công." });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi khi thay đổi mật khẩu.", details = ex.Message });
-            }
-        }
+        //        await _authService.ChangePasswordAsync(userId, request);
+        //        return Ok(new { message = "Mật khẩu đã được thay đổi thành công." });
+        //    }
+        //    catch (UnauthorizedAccessException ex)
+        //    {
+        //        return Unauthorized(new { message = ex.Message });
+        //    }
+        //    catch (InvalidOperationException ex)
+        //    {
+        //        return BadRequest(new { message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = "Lỗi khi thay đổi mật khẩu.", details = ex.Message });
+        //    }
+        //}
 
         [HttpPost("logout")]
         [Authorize]

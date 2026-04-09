@@ -9,6 +9,6 @@ namespace Backend.Services.Interfaces
 
         Task<bool> UpdateProfileAsync(int userId, UpdateProfileDTO dto);
 
-        //Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto);
+        Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto);
     }
 }
