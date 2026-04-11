@@ -1,6 +1,7 @@
 $(document).ready(function () {
     // Populate readonly email field from LocalStorage (saved during Google Login)
     const tempEmail = localStorage.getItem('tempGoogleEmail');
+    const pendingRoleId = (localStorage.getItem('pendingRegistrationRole') || '').toString();
     if (tempEmail) {
         $('#Email').val(tempEmail);
     } else {
@@ -21,6 +22,11 @@ $(document).ready(function () {
             $('#StudentId').val('');
         }
     });
+
+    if (pendingRoleId) {
+        $('#RoleId').val(pendingRoleId);
+    }
+    $('#RoleId').trigger('change');
 
     // Handle form submission
     $('#registerForm').on('submit', function (e) {
@@ -102,6 +108,7 @@ $(document).ready(function () {
                     localStorage.removeItem('tempGoogleToken');
                     localStorage.removeItem('tempGoogleEmail');
                     localStorage.removeItem('tempGoogleNeedsCompletion');
+                    localStorage.removeItem('pendingRegistrationRole');
 
                     window.location.href = '/';
                 }
