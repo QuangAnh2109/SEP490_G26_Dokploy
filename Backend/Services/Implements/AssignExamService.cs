@@ -45,39 +45,41 @@ public class AssignExamService : IAssignExamService
         return s?.Trim() ?? string.Empty;
     }
 
-    public async Task<AssignExamFiltersResponseDto> GetFiltersAsync(int? teacherId, CancellationToken ct = default)
-    {
-        await EnsureUserActiveAsync(teacherId, ct);
+    //public async Task<AssignExamFiltersResponseDto> GetFiltersAsync(int? teacherId, CancellationToken ct = default)
+    //{
+    //    await EnsureUserActiveAsync(teacherId, ct);
 
-        return await _repo.GetAssignExamFilterOptionsAsync(teacherId!.Value, ct);
-    }
+    //    return await _repo.GetAssignExamFilterOptionsAsync(teacherId!.Value, ct);
+    //}
 
-    public async Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
-        int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct = default)
-    {
-        page = Math.Max(1, page);
-        size = Math.Clamp(size, 1, 200);
+    //public async Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
+    //    int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct = default)
+    //{
+    //    page = Math.Max(1, page);
+    //    size = Math.Clamp(size, 1, 200);
 
-        kw = kw?.Trim();
-        subj = subj?.Trim();
-        sem = sem?.Trim();
+    //    kw = kw?.Trim();
+    //    subj = subj?.Trim();
+    //    sem = sem?.Trim();
 
-        var (items, total) = await _repo.GetPagedClassesForTeacherAsync(teacherId, kw, subj, sem, page, size, ct);
+    //    var (items, total) = await _repo.GetPagedClassesForTeacherAsync(teacherId, kw, subj, sem, page, size, ct);
 
-        var classListItems = items.Select(x => new ClassListItemDto(
-            x.ClassId,
-            x.Name,
-            x.SubjectCode,
-            x.Semester,
-            x.MemberCount
-        )).ToList();
+    //    var classListItems = items.Select(x => new ClassListItemDto(
+    //        x.ClassId,
+    //        x.Name,
+    //        x.SubjectCode,
+    //        x.Semester,
+    //        x.MemberCount
+    //    )).ToList();
 
-        return new PagedResultDto<ClassListItemDto>(page, size, total, classListItems);
-    }
+    //    return new PagedResultDto<ClassListItemDto>(page, size, total, classListItems);
+    //}
 
     public async Task<IReadOnlyList<BlueprintListItemDto>> GetBlueprintsAsync(
         int? teacherId, string? subj, string? kw, CancellationToken ct = default)
     {
+        await EnsureUserActiveAsync(teacherId, ct);
+
         subj = subj?.Trim();
         kw = kw?.Trim();
 
@@ -92,6 +94,8 @@ public class AssignExamService : IAssignExamService
     public async Task<IReadOnlyList<QuestionListItemDto>> GetQuestionsAsync(
         int? teacherId, string? subj, int? ch, int? diff, CancellationToken ct = default)
     {
+        await EnsureUserActiveAsync(teacherId, ct);
+
         subj = subj?.Trim();
         return await _repo.GetQuestionsAsync(teacherId, subj, ch, diff, ActiveStatus, ct);
     }

@@ -72,11 +72,81 @@ namespace Backend.Services.Implements
                     Email = userEmail
                 };
             }
-            // đảm bảo token nhận diện là google
-            user.PasswordHash = null;
+            // If user exists but is missing required profile fields, require completion before issuing token
+            var missing = new List<string>();
+            var fullName = (user.FullName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(fullName) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
+            {
+                missing.Add("FullName");
+            }
+            if (user.RoleId == 2)
+            {
+                var studentId = (user.StudentId ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(studentId) ||
+                    !System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
+                {
+                    missing.Add("StudentId");
+                }
+            }
+            if (missing.Count > 0)
+            {
+                return new LoginResponse
+                {
+                    NeedsProfileCompletion = true,
+                    Email = userEmail,
+                    MissingFields = missing
+                };
+            }
             var token = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshTokenAsJwt(user);
 
+            return new LoginResponse
+            {
+                Token = token,
+                RefreshToken = refreshToken,
+                RoleName = user.Role?.Name ?? "User",
+                Email = user.Email
+            };
+        }
+
+        public async Task<LoginResponse> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request)
+        {
+            var payload = await ValidateGoogleTokenAsync(request.IdToken);
+            var userEmail = payload.Email;
+
+            var user = await _authRepository.GetUserByEmailAsync(userEmail);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Tài khoản chưa tồn tại để cập nhật thông tin.");
+            }
+
+            var fullName = (request.FullName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+                throw new InvalidOperationException(ValidationMessages.FullNameRequired);
+            if (!System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
+                throw new InvalidOperationException(ValidationMessages.FullNameInvalid);
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber.Trim(), @"^0\d{9}$"))
+                throw new InvalidOperationException(ValidationMessages.PhoneNumberInvalid);
+
+            if (user.RoleId == 2)
+            {
+                var studentId = (request.StudentId ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(studentId))
+                    throw new InvalidOperationException(ValidationMessages.StudentIdRequiredForStudent);
+                if (!System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
+                    throw new InvalidOperationException(ValidationMessages.StudentIdInvalid);
+                user.StudentId = studentId;
+            }
+
+            user.FullName = fullName;
+            user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+            await _authRepository.UpdateUserAsync(user);
+
+            var token = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshTokenAsJwt(user);
             return new LoginResponse
             {
                 Token = token,
@@ -97,12 +167,42 @@ namespace Backend.Services.Implements
                 throw new InvalidOperationException(ErrorMessages.UserAlreadyExists);
             }
 
+            var fullName = (request.FullName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                throw new InvalidOperationException(ValidationMessages.FullNameRequired);
+            }
+            if (!System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
+            {
+                throw new InvalidOperationException(ValidationMessages.FullNameInvalid);
+            }
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber.Trim(), @"^0\d{9}$"))
+            {
+                throw new InvalidOperationException(ValidationMessages.PhoneNumberInvalid);
+            }
+            if (request.RoleId == 2)
+            {
+                var studentId = (request.StudentId ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(studentId))
+                {
+                    throw new InvalidOperationException(ValidationMessages.StudentIdRequiredForStudent);
+                }
+                if (!System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
+                {
+                    throw new InvalidOperationException(ValidationMessages.StudentIdInvalid);
+                }
+            }
+
             var user = new User
             {
                 PasswordHash = null,
                 RoleId = request.RoleId,
                 Email = userEmail,
-                SecurityStamp = DateTime.UtcNow
+                SecurityStamp = DateTime.UtcNow,
+                FullName = fullName,
+                PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
+                StudentId = string.IsNullOrWhiteSpace(request.StudentId) ? null : request.StudentId.Trim()
             };
 
             await _authRepository.AddUserAsync(user);
@@ -126,6 +226,33 @@ namespace Backend.Services.Implements
             var existingUserByEmail = await _authRepository.GetUserByEmailAsync(request.Email);
             if (existingUserByEmail != null && existingUserByEmail.Email == request.Email)
                 throw new InvalidOperationException(ErrorMessages.EmailAlreadyRegistered);
+
+            var fullName = (request.FullName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                throw new InvalidOperationException(ValidationMessages.FullNameRequired);
+            }
+            if (!System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
+            {
+                throw new InvalidOperationException(ValidationMessages.FullNameInvalid);
+            }
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber.Trim(), @"^0\d{9}$"))
+            {
+                throw new InvalidOperationException(ValidationMessages.PhoneNumberInvalid);
+            }
+            if (request.RoleId == 2)
+            {
+                var studentId = (request.StudentId ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(studentId))
+                {
+                    throw new InvalidOperationException(ValidationMessages.StudentIdRequiredForStudent);
+                }
+                if (!System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
+                {
+                    throw new InvalidOperationException(ValidationMessages.StudentIdInvalid);
+                }
+            }
 
             // 2. Generate 6-digit OTP
             var otp = new Random().Next(100000, 999999).ToString();
@@ -205,7 +332,10 @@ namespace Backend.Services.Implements
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(regRequest.Password),
                 RoleId = regRequest.RoleId,
                 Email = regRequest.Email,
-                SecurityStamp = DateTime.UtcNow
+                SecurityStamp = DateTime.UtcNow,
+                FullName = (regRequest.FullName ?? string.Empty).Trim(),
+                PhoneNumber = string.IsNullOrWhiteSpace(regRequest.PhoneNumber) ? null : regRequest.PhoneNumber.Trim(),
+                StudentId = string.IsNullOrWhiteSpace(regRequest.StudentId) ? null : regRequest.StudentId.Trim()
             };
 
             await _authRepository.AddUserAsync(user);

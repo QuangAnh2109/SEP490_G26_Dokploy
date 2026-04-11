@@ -1,3 +1,4 @@
+using Backend.Constants;
 using Backend.DTOs.Course;
 using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
@@ -377,6 +378,31 @@ namespace Backend.Repositories.Implements
                 membership.MemberStatus = status;
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public Task<bool> IsTeacherOfClassAsync(int classId, int teacherUserId)
+        {
+            return _context.Classes.AnyAsync(c => c.ClassId == classId && c.TeacherId == teacherUserId);
+        }
+
+        public Task<bool> StudentHasInProgressSubmissionInClassAsync(int classId, int studentId)
+        {
+            return _context.Submissions.AnyAsync(s =>
+                s.StudentId == studentId
+                && s.Status == SubmissionStatus.InProgress
+                && s.Paper != null
+                && s.Paper.Exam != null
+                && s.Paper.Exam.ClassId == classId);
+        }
+
+        public async Task<bool> RemoveActiveStudentFromClassAsync(int classId, int studentId)
+        {
+            var rows = await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId
+                             && cm.StudentId == studentId
+                             && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
+                .ExecuteDeleteAsync();
+            return rows > 0;
         }
     }
 }

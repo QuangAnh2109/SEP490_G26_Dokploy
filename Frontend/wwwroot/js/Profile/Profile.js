@@ -1,4 +1,4 @@
-﻿// ================= GLOBAL =================
+// ================= GLOBAL =================
 let originalProfile = {};
 
 // ================= INIT =================
@@ -103,14 +103,69 @@ $("#profileForm").on("submit", async function (e) {
 
     e.preventDefault();
 
+    // Clear previous invalid marks
+    $("#fullName, #phoneNumber, #studentId").removeClass("is-invalid");
+
+    const fullName = ($("#fullName").val() || "").toString().trim();
+    const phoneNumber = ($("#phoneNumber").val() || "").toString().trim();
+    const studentId = ($("#studentId").val() || "").toString().trim();
+    const isStudent = !$("#studentIdGroup").attr("hidden");
+
+    // Validate FullName
+    if (!fullName) {
+        showToast("Họ và tên là bắt buộc.", "error");
+        $("#fullName").addClass("is-invalid");
+        return;
+    }
+    const fullNamePattern = /^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$/u;
+    if (!fullNamePattern.test(fullName)) {
+        showToast("Họ và tên chỉ được chứa chữ cái và khoảng trắng.", "error");
+        $("#fullName").addClass("is-invalid");
+        return;
+    }
+
+    // Validate PhoneNumber (optional)
+    if (phoneNumber) {
+        const phonePattern = /^0\d{9}$/;
+        if (!phonePattern.test(phoneNumber)) {
+            showToast("Số điện thoại phải gồm 10 số và bắt đầu bằng 0.", "error");
+            $("#phoneNumber").addClass("is-invalid");
+            return;
+        }
+    }
+
+    // Validate StudentId (student must have, format must match)
+    if (isStudent) {
+        if (!studentId) {
+            showToast("Mã sinh viên là bắt buộc cho tài khoản học sinh.", "error");
+            $("#studentId").addClass("is-invalid");
+            return;
+        }
+        const studentIdPattern = /^[A-Za-z]{2}\d{6}$/;
+        if (!studentIdPattern.test(studentId)) {
+            showToast("Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).", "error");
+            $("#studentId").addClass("is-invalid");
+            return;
+        }
+    } else if (studentId) {
+        const studentIdPattern = /^[A-Za-z]{2}\d{6}$/;
+        if (!studentIdPattern.test(studentId)) {
+            showToast("Mã sinh viên phải gồm 8 ký tự: 2 chữ cái đầu và 6 chữ số sau (ví dụ: SE123456).", "error");
+            $("#studentId").addClass("is-invalid");
+            return;
+        }
+    }
+
     const payload = {
-        fullName: $("#fullName").val(),
-        phoneNumber: $("#phoneNumber").val()
+        fullName: fullName,
+        phoneNumber: phoneNumber || null
     };
 
     // chỉ gửi studentId nếu có
     if (!$("#studentIdGroup").attr("hidden")) {
-        payload.studentId = $("#studentId").val();
+        payload.studentId = studentId;
+    } else if (studentId) {
+        payload.studentId = studentId;
     }
 
     try {
@@ -174,15 +229,15 @@ $("#changePasswordForm").on("submit", function (e) {
 
     clearFieldError();
 
-    const oldPassword = $("#currentPassword").val();
+    const currentPassword = $("#currentPassword").val();
     const newPassword = $("#newPassword").val();
     const confirmPassword = $("#confirmPassword").val();
 
-    const error = validateChangePassword(oldPassword, newPassword, confirmPassword);
+    const error = validateChangePassword(currentPassword, newPassword, confirmPassword);
 
     if (error) {
 
-        if (!oldPassword) showFieldError("#currentPassword");
+        if (!currentPassword) showFieldError("#currentPassword");
         if (!newPassword) showFieldError("#newPassword");
         if (!confirmPassword) showFieldError("#confirmPassword");
 
@@ -198,8 +253,8 @@ $("#changePasswordForm").on("submit", function (e) {
         .prop("disabled", true)
         .html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
 
-    apiClient.post("/api/auth/change-password", {
-        oldPassword,
+    apiClient.put("/api/profile/change-password", {
+        currentPassword,
         newPassword
     })
         .then(() => {

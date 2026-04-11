@@ -34,5 +34,8 @@ namespace Backend.Repositories.Interfaces
         Task<User?> GetUserWithRoleByEmailAsync(string email);
         Task<ClassMember?> GetClassMemberAsync(int classId, int studentId);
         Task UpdateClassMemberStatusAsync(int classId, int studentId, int status);
+        Task<bool> IsTeacherOfClassAsync(int classId, int teacherUserId);
+        Task<bool> StudentHasInProgressSubmissionInClassAsync(int classId, int studentId);
+        Task<bool> RemoveActiveStudentFromClassAsync(int classId, int studentId);
     }
 }

@@ -8,6 +8,7 @@ namespace Backend.Services.Interfaces
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<LoginResponse> GoogleLoginAsync(GoogleLoginRequest request);
         Task<LoginResponse> GoogleRegisterAsync(GoogleRegisterRequest request);
+        Task<LoginResponse> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request);
         Task SendOtpAsync(RegisterRequest request);
         Task ResendOtpAsync(string email);
         Task<LoginResponse> VerifyOtpAndRegisterAsync(VerifyOtpRequest request);

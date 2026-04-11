@@ -46,10 +46,10 @@ public record SubjectOptionDto(
     string Name
 );
 
-public record AssignExamFiltersResponseDto(
-    IReadOnlyList<SubjectOptionDto> Subjects,
-    IReadOnlyList<string> Semesters
-);
+//public record AssignExamFiltersResponseDto(
+//    IReadOnlyList<SubjectOptionDto> Subjects,
+//    IReadOnlyList<string> Semesters
+//);
 
 public class CreateAssignExamRequest
 {

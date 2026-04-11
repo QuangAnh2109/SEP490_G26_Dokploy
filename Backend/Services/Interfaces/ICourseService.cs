@@ -29,6 +29,7 @@ namespace Backend.Services.Interfaces
         Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
         Task ApproveStudentAsync(int classId, int studentId);
         Task RejectStudentAsync(int classId, int studentId);
+        Task RemoveStudentFromClassAsync(int teacherUserId, int classId, int studentId);
         Task<List<SubjectOptionDto>> GetSubjectsAsync();
     }
 }
