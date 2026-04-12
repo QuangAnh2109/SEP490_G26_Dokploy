@@ -48,6 +48,12 @@ async function loadStudents() {
             const pendingMenu = document.getElementById("pendingMenuItem");
             if (pendingMenu) pendingMenu.style.display = 'none';
         }
+        if (role === "Teacher") {
+            const practiceMenu = document.getElementById("practiceMenuItem");
+            if (practiceMenu) practiceMenu.style.display = 'none';
+            const historyMenu = document.getElementById("practiceHistoryMenuItem");
+            if (historyMenu) historyMenu.style.display = 'none';
+        }
         if (role === "Teacher" && currentClassStatus !== 0) {
             document.querySelectorAll('.action-col').forEach(el => el.style.display = '');
         }

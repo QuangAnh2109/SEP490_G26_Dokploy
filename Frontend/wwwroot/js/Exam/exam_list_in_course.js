@@ -267,11 +267,6 @@ function renderExams(exams) {
                     actionFragment.querySelector(".btn-take").remove();
                 }
                 
-                if (status === "closed" || exam.showScore) {
-                    actionFragment.querySelector(".btn-result").href = `/Analytics/StudentResult?examId=${exam.examId}`;
-                } else {
-                    actionFragment.querySelector(".btn-result").remove();
-                }
                 actionsCol.appendChild(actionFragment);
             }
         }

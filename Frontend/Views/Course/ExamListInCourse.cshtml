@@ -3,6 +3,7 @@
     var classId = ViewBag.ClassId ?? 0;
     var className = ViewBag.ClassName as string;
     var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
@@ -27,7 +28,7 @@
             <i class="fas fa-brain"></i> Luyện tập
         </a>
         <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
-            <i class="fas fa-history"></i> Lịch sử luyện tập
+            <i class="fas fa-chart-bar"></i> Kết quả
         </a>
 
         <div class="nav-section-title">Quản lý</div>
@@ -129,7 +130,6 @@
 <template id="student-action-template">
     <a class="btn btn-sm btn-outline-secondary d-inline btn-detail" href="#">Chi tiết</a>
     <a class="btn btn-sm btn-primary d-inline btn-take" href="#">Vào làm</a>
-    <a class="btn btn-sm btn-info text-white d-inline btn-result" href="#"><i class="fas fa-chart-bar"></i> Xem kết quả</a>
 </template>
 
 @section Scripts {

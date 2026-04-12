@@ -32,7 +32,7 @@
                     </div>
                 </div>
                 <div class="col-md-8">
-                    <h3 class="mb-3">Kết quả luyện tập</h3>
+                    <h3 class="mb-3" style="font-family: 'Libre Baskerville', serif;">Kết quả luyện tập</h3>
                     <div class="row g-3">
                         <div class="col-sm-4">
                             <div class="text-muted small">Tổng câu hỏi</div>
@@ -95,9 +95,10 @@
     <script>
         const submissionId = @submissionId;
         let resultData = null;
-
-        document.addEventListener('DOMContentLoaded', loadResult);
-
+        document.addEventListener('DOMContentLoaded', () => {
+            loadResult();
+            loadBreadcrumb();
+        });
         function goBackToHistory(e) {
             e.preventDefault();
             const classId = sessionStorage.getItem('currentPracticeClassId');
@@ -105,6 +106,45 @@
                 window.location.href = `/PracticeExam/History?classId=${classId}`;
             } else {
                 window.location.href = `/Course/CourseList`;
+            }
+        }
+
+        async function loadBreadcrumb() {
+            const classId = sessionStorage.getItem('currentPracticeClassId');
+            if (!classId) return;
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: data.className || ('Lớp ' + classId), url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                            { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
+                            { text: "Chi tiết bài làm", url: null }
+                        ]);
+                    }
+                } else {
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: 'Lớp ' + classId, url: "/Course/ExamListInCourse/" + classId },
+                            { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
+                            { text: "Chi tiết bài làm", url: null }
+                        ]);
+                    }
+                }
+            } catch {
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: 'Lớp ' + classId, url: "/Course/ExamListInCourse/" + classId },
+                        { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
+                        { text: "Chi tiết bài làm", url: null }
+                    ]);
+                }
             }
         }
 

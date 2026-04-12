@@ -152,7 +152,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/settings")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetClassSettings(int id)
         {
             var course = await _service.GetByIdAsync(id);

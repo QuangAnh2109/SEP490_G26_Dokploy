@@ -1,5 +1,6 @@
 using Backend.DTOs;
 using Backend.Constants;
+using Backend.Jobs;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Backend.Repositories.Interfaces;
@@ -134,10 +135,6 @@ public class AssignExamService : IAssignExamService
                     throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}. Needs {row.TotalOfQuestions}, has {bank.Count}.");
                 }
 
-                // Rolling Shuffle Strategy: 
-                // We use a "streaming" approach to pull questions from a shuffled bank.
-                // This ensures every question is used once before any question is used twice,
-                // minimizing overlap across papers and guaranteeing uniqueness within one paper.
                 var shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
                 int bankIdx = 0;
 
@@ -404,12 +401,18 @@ public class AssignExamService : IAssignExamService
 
     public async Task ApproveExamAsync(int id, CancellationToken ct = default)
     {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
 
         var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
         await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
         
         await _repo.UpdateBlueprintToInprogressAsync(id, ct);
+
+        // Hangfire: Lập lịch tự động Published → InProgress tại OpenAt, InProgress → Closed tại CloseAt
+        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
     }
 
     public async Task CancelExamAsync(int id, CancellationToken ct = default)
@@ -450,7 +453,30 @@ public class AssignExamService : IAssignExamService
                 "Chỉ có thể khôi phục đề thi đang ở trạng thái Cancelled.");
         }
 
+        var now = DateTime.UtcNow;
+
+        // 1. OpenAt phải nằm trong tương lai – nếu đã qua giờ mở, GV phải chỉnh thời gian trước
+        if (exam.OpenAt.HasValue && exam.OpenAt.Value <= now)
+        {
+            throw new InvalidOperationException(
+                "Thời điểm mở đề đã qua. Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+        }
+
+        // 2. Khoảng cách (CloseAt - OpenAt) phải >= Duration (phút)
+        if (exam.OpenAt.HasValue && exam.CloseAt.HasValue && exam.Duration > 0)
+        {
+            var windowMinutes = (exam.CloseAt.Value - exam.OpenAt.Value).TotalMinutes;
+            if (windowMinutes < exam.Duration)
+            {
+                throw new InvalidOperationException(
+                    $"Khoảng cách mở-đóng ({Math.Round(windowMinutes)} phút) phải >= thời lượng làm bài ({exam.Duration} phút). Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+            }
+        }
+
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+
+        // Hangfire: Lập lịch lại sau khi khôi phục
+        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
     }
 
     public async Task DeleteExamAsync(int id, CancellationToken ct = default)
@@ -482,6 +508,7 @@ public class AssignExamService : IAssignExamService
         else if (exam.Status == ExamStatus.Ready)
         {
             // Trạng thái Ready: cho phép sửa đầy đủ (Title + thời gian)
+            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
             await _repo.UpdateExamInfoAsync(id, request.Title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
         }
         else

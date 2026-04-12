@@ -18,9 +18,9 @@
 
 	<div class="app-shell">
 		@await Html.PartialAsync("_Sidebar")
-		<div class="app-content">
-			<div class="container">
-				<main role="main" class="pb-3">
+		<div class="app-content @(ViewBag.IsFullWidth == true ? "pt-0" : "")">
+			<div class="@(ViewBag.IsFullWidth == true ? "container-fluid p-0" : "container mt-4")">
+				<main role="main" class="pb-3 w-100">
 					@RenderBody()
 				</main>
 			</div>

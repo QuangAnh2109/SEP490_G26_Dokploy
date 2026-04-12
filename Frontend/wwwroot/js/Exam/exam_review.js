@@ -612,6 +612,22 @@ function cancelExam() {
 }
 
 function restoreExam() {
+    const d = currentReviewData;
+
+    // Validate phía client trước khi gọi API
+    const now = new Date();
+    if (d.openAt && new Date(d.openAt) <= now) {
+        showToast("Thời điểm mở đề đã qua. Vui lòng điều chỉnh thời gian trước khi khôi phục.", "error");
+        return;
+    }
+    if (d.openAt && d.closeAt && d.duration > 0) {
+        const windowMinutes = (new Date(d.closeAt) - new Date(d.openAt)) / 60000;
+        if (windowMinutes < d.duration) {
+            showToast(`Khoảng cách mở-đóng (${Math.round(windowMinutes)} phút) phải >= thời lượng làm bài (${d.duration} phút). Vui lòng điều chỉnh thời gian trước khi khôi phục.`, "error");
+            return;
+        }
+    }
+
     showConfirm("Khôi phục đề thi này? Đề thi sẽ trở lại trạng thái Published.", "Khôi phục đề thi", async () => {
         const btn = document.getElementById("btnRestore");
         btn.disabled = true;

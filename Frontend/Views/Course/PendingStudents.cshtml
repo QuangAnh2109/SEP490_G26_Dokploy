@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = "Phê duyệt học sinh";
     var classId = ViewBag.ClassId ?? 0;
+    ViewBag.IsFullWidth = true;
 }
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
@@ -20,11 +21,11 @@
         <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
             <i class="fas fa-list"></i> Danh sách đề
         </a>
-        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link">
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
             <i class="fas fa-brain"></i> Luyện tập
         </a>
-        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link">
-            <i class="fas fa-history"></i> Lịch sử luyện tập
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
         </a>
 
         <div class="nav-section-title">Quản lý</div>

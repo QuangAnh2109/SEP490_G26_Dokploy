@@ -17,6 +17,13 @@ async function loadPendingStudents() {
         return;
     }
 
+    if (role === "Teacher") {
+        const practiceMenu = document.getElementById("practiceMenuItem");
+        if (practiceMenu) practiceMenu.style.display = 'none';
+        const historyMenu = document.getElementById("practiceHistoryMenuItem");
+        if (historyMenu) historyMenu.style.display = 'none';
+    }
+
     try {
         const settingsRes = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, {
             headers: { "Authorization": "Bearer " + token }

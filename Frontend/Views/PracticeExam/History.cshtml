@@ -1,68 +1,196 @@
 @{
-    ViewData["Title"] = "Lịch sử luyện tập";
+    ViewData["Title"] = "Kết quả";
     var classId = ViewBag.ClassId ?? 0;
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
 }
 
-<div class="container py-4">
-    <section class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-history me-2 text-primary"></i>Lịch sử luyện tập</h2>
-            <p class="text-muted mb-0">Xem lại các bài luyện tập đã làm</p>
+<div class="course-wrapper">
+    <!-- Sidebar -->
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
-        <a href="/PracticeExam/Setup?classId=@classId" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Luyện tập mới
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
         </a>
-    </section>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link active" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
 
-    <!-- Loading -->
-    <div id="historyLoading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
+    </aside>
 
-    <!-- Content -->
-    <div id="historyContent" class="d-none">
-        <div id="historyList"></div>
-        <div id="historyEmpty" class="text-center py-5 d-none">
-            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-            <p class="text-muted">Bạn chưa có bài luyện tập nào.</p>
-            <a href="/PracticeExam/Setup?classId=@classId" class="btn btn-primary mt-2">
-                <i class="fas fa-play me-1"></i> Bắt đầu luyện tập
+    <!-- Main Content -->
+    <main class="course-content">
+        <section class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fw-bold pt-4 pb-2" style="font-family: 'Libre Baskerville', serif;">Kết quả</h2>
+            <a href="/PracticeExam/Setup?classId=@classId" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Luyện tập mới
             </a>
+        </section>
+
+        <!-- Filter: 1 row -->
+        <section class="card p-3 mb-4">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select id="typeFilter" class="form-select">
+                        <option value="">Tất cả loại</option>
+                        <option value="Kiểm tra">Kiểm tra</option>
+                        <option value="Luyện tập">Luyện tập</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Đã nộp">Đã nộp</option>
+                        <option value="Đang làm">Đang làm</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <input id="searchFilter" class="form-control" placeholder="Tìm theo tên đề, chương..." />
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div id="historyLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
-    </div>
+
+        <!-- Content -->
+        <div id="historyContent" class="d-none">
+            <section class="card p-3" id="tableCard">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Loại</th>
+                                <th>Tên đề / Chương</th>
+                                <th>Số câu</th>
+                                <th>Điểm</th>
+                                <th>Trạng thái</th>
+                                <th>Thời gian</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div id="historyEmpty" class="text-center py-5 d-none">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Bạn chưa có bài nộp nào.</p>
+                <a href="/PracticeExam/Setup?classId=@classId" class="btn btn-primary mt-2">
+                    <i class="fas fa-play me-1"></i> Bắt đầu luyện tập
+                </a>
+            </div>
+        </div>
+    </main>
 </div>
 
 @section Scripts {
     <script>
         const classId = @classId;
+        let allHistory = [];
 
         document.addEventListener('DOMContentLoaded', () => {
+            const role = getUserRole();
+            if (role === "Student") {
+                const settingsMenu = document.getElementById("settingsMenuItem");
+                if (settingsMenu) settingsMenu.style.display = 'none';
+                const pendingMenu = document.getElementById("pendingMenuItem");
+                if (pendingMenu) pendingMenu.style.display = 'none';
+            }
+
             sessionStorage.setItem('currentPracticeClassId', classId);
+            loadSidebarClassName();
             loadHistory();
+            document.getElementById('typeFilter').addEventListener('change', applyFilter);
+            document.getElementById('statusFilter').addEventListener('change', applyFilter);
+            document.getElementById('searchFilter').addEventListener('input', applyFilter);
         });
+
+        async function loadSidebarClassName() {
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const className = data.className || 'Lớp ' + classId;
+                    const el = document.getElementById('sidebarClassName');
+                    if (el) el.textContent = className;
+                    
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: className, url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                            { text: "Kết quả", url: null }
+                        ]);
+                    }
+                } else {
+                    const fallbackName = 'Lớp ' + classId;
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: fallbackName, url: "/Course/ExamListInCourse/" + classId },
+                            { text: "Kết quả", url: null }
+                        ]);
+                    }
+                }
+            } catch {
+                const fallbackName = 'Lớp ' + classId;
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: fallbackName, url: "/Course/ExamListInCourse/" + classId },
+                        { text: "Kết quả", url: null }
+                    ]);
+                }
+            }
+        }
 
         async function loadHistory() {
             const token = getToken();
             if (!token) { window.location.href = '/Auth/Login'; return; }
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/practice/history?classId=${classId}`, {
+                const res = await fetch(`${API_BASE_URL}/api/student/exams/history?classId=${classId}`, {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
 
                 if (!res.ok) {
-                    showToast('Lỗi tải lịch sử', 'error');
+                    showToast('Lỗi tải kết quả', 'error');
                     return;
                 }
 
-                const history = await res.json();
-                renderHistory(history);
+                allHistory = await res.json();
+                renderHistory(allHistory);
                 document.getElementById('historyLoading').classList.add('d-none');
                 document.getElementById('historyContent').classList.remove('d-none');
             } catch (err) {
@@ -70,66 +198,138 @@
             }
         }
 
+        function applyFilter() {
+            const typeVal = document.getElementById('typeFilter').value;
+            const statusVal = document.getElementById('statusFilter').value;
+            const keyword = document.getElementById('searchFilter').value.toLowerCase();
+
+            const filtered = allHistory.filter(h => {
+                const matchType = !typeVal || h.type === typeVal;
+                const matchStatus = !statusVal || h.status === statusVal;
+                const matchKeyword = !keyword ||
+                    (h.title && h.title.toLowerCase().includes(keyword));
+                return matchType && matchStatus && matchKeyword;
+            });
+
+            renderHistory(filtered);
+        }
+
         function renderHistory(history) {
-            const list = document.getElementById('historyList');
+            const tbody = document.getElementById('historyTableBody');
             const empty = document.getElementById('historyEmpty');
+            const tableCard = document.getElementById('tableCard');
+
+            tbody.innerHTML = '';
 
             if (!history || history.length === 0) {
                 empty.classList.remove('d-none');
+                tableCard.classList.add('d-none');
                 return;
             }
 
-            list.innerHTML = history.map(h => {
-                const isSubmitted = h.status === 'Đã nộp';
-                const statusClass = isSubmitted ? 'submitted' : 'in-progress';
-                const date = new Date(h.createdAtUtc).toLocaleString('vi-VN', {
-                    timeZone: 'Asia/Ho_Chi_Minh',
-                    year: 'numeric', month: '2-digit', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit'
-                });
+            empty.classList.add('d-none');
+            tableCard.classList.remove('d-none');
 
-                const chapters = h.chapterNames && h.chapterNames.length > 0
-                    ? h.chapterNames.join(', ') : 'N/A';
+            history.forEach(h => {
+                const tr = document.createElement('tr');
 
-                let actionBtn = '';
-                if (isSubmitted) {
-                    actionBtn = `
-                        <a href="/PracticeExam/Result?submissionId=${h.submissionId}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye me-1"></i> Xem kết quả
-                        </a>
-                    `;
+                // Loại
+                const tdType = document.createElement('td');
+                tdType.textContent = h.type;
+                tr.appendChild(tdType);
+
+                // Tên đề
+                const tdTitle = document.createElement('td');
+                tdTitle.style.maxWidth = '300px';
+                tdTitle.style.overflow = 'hidden';
+                tdTitle.style.textOverflow = 'ellipsis';
+                tdTitle.style.whiteSpace = 'nowrap';
+                tdTitle.title = h.title || '';
+                const strong = document.createElement('strong');
+                strong.textContent = h.title || 'N/A';
+                tdTitle.appendChild(strong);
+                tr.appendChild(tdTitle);
+
+                // Số câu
+                const tdTotal = document.createElement('td');
+                tdTotal.textContent = h.totalQuestions;
+                tr.appendChild(tdTotal);
+
+                // Điểm
+                const tdPoints = document.createElement('td');
+                if (h.status === 'Đã nộp' && h.totalPoints !== null && h.totalPoints !== undefined) {
+                    const pts = parseFloat(h.totalPoints);
+                    const badge = document.createElement('span');
+                    badge.className = 'badge ' + (pts >= 8 ? 'bg-success' : pts >= 5 ? 'bg-warning text-dark' : 'bg-danger');
+                    badge.textContent = pts.toFixed(1);
+                    tdPoints.appendChild(badge);
                 } else {
-                    actionBtn = `
-                        <a href="/PracticeExam/TakePractice?submissionId=${h.submissionId}" class="btn btn-sm btn-warning">
-                            <i class="fas fa-redo me-1"></i> Làm tiếp
-                        </a>
-                    `;
+                    const dash = document.createElement('span');
+                    dash.className = 'text-muted';
+                    dash.textContent = '—';
+                    tdPoints.appendChild(dash);
                 }
+                tr.appendChild(tdPoints);
 
-                const scoreHtml = isSubmitted && h.accuracyRate !== null
-                    ? `<span class="badge ${h.accuracyRate >= 80 ? 'bg-success' : h.accuracyRate >= 50 ? 'bg-warning text-dark' : 'bg-danger'}">${h.accuracyRate}% (${h.correctCount}/${h.totalQuestions})</span>`
-                    : '';
+                // Trạng thái
+                const tdStatus = document.createElement('td');
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'badge ' + (h.status === 'Đã nộp' ? 'bg-success' : 'bg-warning text-dark');
+                statusSpan.textContent = h.status;
+                tdStatus.appendChild(statusSpan);
+                tr.appendChild(tdStatus);
 
-                return `
-                    <div class="history-item">
-                        <div style="flex: 1;">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <strong>${escapeHtml(chapters)}</strong>
-                                <span class="history-status ${statusClass}">${h.status}</span>
-                                ${scoreHtml}
-                            </div>
-                            <div class="text-muted small">
-                                <i class="fas fa-calendar me-1"></i>${date}
-                                &nbsp;&nbsp;
-                                <i class="fas fa-list me-1"></i>${h.totalQuestions} câu
-                                ${h.subjectName ? '&nbsp;&nbsp;<i class="fas fa-book me-1"></i>' + escapeHtml(h.subjectName) : ''}
-                            </div>
-                        </div>
-                        <div>${actionBtn}</div>
-                    </div>
-                `;
-            }).join('');
+                // Thời gian
+                const tdTime = document.createElement('td');
+                const timeSmall = document.createElement('small');
+                timeSmall.textContent = formatVNDate(h.createdAtUtc);
+                tdTime.appendChild(timeSmall);
+                tr.appendChild(tdTime);
+
+                // Thao tác
+                const tdAction = document.createElement('td');
+                if (h.status === 'Đã nộp') {
+                    const btn = document.createElement('a');
+                    btn.className = 'btn btn-sm btn-outline-primary';
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-eye me-1';
+                    btn.appendChild(icon);
+                    btn.appendChild(document.createTextNode('Xem'));
+
+                    if (h.type === 'Kiểm tra' && h.examId) {
+                        btn.href = '/Analytics/StudentResult?examId=' + h.examId;
+                    } else {
+                        btn.href = '/PracticeExam/Result?submissionId=' + h.submissionId;
+                    }
+                    tdAction.appendChild(btn);
+                } else if (h.type === 'Luyện tập') {
+                    const btn = document.createElement('a');
+                    btn.className = 'btn btn-sm btn-warning';
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-redo me-1';
+                    btn.appendChild(icon);
+                    btn.appendChild(document.createTextNode('Làm tiếp'));
+                    btn.href = '/PracticeExam/TakePractice?submissionId=' + h.submissionId;
+                    tdAction.appendChild(btn);
+                } else {
+                    const dash = document.createElement('span');
+                    dash.className = 'text-muted';
+                    dash.textContent = '—';
+                    tdAction.appendChild(dash);
+                }
+                tr.appendChild(tdAction);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function formatVNDate(dateStr) {
+            if (!dateStr) return '—';
+            return new Date(dateStr).toLocaleString('vi-VN', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
         }
     </script>
 }
-

@@ -1,8 +1,11 @@
+using Backend.Jobs;
 using Backend.Models;
 using Backend.Repositories.Implements;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
 using Backend.Services.Interfaces;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -55,6 +58,24 @@ namespace Backend
             // Add PracticeExam
             builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
             builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
+
+            // Hangfire – Lập lịch tự động chuyển trạng thái đề thi
+            builder.Services.AddSingleton<ExamStatusJob>();
+            builder.Services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSqlServerStorage(
+                    builder.Configuration.GetConnectionString("MyCnn"),
+                    new SqlServerStorageOptions
+                    {
+                        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                        QueuePollInterval = TimeSpan.FromSeconds(15),
+                        UseRecommendedIsolationLevel = true,
+                        DisableGlobalLocks = true
+                    }));
+            builder.Services.AddHangfireServer();
 
 
             // =========================
@@ -159,6 +180,12 @@ namespace Backend
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Hangfire Dashboard (chỉ dùng trong development)
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseHangfireDashboard("/hangfire");
+            }
 
             app.MapControllers();
             app.MapHub<Backend.Hubs.ExamHub>("/examHub");

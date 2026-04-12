@@ -84,14 +84,21 @@ window.AssignExamValidator = (() => {
                 markFieldInvalid(f.closeAt, true);
             }
 
-            // 3. visibleFrom < closeAt (phải thấy đề trước khi đóng)
+            // 3. visibleFrom <= openAt (phải thấy đề trước hoặc cùng lúc mở)
+            if (data.visibleFromDate > data.openAtDate) {
+                errors.push('Thời điểm thấy đề phải trước hoặc bằng thời điểm mở.');
+                markFieldInvalid(f.visibleFrom, true);
+                markFieldInvalid(f.openAt, true);
+            }
+
+            // 4. visibleFrom < closeAt (phải thấy đề trước khi đóng)
             if (data.visibleFromDate >= data.closeAtDate) {
                 errors.push('Thời điểm thấy đề phải trước thời điểm đóng.');
                 markFieldInvalid(f.visibleFrom, true);
                 markFieldInvalid(f.closeAt, true);
             }
 
-            // 4. Khoảng mở-đóng phải đủ cho thời lượng làm bài
+            // 5. Khoảng mở-đóng phải đủ cho thời lượng làm bài
             if (data.openAtDate < data.closeAtDate && data.duration > 0) {
                 const windowMinutes = (data.closeAtDate - data.openAtDate) / 60000;
                 if (windowMinutes < data.duration) {

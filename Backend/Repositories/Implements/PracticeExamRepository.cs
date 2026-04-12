@@ -209,6 +209,8 @@ namespace Backend.Repositories.Implements
                 .Where(s => s.SubmissionId == submissionId
                          && s.StudentId == studentId
                          && s.Paper.ExamId == null) // Chỉ lấy bài luyện tập
+                .AsNoTracking()
+                .AsSplitQuery() // <-- Tránh Cartesian explosion
                 .FirstOrDefaultAsync();
         }
 
@@ -222,6 +224,8 @@ namespace Backend.Repositories.Implements
                 .Include(p => p.Questions)
                     .ThenInclude(q => q.Chapter)
                 .Where(p => p.PaperId == paperId && p.ExamId == null)
+                .AsNoTracking()
+                .AsSplitQuery() // <-- Tránh Cartesian explosion
                 .FirstOrDefaultAsync();
         }
 

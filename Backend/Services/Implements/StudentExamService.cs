@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 
 using Backend.Constants;
 using Backend.DTOs.StudentExam;
+using Backend.Helper;
 using Backend.Helpers;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -187,6 +188,29 @@ namespace Backend.Services.Implements
                 Description = data.Description,
                 BlueprintMatrix = matrixRows
             };
+        }
+
+        // ════════════════════════════════════════════════════════
+        //  LỊCH SỬ BÀI NỘP TỔNG HỢP (Kiểm tra + Luyện tập)
+        // ════════════════════════════════════════════════════════
+        public async Task<List<StudentSubmissionHistoryDto>> GetAllSubmissionHistoryAsync(int studentId, int? classId = null)
+        {
+            var rawList = await _studentExamRepository.GetSubmissionHistoryRawAsync(studentId, classId);
+
+            return rawList.Select(r => new StudentSubmissionHistoryDto
+            {
+                SubmissionId = r.SubmissionId,
+                Type = r.IsExam ? "Kiểm tra" : "Luyện tập",
+                Title = r.Title,
+                ClassName = r.ClassName,
+                SubjectName = r.SubjectName,
+                TotalQuestions = r.TotalQuestions,
+                TotalPoints = r.TotalPoints,
+                Status = r.Status == SubmissionStatus.Submitted ? "Đã nộp" : "Đang làm",
+                CreatedAtUtc = r.CreatedAtUtc,
+                CompletedAtUtc = r.Status == SubmissionStatus.Submitted ? r.UpdatedAtUtc : null,
+                ExamId = r.ExamId
+            }).ToList();
         }
     }
 }
