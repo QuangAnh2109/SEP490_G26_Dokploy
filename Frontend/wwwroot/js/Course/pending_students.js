@@ -3,13 +3,6 @@ let classId = null;
 let currentClassStatus = 1;
 
 async function loadPendingStudents() {
-    const token = getToken();
-    if (!token) {
-        showToast("Bạn chưa đăng nhập", "error");
-        window.location.href = "/Auth/Login";
-        return;
-    }
-
     const role = getUserRole();
     if (role === "Student") {
         showToast("Bạn không có quyền truy cập", "error");
@@ -25,29 +18,23 @@ async function loadPendingStudents() {
     }
 
     try {
-        const settingsRes = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, {
-            headers: { "Authorization": "Bearer " + token }
-        });
-        if (settingsRes.ok) {
-            const settingsData = await settingsRes.json();
-            currentClassStatus = settingsData.status ?? 1;
-        }
+        // Sử dụng Promise.all để gọi đồng thời 2 API cho tối ưu
+        const [settingsData, pendingData] = await Promise.all([
+            apiClient.get(`/api/Course/${classId}/settings`).catch(() => ({ status: 1 })), // Fallback nếu lỗi cài đặt
+            apiClient.get(`/api/Course/${classId}/students/pending`)
+        ]);
 
-        const response = await fetch(`${API_BASE_URL}/api/Course/${classId}/students/pending`, {
-            headers: { "Authorization": "Bearer " + token }
-        });
+        currentClassStatus = settingsData.status ?? 1;
+        allPendingStudents = pendingData;
 
-        if (response.status === 401) {
+        renderStudents(allPendingStudents);
+    } catch (error) {
+        if (error.xhr && error.xhr.status === 401) {
             showToast("Phiên đăng nhập hết hạn", "error");
             window.location.href = "/Auth/Login";
             return;
         }
 
-        if (!response.ok) throw new Error("Không thể tải danh sách chờ phê duyệt");
-
-        allPendingStudents = await response.json();
-        renderStudents(allPendingStudents);
-    } catch (error) {
         console.error(error);
         const tbody = document.getElementById("studentTableBody");
         tbody.innerHTML = "";
@@ -98,65 +85,44 @@ function renderStudents(students) {
             tr.querySelector(".student-code").textContent = student.studentCode || '-';
             tr.querySelector(".student-name").textContent = student.fullName || '-';
             tr.querySelector(".student-email").textContent = student.email || '-';
-            
+
             const actionsCol = tr.querySelector("td:last-child");
             if (currentClassStatus === 0 && actionsCol) {
                 actionsCol.innerHTML = "<span class='text-muted small'>Lớp đã đóng</span>";
             } else {
                 const btnApprove = tr.querySelector(".btn-approve");
                 const btnReject = tr.querySelector(".btn-reject");
-                if (btnApprove) btnApprove.onclick = () => approveStudent(student.studentId);
-                if (btnReject) btnReject.onclick = () => rejectStudent(student.studentId);
+                // Thay đổi từ string "confirm" sang sử dụng showConfirm để đồng bộ UI
+                if (btnApprove) btnApprove.onclick = () => showConfirm("Cho phép học sinh này tham gia lớp?", "Phê duyệt", () => approveStudent(student.studentId));
+                if (btnReject) btnReject.onclick = () => showConfirm("Bạn chắc chắn muốn từ chối học sinh này?", "Từ chối", () => rejectStudent(student.studentId));
             }
-            
+
             tbody.appendChild(tr);
         }
     });
 }
 
 async function approveStudent(studentId) {
-    if (!confirm("Cho phép học sinh này tham gia lớp?")) return;
-    const token = getToken();
-
     try {
-        const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/students/${studentId}/approve`, {
-            method: 'POST',
-            headers: { "Authorization": "Bearer " + token }
-        });
-
-        if (res.ok) {
-            showToast("Đã phê duyệt thành công", "success");
-            loadPendingStudents();
-        } else {
-            showToast("Lỗi khi phê duyệt", "error");
-        }
-    } catch (e) {
-        showToast("Đã xảy ra lỗi hệ thống", "error");
+        await apiClient.post(`/api/Course/${classId}/students/${studentId}/approve`);
+        showToast("Đã phê duyệt thành công", "success");
+        loadPendingStudents();
+    } catch (error) {
+        showToast(error.message || "Lỗi khi phê duyệt", "error");
     }
 }
 
 async function rejectStudent(studentId) {
-    if (!confirm("Bạn chắc chắn muốn từ chối học sinh này?")) return;
-    const token = getToken();
-
     try {
-        const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/students/${studentId}/reject`, {
-            method: 'DELETE',
-            headers: { "Authorization": "Bearer " + token }
-        });
-
-        if (res.ok) {
-            showToast("Đã từ chối thành công", "success");
-            loadPendingStudents();
-        } else {
-            showToast("Lỗi khi từ chối", "error");
-        }
-    } catch (e) {
-        showToast("Đã xảy ra lỗi hệ thống", "error");
+        await apiClient.delete(`/api/Course/${classId}/students/${studentId}/reject`);
+        showToast("Đã từ chối thành công", "success");
+        loadPendingStudents();
+    } catch (error) {
+        showToast(error.message || "Lỗi khi từ chối", "error");
     }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     const dataEl = document.getElementById("courseData");
     classId = dataEl ? dataEl.dataset.classId : null;
 
