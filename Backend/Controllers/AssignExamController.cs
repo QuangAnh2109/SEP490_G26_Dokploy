@@ -74,18 +74,6 @@ public class AssignExamController : ControllerBase
     }
 
 
-    [HttpGet("blueprints")]
-    public async Task<ActionResult<IReadOnlyList<BlueprintListItemDto>>> GetBlueprints(
-        [FromQuery] int? teacherId,
-        [FromQuery] string? subjectCode,
-        [FromQuery] string? keyword,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _assignExamService.GetBlueprintsAsync(
-            teacherId, subjectCode, keyword, cancellationToken);
-        return Ok(result);
-    }
-
     [HttpGet("blueprints/{id:int}/detail")]
     public async Task<ActionResult<IReadOnlyList<BlueprintDetailRowDto>>> GetBlueprintDetail(
         [FromRoute] int id,

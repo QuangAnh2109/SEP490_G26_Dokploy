@@ -434,6 +434,7 @@ namespace Backend.Repositories.Implements
                              && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
                 .ExecuteDeleteAsync();
             return rows > 0;
+        }
         public async Task<bool> CloseClassAsync(int classId)
         {
             var course = await _context.Classes.FirstOrDefaultAsync(c => c.ClassId == classId);
