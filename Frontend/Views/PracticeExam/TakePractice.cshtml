@@ -7,10 +7,23 @@
     <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
     <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
     <style>
-        math-field::part(virtual-keyboard-toggle) { display: none; }
-        math-field::part(menu-toggle) { display: none; }
-        #question-block-mcq { list-style-type: upper-alpha; }
-        math-field { max-width: 100%; overflow-x: auto; display: block; }
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
+
+        #question-block-mcq {
+            list-style-type: upper-alpha;
+        }
+
+        math-field {
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
     </style>
 }
 
@@ -127,32 +140,28 @@
         });
 
         async function loadPracticeExam() {
-            const token = getToken();
-            if (!token) { window.location.href = '/Auth/Login'; return; }
 
             const submissionId = @submissionId;
 
             // Thử resume trước (bài đang làm dở)
             try {
-                const res = await fetch(`${API_BASE_URL}/api/practice/resume/${submissionId}`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                practiceData = await apiClient.get(`/api/practice/resume/${submissionId}`);
+                isResumed = true;
 
-                if (res.ok) {
-                    practiceData = await res.json();
-                    isResumed = true;
+                // Khôi phục câu trả lời đã lưu
+                if (practiceData.savedAnswers && practiceData.savedAnswers.length > 0) {
+                    practiceData.savedAnswers.forEach(sa => {
+                        studentAnswers.set(String(sa.questionAnswerId), sa.response || '');
+                    });
+                }
 
-                    // Khôi phục câu trả lời đã lưu
-                    if (practiceData.savedAnswers && practiceData.savedAnswers.length > 0) {
-                        practiceData.savedAnswers.forEach(sa => {
-                            studentAnswers.set(String(sa.questionAnswerId), sa.response || '');
-                        });
-                    }
-
-                    initExam();
+                initExam();
+                return;
+            } catch (error) {
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
                     return;
                 }
-            } catch (err) {
                 console.log('Resume failed, trying create response from sessionStorage');
             }
 
@@ -391,37 +400,22 @@
             });
 
             try {
-                const token = getToken();
-                const res = await fetch(`${API_BASE_URL}/api/practice/submit`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        submissionId: practiceData.submissionId,
-                        studentAnswers: studentAnswerDtos
-                    })
+                const result = await apiClient.post('/api/practice/submit', {
+                    submissionId: practiceData.submissionId,
+                    studentAnswers: studentAnswerDtos
                 });
 
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.message || 'Lỗi nộp bài');
-                }
-
-                const result = await res.json();
                 showToast(`Nộp bài thành công! Đúng ${result.correctCount}/${result.totalQuestions} (${result.accuracyRate}%)`, 'success', 5000);
 
                 // Chuyển sang trang kết quả
                 setTimeout(() => {
                     window.location.href = `/PracticeExam/Result?submissionId=${practiceData.submissionId}`;
                 }, 1500);
-            } catch (err) {
-                showToast(err.message, 'error');
+            } catch (error) {
+                showToast(error.message || 'Lỗi nộp bài', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Nộp bài';
             }
         }
     </script>
 }
-
