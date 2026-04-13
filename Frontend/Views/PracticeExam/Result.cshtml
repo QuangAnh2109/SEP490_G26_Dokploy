@@ -6,23 +6,25 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
     <style>
-        math-field::part(virtual-keyboard-toggle) { display: none; }
-        math-field::part(menu-toggle) { display: none; }
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
     </style>
 }
 
 <div class="container py-4">
-    <!-- Loading -->
     <div id="resultLoading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 
-    <!-- Content -->
     <div id="resultContent" class="d-none">
 
-        <!-- Summary -->
         <div class="result-summary-card">
             <div class="row align-items-center">
                 <div class="col-md-4 text-center">
@@ -59,13 +61,11 @@
             </div>
         </div>
 
-        <!-- Chapter stats -->
         <div class="result-summary-card">
             <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Thống kê theo chương</h5>
             <div id="chapterStatsContainer"></div>
         </div>
 
-        <!-- Filter -->
         <div class="d-flex gap-2 mb-3 flex-wrap">
             <button class="btn btn-sm btn-outline-secondary active" data-filter="all" onclick="filterAnswers('all', this)">
                 Tất cả
@@ -78,10 +78,8 @@
             </button>
         </div>
 
-        <!-- Answer Review -->
         <div id="answerReviewContainer"></div>
 
-        <!-- Actions -->
         <div class="d-flex justify-content-center gap-3 mt-4 mb-4">
             <a href="#" onclick="goBackToHistory(event)" class="btn btn-outline-secondary px-4">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại lịch sử
@@ -112,29 +110,16 @@
         async function loadBreadcrumb() {
             const classId = sessionStorage.getItem('currentPracticeClassId');
             if (!classId) return;
-            const token = getToken();
-            if (!token) return;
+
             try {
-                const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, { headers: { 'Authorization': 'Bearer ' + token } });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: data.className || ('Lớp ' + classId), url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
-                            { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
-                            { text: "Chi tiết bài làm", url: null }
-                        ]);
-                    }
-                } else {
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: 'Lớp ' + classId, url: "/Course/ExamListInCourse/" + classId },
-                            { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
-                            { text: "Chi tiết bài làm", url: null }
-                        ]);
-                    }
+                const data = await apiClient.get(`/api/Course/${classId}/settings`);
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: data.className || ('Lớp ' + classId), url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                        { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
+                        { text: "Chi tiết bài làm", url: null }
+                    ]);
                 }
             } catch {
                 if (typeof setBreadcrumb === "function") {
@@ -149,27 +134,18 @@
         }
 
         async function loadResult() {
-            const token = getToken();
-            if (!token) { window.location.href = '/Auth/Login'; return; }
-
             try {
-                const res = await fetch(`${API_BASE_URL}/api/practice/result/${submissionId}`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                resultData = await apiClient.get(`/api/practice/result/${submissionId}`);
 
-                if (res.status === 401) { window.location.href = '/Auth/Login'; return; }
-                if (!res.ok) {
-                    const err = await res.json();
-                    showToast(err.message || 'Lỗi tải kết quả', 'error');
-                    return;
-                }
-
-                resultData = await res.json();
                 renderResult(resultData);
                 document.getElementById('resultLoading').classList.add('d-none');
                 document.getElementById('resultContent').classList.remove('d-none');
-            } catch (err) {
-                showToast('Lỗi: ' + err.message, 'error');
+            } catch (error) {
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+                showToast(error.message || 'Lỗi tải kết quả', 'error');
             }
         }
 
@@ -287,7 +263,7 @@
                         let placeholderLabel = "Ô trống";
                         let match = contentDisplay.match(/\\?placeholder\[([^\]]+)\](?:\{\})?/);
                         if (match) placeholderLabel = `Ô trống [${match[1]}]`;
-                        
+
                         let exactAnswer = opt.correctAnswer ? `<math-span>${opt.correctAnswer}</math-span>` : '';
                         contentDisplay = `<strong>${placeholderLabel}</strong>: ${exactAnswer}`;
                     }
@@ -364,4 +340,3 @@
         }
     </script>
 }
-
