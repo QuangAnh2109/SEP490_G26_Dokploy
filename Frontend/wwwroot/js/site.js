@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://localhost:7167";
+const API_BASE_URL = window.API_BASE_URL;
 
 try {
     if (typeof window.$ !== 'undefined' && window.$.ajaxSetup) {

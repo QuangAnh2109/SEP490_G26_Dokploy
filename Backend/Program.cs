@@ -6,9 +6,11 @@ using Backend.Services.Implements;
 using Backend.Services.Interfaces;
 using Hangfire;
 using Hangfire.SqlServer;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+
 using System.Text;
 
 namespace Backend
@@ -18,6 +20,59 @@ namespace Backend
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // ============================
+            // LOAD .env FILE
+            // ============================
+            DotNetEnv.Env.Load();
+
+            // ============================
+            // Map and Validate Environment Variables
+            // ============================
+            var missingKeys = new List<string>();
+
+            // Local helper function to validate and map (reads from .env first, then falls back to existing appsettings.json config)
+            void MapRequiredEnv(string configKey, string envKey)
+            {
+                var envValue = Environment.GetEnvironmentVariable(envKey);
+                var existingConfigValue = builder.Configuration[configKey];
+                
+                // Lỗi khi cả .env VÀ appsettings.json đều rỗng
+                if (string.IsNullOrWhiteSpace(envValue) && string.IsNullOrWhiteSpace(existingConfigValue))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[CRITICAL] Missing required config: '{configKey}'. Add as {envKey} in .env or straight to appsettings.json!");
+                    Console.ResetColor();
+                    missingKeys.Add(envKey);
+                    return;
+                }
+
+                // Ưu tiên nạp đè cấu hình nếu có tham số môi trường
+                if (!string.IsNullOrWhiteSpace(envValue))
+                {
+                    builder.Configuration[configKey] = envValue;
+                }
+            }
+
+            MapRequiredEnv("ConnectionStrings:MyCnn", "DB_CONNECTION_STRING");
+            MapRequiredEnv("Jwt:Key", "JWT_KEY");
+            MapRequiredEnv("Jwt:Issuer", "JWT_ISSUER");
+            MapRequiredEnv("Jwt:Audience", "JWT_AUDIENCE");
+            MapRequiredEnv("EmailSettings:SmtpServer", "EMAIL_SMTP_SERVER");
+            MapRequiredEnv("EmailSettings:Port", "EMAIL_PORT");
+            MapRequiredEnv("EmailSettings:SenderEmail", "EMAIL_SENDER");
+            MapRequiredEnv("EmailSettings:SenderPassword", "EMAIL_PASSWORD");
+            MapRequiredEnv("Google:ClientId", "GOOGLE_CLIENT_ID");
+            MapRequiredEnv("FrontendSettings:BaseUrl", "FRONTEND_BASE_URL");
+
+            // Kiểm tra tổng quát trước khi nổ app
+            if (missingKeys.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to start application. The following environment variables are missing in your .env file:\n" +
+                    $"- {string.Join("\n- ", missingKeys)}"
+                );
+            }
 
             // =========================
             // DATABASE

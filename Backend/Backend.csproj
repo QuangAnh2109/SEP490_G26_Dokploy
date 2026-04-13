@@ -8,9 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
-    <PackageReference Include="Eleven41.Skip32" Version="1.0.1">
-      <NoWarn>NU1701</NoWarn>
-    </PackageReference>
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="Eleven41.Skip32" Version="1.0.1" />
     <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.17" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.17" />

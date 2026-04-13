@@ -1,5 +1,3 @@
-
-
 function getAuthToken() {
     const token =
         sessionStorage.getItem('jwtToken') ||

@@ -19,7 +19,7 @@
   })();
 
   const apiFetch = async (path, opts = {}) => {
-    const base = (window.API_BASE_URL || 'https://localhost:7167').replace(/\/+$/, '');
+    const base = window.API_BASE_URL.replace(/\/+$/, '');
     const url = new URL(`${base}${path.startsWith('/') ? path : '/' + path}`, window.location.origin);
     if (opts.params) Object.entries(opts.params).forEach(([k, v]) => v != null && url.searchParams.set(k, String(v)));
     
