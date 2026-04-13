@@ -12,19 +12,11 @@ function initBreadcrumb(name) {
 let currentClassStatus = 1;
 
 async function ensureClassNameAndBreadcrumb() {
-    const token = getToken();
-    if (!token) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
-        if (res.ok) {
-            const data = await res.json();
-            currentClassStatus = data.status ?? 1;
-            if (!classNameFromServer) initBreadcrumb(data.className || "Lớp " + classId);
-            else initBreadcrumb(classNameFromServer);
-        } else {
-            if (!classNameFromServer) initBreadcrumb("Lớp " + classId);
-            else initBreadcrumb(classNameFromServer);
-        }
+        const data = await apiClient.get(`/api/Course/${classId}/settings`);
+        currentClassStatus = data.status ?? 1;
+        if (!classNameFromServer) initBreadcrumb(data.className || "Lớp " + classId);
+        else initBreadcrumb(classNameFromServer);
     } catch {
         if (!classNameFromServer) initBreadcrumb("Lớp " + classId);
         else initBreadcrumb(classNameFromServer);
@@ -32,14 +24,6 @@ async function ensureClassNameAndBreadcrumb() {
 }
 
 async function loadStudents() {
-    const token = getToken();
-
-    if (!token) {
-        showToast("Bạn chưa đăng nhập", "error");
-        window.location.href = "/Auth/Login";
-        return;
-    }
-
     try {
         const role = getUserRole();
         if (role === "Student") {
@@ -58,24 +42,16 @@ async function loadStudents() {
             document.querySelectorAll('.action-col').forEach(el => el.style.display = '');
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/Course/${classId}/students`, {
-            headers: { "Authorization": "Bearer " + token }
-        });
-
-        if (response.status === 401) {
+        const students = await apiClient.get(`/api/Course/${classId}/students`);
+        renderStudents(students);
+    } catch (error) {
+        if (error.xhr && error.xhr.status === 401) {
             showToast("Phiên đăng nhập hết hạn", "error");
             removeToken();
             window.location.href = "/Auth/Login";
             return;
         }
 
-        if (!response.ok) {
-            throw new Error("Không thể tải danh sách học sinh");
-        }
-
-        const students = await response.json();
-        renderStudents(students);
-    } catch (error) {
         console.error(error);
         const tbody = document.getElementById("studentTableBody");
         tbody.innerHTML = "";
@@ -143,25 +119,13 @@ async function removeStudent(studentId, studentName) {
         `Bạn có chắc muốn xóa học sinh "${studentName}" khỏi lớp không?`,
         "Xác nhận xóa học sinh",
         async () => {
-            const token = getToken();
-            if (!token) return;
-
             try {
-                const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/students/${studentId}/remove`, {
-                    method: "DELETE",
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (res.ok) {
-                    showToast("Đã xóa học sinh khỏi lớp.", "success");
-                    loadStudents();
-                } else {
-                    const data = await res.json().catch(() => null);
-                    showToast(data?.message || "Không thể xóa học sinh.", "error");
-                }
-            } catch (err) {
-                console.error(err);
-                showToast("Có lỗi xảy ra khi xóa học sinh.", "error");
+                await apiClient.delete(`/api/Course/${classId}/students/${studentId}/remove`);
+                showToast("Đã xóa học sinh khỏi lớp.", "success");
+                loadStudents();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || "Không thể xóa học sinh.", "error");
             }
         }
     );
