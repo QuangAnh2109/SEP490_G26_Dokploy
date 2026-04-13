@@ -1,5 +1,4 @@
 // inviteCode is injected globally by Razor
-
 let inviteCode = "";
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -10,15 +9,12 @@ document.addEventListener("DOMContentLoaded", function () {
         showError("Vui lòng cung cấp mã mời (code) trong đường link.");
         return;
     }
-    
+
     checkAuthAndJoin();
 });
 
-function getToken() {
-    return sessionStorage.getItem("jwtToken") || localStorage.getItem("jwtToken") || "";
-}
-
 async function checkAuthAndJoin() {
+    // Sử dụng getToken() toàn cục từ site.js
     const token = getToken();
     if (!token) {
         // Not logged in -> Redirect to login page and remember return URL
@@ -32,31 +28,20 @@ async function checkAuthAndJoin() {
     }
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/course/join`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({ invitationCode: inviteCode })
-        });
+        await apiClient.post('/api/course/join', { invitationCode: inviteCode });
 
-        if (res.ok) {
-            document.getElementById("processingStatus").classList.add("d-none");
-            document.getElementById("successStatus").classList.remove("d-none");
-            
-            setTimeout(() => {
-                window.location.href = "/Course/CourseList";
-            }, 3000);
-        }
-        else if (res.status === 400 || res.status === 404) {
-            const text = await res.text();
-            showError("Mã mời không hợp lệ, đã hết hạn, hoặc bạn đã ở sẵn trong lớp này. (" + text + ")");
-        } else {
-            showError("Lỗi hệ thống khi tham gia lớp.");
-        }
+        // Thành công
+        document.getElementById("processingStatus").classList.add("d-none");
+        document.getElementById("successStatus").classList.remove("d-none");
+
+        setTimeout(() => {
+            window.location.href = "/Course/CourseList";
+        }, 3000);
+
     } catch (error) {
-        showError("Không thể kết nối đến máy chủ.");
+        // apiClient trả về object { xhr, status, error, message }
+        const errorMsg = error.message || "Mã mời không hợp lệ, đã hết hạn, hoặc bạn đã ở sẵn trong lớp này.";
+        showError(errorMsg);
     }
 }
 
