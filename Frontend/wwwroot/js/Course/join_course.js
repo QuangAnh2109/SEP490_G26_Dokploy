@@ -14,18 +14,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 async function checkAuthAndJoin() {
-    // Sử dụng getToken() toàn cục từ site.js
-    const token = getToken();
-    if (!token) {
-        // Not logged in -> Redirect to login page and remember return URL
-        const currentUrl = encodeURIComponent(window.location.href);
-        // Assume login page is /Auth/Login or similar
-        // We'll pass the link back
-        showConfirm("Bạn cần đăng nhập để tham gia lớp. Đi tới trang đăng nhập?", "Yêu cầu đăng nhập", () => {
-            window.location.href = `/Auth/Login?returnUrl=${currentUrl}`;
-        });
-        return;
-    }
 
     try {
         await apiClient.post('/api/course/join', { invitationCode: inviteCode });
