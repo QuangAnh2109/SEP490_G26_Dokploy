@@ -9,7 +9,6 @@
 }
 
 <div class="course-wrapper">
-    <!-- Sidebar -->
     <aside class="course-sidebar">
         <div class="mb-4">
             <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
@@ -39,7 +38,6 @@
         </a>
     </aside>
 
-    <!-- Main Content -->
     <main class="course-content">
         <section class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="mb-0 fw-bold pt-4 pb-2" style="font-family: 'Libre Baskerville', serif;">Kết quả</h2>
@@ -48,7 +46,6 @@
             </a>
         </section>
 
-        <!-- Filter: 1 row -->
         <section class="card p-3 mb-4">
             <div class="row g-2">
                 <div class="col-md-3">
@@ -71,14 +68,12 @@
             </div>
         </section>
 
-        <!-- Loading -->
         <div id="historyLoading" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-        <!-- Content -->
         <div id="historyContent" class="d-none">
             <section class="card p-3" id="tableCard">
                 <div class="table-responsive">
@@ -134,36 +129,20 @@
         });
 
         async function loadSidebarClassName() {
-            const token = getToken();
-            if (!token) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const className = data.className || 'Lớp ' + classId;
-                    const el = document.getElementById('sidebarClassName');
-                    if (el) el.textContent = className;
-                    
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: className, url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
-                            { text: "Kết quả", url: null }
-                        ]);
-                    }
-                } else {
-                    const fallbackName = 'Lớp ' + classId;
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: fallbackName, url: "/Course/ExamListInCourse/" + classId },
-                            { text: "Kết quả", url: null }
-                        ]);
-                    }
+                const data = await apiClient.get(`/api/Course/${classId}/settings`);
+                const className = data.className || 'Lớp ' + classId;
+                const el = document.getElementById('sidebarClassName');
+                if (el) el.textContent = className;
+
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: className, url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                        { text: "Kết quả", url: null }
+                    ]);
                 }
-            } catch {
+            } catch (error) {
                 const fallbackName = 'Lớp ' + classId;
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
@@ -176,25 +155,18 @@
         }
 
         async function loadHistory() {
-            const token = getToken();
-            if (!token) { window.location.href = '/Auth/Login'; return; }
-
             try {
-                const res = await fetch(`${API_BASE_URL}/api/student/exams/history?classId=${classId}`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                allHistory = await apiClient.get(`/api/student/exams/history?classId=${classId}`);
 
-                if (!res.ok) {
-                    showToast('Lỗi tải kết quả', 'error');
-                    return;
-                }
-
-                allHistory = await res.json();
                 renderHistory(allHistory);
                 document.getElementById('historyLoading').classList.add('d-none');
                 document.getElementById('historyContent').classList.remove('d-none');
-            } catch (err) {
-                showToast('Lỗi: ' + err.message, 'error');
+            } catch (error) {
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+                showToast(error.message || 'Lỗi tải kết quả', 'error');
             }
         }
 
