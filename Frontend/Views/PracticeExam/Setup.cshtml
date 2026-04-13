@@ -10,7 +10,6 @@
 }
 
 <div class="course-wrapper">
-    <!-- Sidebar -->
     <aside class="course-sidebar">
         <div class="mb-4">
             <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
@@ -40,14 +39,12 @@
         </a>
     </aside>
 
-    <!-- Main Content -->
     <main class="course-content">
         <section class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="mb-0 fw-bold pt-4 pb-2" style="font-family: 'Libre Baskerville', serif;">Luyện tập</h2>
         </section>
         <p class="text-muted mb-4">Chọn chương và số câu hỏi. Hệ thống sẽ tự phân bổ mức độ phù hợp dựa trên lịch sử luyện tập của bạn.</p>
 
-        <!-- Loading -->
         <div id="setupLoading" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -55,16 +52,13 @@
             <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
         </div>
 
-        <!-- Main Content -->
         <div id="setupContent" class="d-none">
-            <!-- Chọn chương -->
             <section class="card p-3 mb-4">
                 <h5 class="mb-3"><i class="fas fa-layer-group me-2"></i>Chọn chương muốn luyện tập</h5>
                 <p class="text-muted small mb-3">Chọn 1 hoặc nhiều chương. Thanh màu thể hiện tỉ lệ đúng của bạn.</p>
                 <div class="chapter-grid" id="chapterGrid"></div>
             </section>
 
-            <!-- Số câu hỏi -->
             <section class="card p-3 mb-4">
                 <h5 class="mb-3"><i class="fas fa-list-ol me-2"></i>Số câu hỏi</h5>
                 <div class="d-flex align-items-center gap-3">
@@ -79,20 +73,17 @@
                 </div>
             </section>
 
-            <!-- Phân bổ mức độ (auto) -->
             <section class="card p-3 mb-4">
                 <h5 class="mb-3"><i class="fas fa-signal me-2"></i>Phân bổ mức độ (tự động)</h5>
                 <p class="text-muted small mb-3">Hệ thống sẽ tự phân bổ mức độ dựa trên lịch sử luyện tập. Mức độ bạn yếu sẽ được ưu tiên nhiều hơn.</p>
                 <div class="difficulty-preview-grid" id="difficultyPreview"></div>
             </section>
 
-            <!-- Bài luyện tập đang làm dở -->
             <section id="inProgressSection" class="card p-3 mb-4 d-none">
                 <h5 class="mb-3"><i class="fas fa-clock text-warning me-2"></i>Bài luyện tập đang làm dở</h5>
                 <div id="inProgressList"></div>
             </section>
 
-            <!-- Nút tạo đề -->
             <div class="d-flex justify-content-end gap-2 mt-3">
                 <a href="javascript:history.back()" class="btn btn-outline-secondary px-4">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
@@ -105,11 +96,6 @@
     </main>
 </div>
 
-<!-- ══════════════════════════════════════════════════════ -->
-<!--  HTML Templates (dùng bởi practice_setup.js)         -->
-<!-- ══════════════════════════════════════════════════════ -->
-
-<!-- Template: Chapter Item -->
 <template id="chapterItemTemplate">
     <div class="chapter-item">
         <i class="fas fa-check-circle check-icon"></i>
@@ -124,7 +110,6 @@
     </div>
 </template>
 
-<!-- Template: In-Progress History Item -->
 <template id="inProgressItemTemplate">
     <div class="history-item">
         <div>
@@ -151,36 +136,20 @@
                 if (pendingMenu) pendingMenu.style.display = 'none';
             }
 
-            const token = getToken();
-            if (!token) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/Course/${practiceClassId}/settings`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const className = data.className || 'Lớp ' + practiceClassId;
-                    const el = document.getElementById('sidebarClassName');
-                    if (el) el.textContent = className;
-                    
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: className, url: "/Course/ExamListInCourse/" + practiceClassId + "?className=" + encodeURIComponent(className) },
-                            { text: "Luyện tập", url: null }
-                        ]);
-                    }
-                } else {
-                    const classNameFallback = 'Lớp ' + practiceClassId;
-                    if (typeof setBreadcrumb === "function") {
-                        setBreadcrumb([
-                            { text: "Khóa học", url: "/Course/CourseList" },
-                            { text: classNameFallback, url: "/Course/ExamListInCourse/" + practiceClassId },
-                            { text: "Luyện tập", url: null }
-                        ]);
-                    }
+                const data = await apiClient.get(`/api/Course/${practiceClassId}/settings`);
+                const className = data.className || 'Lớp ' + practiceClassId;
+                const el = document.getElementById('sidebarClassName');
+                if (el) el.textContent = className;
+
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: className, url: "/Course/ExamListInCourse/" + practiceClassId + "?className=" + encodeURIComponent(className) },
+                        { text: "Luyện tập", url: null }
+                    ]);
                 }
-            } catch {
+            } catch (error) {
                 const classNameFallback = 'Lớp ' + practiceClassId;
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
