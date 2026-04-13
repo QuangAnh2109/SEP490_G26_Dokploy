@@ -110,7 +110,7 @@ const apiClient = {
     request: function (method, endpoint, data = null) {
         return new Promise((resolve, reject) => {
             const ajaxOptions = {
-                url: API_BASE_URL + endpoint,
+                url: API_BASE_URL.replace(/\/+$/, '') + (endpoint.startsWith('/') ? endpoint : '/' + endpoint),
                 type: method,
                 contentType: "application/json",
                 success: function (response) {

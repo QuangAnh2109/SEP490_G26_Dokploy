@@ -18,26 +18,19 @@
     return Number(q || g || t) || null;
   })();
 
-  const apiFetch = async (path, opts = {}) => {
-    const base = window.API_BASE_URL.replace(/\/+$/, '');
-    const url = new URL(`${base}${path.startsWith('/') ? path : '/' + path}`, window.location.origin);
-    if (opts.params) Object.entries(opts.params).forEach(([k, v]) => v != null && url.searchParams.set(k, String(v)));
-    
-    const token = typeof getToken === 'function' ? getToken() : '';
-    const res = await fetch(url, {
-      method: opts.method || 'GET',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(json?.message || `Lỗi ${res.status}`);
-    return json;
+  const apiGetJson = async (path, params) => {
+    let url = path;
+    if (params) {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => v != null && query.set(k, String(v)));
+        const qStr = query.toString();
+        if (qStr) url += (url.includes('?') ? '&' : '?') + qStr;
+    }
+    return await apiClient.get(url);
   };
-  const apiGetJson = (path, params) => apiFetch(path, { params });
-  const apiPostJson = (path, body) => apiFetch(path, { method: 'POST', body });
+  const apiPostJson = async (path, body) => {
+    return await apiClient.post(path, body);
+  };
 
   const ui = {
     bpSearch: get('blueprintSearchInput'),
@@ -259,7 +252,7 @@
       setTimeout(() => {
           window.location.href = `/Exam/ExamReview?examId=${res.examId}&classId=${state.selClassId}`;
       }, 1500);
-    } catch(e) { showToast(`Lưu thất bại: ${e.message}`, 'error'); }
+    } catch(e) { showToast(`Lưu thất bại: ${e?.message || e?.error || 'Lỗi không xác định'}`, 'error'); }
     finally { [ui.btnSaveTop, ui.btnSaveBottom].forEach(b => b && (b.disabled = false)); }
   };
 
@@ -326,7 +319,7 @@
       renderManualTable();
     } catch(e) { 
       console.error("Initialization error", e); 
-      showToast("Lỗi khi tải thông tin: " + e.message, "error"); 
+      showToast("Lỗi khi tải thông tin: " + (e?.message || e?.error || 'Lỗi không xác định'), "error"); 
     }
   })();
 })();

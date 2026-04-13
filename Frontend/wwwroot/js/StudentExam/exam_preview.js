@@ -14,28 +14,22 @@ function loadExamPreview() {
         return;
     }
 
-    $.ajax({
-        url: `${API_BASE_URL}/api/student/exams/${EXAM_ID}/preview`,
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        success: function (data) {
+    apiClient.get(`/api/student/exams/${EXAM_ID}/preview`)
+        .then(function (data) {
             renderPreview(data);
-        },
-        error: function (xhr) {
-            if (xhr.status === 401) {
+        })
+        .catch(function (err) {
+            const httpStatus = err.xhr ? err.xhr.status : null;
+            if (httpStatus === 401) {
                 showError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-            } else if (xhr.status === 403) {
+            } else if (httpStatus === 403) {
                 showError('Bạn không có quyền xem đề thi này.');
-            } else if (xhr.status === 404) {
+            } else if (httpStatus === 404) {
                 showError('Không tìm thấy đề thi.');
             } else {
                 showError('Đã xảy ra lỗi khi tải thông tin đề thi. Vui lòng thử lại.');
             }
-        }
-    });
+        });
 }
 
 function renderPreview(data) {

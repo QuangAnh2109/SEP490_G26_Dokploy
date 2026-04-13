@@ -9,9 +9,9 @@ const MAX_QUESTIONS = 30;
 const MIN_QUESTIONS = 5;
 
 const DIFFICULTY_CONFIG = [
-    { level: 1, name: 'Nhận biết',    colorClass: 'diff-easy',   color: '#198754' },
-    { level: 2, name: 'Thông hiểu',   colorClass: 'diff-medium', color: '#0d6efd' },
-    { level: 3, name: 'Vận dụng',     colorClass: 'diff-hard',   color: '#fd7e14' },
+    { level: 1, name: 'Nhận biết', colorClass: 'diff-easy', color: '#198754' },
+    { level: 2, name: 'Thông hiểu', colorClass: 'diff-medium', color: '#0d6efd' },
+    { level: 3, name: 'Vận dụng', colorClass: 'diff-hard', color: '#fd7e14' },
     { level: 4, name: 'Vận dụng cao', colorClass: 'diff-expert', color: '#dc3545' }
 ];
 
@@ -40,26 +40,20 @@ function setupSlider() {
 
 // ── Load Chapters ─────────────────────────────────────────
 async function loadChapters() {
-    const token = getToken();
-    if (!token) { window.location.href = '/Auth/Login'; return; }
 
     try {
-        const res = await fetch(API_BASE_URL + '/api/practice/class/' + practiceClassId + '/chapters', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        if (res.status === 401) { window.location.href = '/Auth/Login'; return; }
-        if (res.status === 404) {
-            showToast('Không tìm thấy khóa học hoặc bạn không thuộc lớp này.', 'error');
-            return;
-        }
-
-        chaptersData = await res.json();
+        chaptersData = await apiClient.get('/api/practice/class/' + practiceClassId + '/chapters');
         renderChapters(chaptersData);
         document.getElementById('setupLoading').classList.add('d-none');
         document.getElementById('setupContent').classList.remove('d-none');
         updateDifficultyPreview();
     } catch (err) {
+        const httpStatus = err.xhr ? err.xhr.status : null;
+        if (httpStatus === 401) { window.location.href = '/Auth/Login'; return; }
+        if (httpStatus === 404) {
+            showToast('Không tìm thấy khóa học hoặc bạn không thuộc lớp này.', 'error');
+            return;
+        }
         showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
     }
 }
@@ -190,8 +184,8 @@ function computeDifficultyAllocation() {
         // Phân loại: yếu (< 50%), trung bình (50-80%), mạnh (>= 80%), chưa làm (-1)
         var weights = diffStats.map(function (d) {
             if (d.totalAttempted === 0) return 2.0;  // Chưa làm → coi như cần luyện
-            if (d.accuracyRate < 50)    return 3.0;  // Yếu
-            if (d.accuracyRate < 80)    return 2.0;  // Trung bình
+            if (d.accuracyRate < 50) return 3.0;  // Yếu
+            if (d.accuracyRate < 80) return 2.0;  // Trung bình
             return 1.0;                               // Mạnh
         });
 
@@ -266,16 +260,8 @@ function updateDifficultyPreview() {
 
 // ── Load In-Progress History ──────────────────────────────
 async function loadInProgressHistory() {
-    var token = getToken();
-    if (!token) return;
-
     try {
-        var res = await fetch(API_BASE_URL + '/api/practice/history?classId=' + practiceClassId, {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) return;
-
-        var history = await res.json();
+        var history = await apiClient.get('/api/practice/history?classId=' + practiceClassId);
         var inProgress = history.filter(function (h) { return h.status === 'Đang làm'; });
 
         if (inProgress.length > 0) {
@@ -335,21 +321,7 @@ async function createPracticeExam() {
 
         // Không gửi difficultyLevels — backend sẽ tự phân bổ
 
-        var res = await fetch(API_BASE_URL + '/api/practice/create', {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!res.ok) {
-            var errData = await res.json();
-            throw new Error(errData.message || 'Lỗi tạo đề');
-        }
-
-        var data = await res.json();
+        var data = await apiClient.post('/api/practice/create', body);
         window.location.href = '/PracticeExam/TakePractice?submissionId=' + data.submissionId;
     } catch (err) {
         showToast(err.message, 'error');

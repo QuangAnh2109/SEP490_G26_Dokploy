@@ -19,19 +19,11 @@ function initBreadcrumb(name) {
 }
 
 async function ensureClassNameAndBreadcrumb() {
-    const token = getToken();
-    if (!token) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
-        if (res.ok) {
-            const data = await res.json();
-            currentClassStatus = data.status ?? 1;
-            if (!classNameFromServer) initBreadcrumb(data.className || "Lớp " + classId);
-            else initBreadcrumb(classNameFromServer);
-        } else {
-            if (!classNameFromServer) initBreadcrumb("Lớp " + classId);
-            else initBreadcrumb(classNameFromServer);
-        }
+        const data = await apiClient.get(`/api/Course/${classId}/settings`);
+        currentClassStatus = data.status ?? 1;
+        if (!classNameFromServer) initBreadcrumb(data.className || "Lớp " + classId);
+        else initBreadcrumb(classNameFromServer);
     } catch {
         if (!classNameFromServer) initBreadcrumb("Lớp " + classId);
         else initBreadcrumb(classNameFromServer);
@@ -73,18 +65,18 @@ async function loadExams() {
 
     await loadChapters();   // load chapter trước
 
-    const response = await fetch(`${API_BASE_URL}/api/Course/${classId}/exams`, {
-        headers: { "Authorization": "Bearer " + token }
-    });
-
-    if (response.status === 401) {
-        showToast("Phiên đăng nhập hết hạn", "error");
-        removeToken();
-        window.location.href = "/Auth/Login";
-        return;
+    try {
+        allExams = await apiClient.get(`/api/Course/${classId}/exams`);
+    } catch (err) {
+        const httpStatus = err.xhr ? err.xhr.status : null;
+        if (httpStatus === 401) {
+            showToast("Phiên đăng nhập hết hạn", "error");
+            removeToken();
+            window.location.href = "/Auth/Login";
+            return;
+        }
+        allExams = [];
     }
-
-    allExams = await response.json();
     renderExams(allExams);
     initFilters();
 }
@@ -94,16 +86,13 @@ async function loadChapters() {
     const token = getToken();
     if (!token) return;
 
-    const response = await fetch(`${API_BASE_URL}/api/Course/${classId}/chapters`, {
-        headers: { "Authorization": "Bearer " + token }
-    });
-
-    if (!response.ok) {
+    let chapters;
+    try {
+        chapters = await apiClient.get(`/api/Course/${classId}/chapters`);
+    } catch (err) {
         console.error("Không load được chapters");
         return;
     }
-
-    const chapters = await response.json();
 
     const chapterSelect = document.getElementById("chapterFilter");
     chapterSelect.innerHTML = "";

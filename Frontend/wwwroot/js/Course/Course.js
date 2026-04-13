@@ -1,31 +1,10 @@
-function getAuthToken() {
-    const token =
-        sessionStorage.getItem('jwtToken') ||
-        localStorage.getItem('jwtToken') ||
-        '';
-
-    return token;
-}
-
-
 /* ==============================
    LOAD EXAMS BY CLASS
 ============================== */
 
 function loadClassExams(classId) {
-
-    const token = getAuthToken();
-
-    console.log("Calling API:", `${API_BASE_URL}/api/course/${classId}/exams`);
-    console.log("Token:", token);
-
-    $.ajax({
-        url: `${API_BASE_URL}/api/course/${classId}/exams`,
-        method: 'GET',
-        headers: token
-            ? { 'Authorization': `Bearer ${token}` }
-            : {},
-        success: function (data) {
+    apiClient.get(`/api/course/${classId}/exams`)
+        .then(function (data) {
 
             console.log("API SUCCESS - Exams:", data);
 
@@ -34,14 +13,13 @@ function loadClassExams(classId) {
             }
 
             $(document).trigger('classExamsLoaded', [data]);
-        },
-        error: function (xhr) {
+        })
+        .catch(function (err) {
 
             console.error("API ERROR");
-            console.error("Status:", xhr.status);
-            console.error("Response:", xhr.responseText);
-        }
-    });
+            console.error("Status:", err.xhr ? err.xhr.status : err.status);
+            console.error("Response:", err.message);
+        });
 }
 
 
@@ -51,27 +29,17 @@ function loadClassExams(classId) {
 
 function loadClassChapters(classId) {
 
-    const token = getAuthToken();
-
-    console.log("Calling API:", `${API_BASE_URL}/api/course/${classId}/chapters`);
-
-    $.ajax({
-        url: `${API_BASE_URL}/api/course/${classId}/chapters`,
-        method: 'GET',
-        headers: token
-            ? { 'Authorization': `Bearer ${token}` }
-            : {},
-        success: function (data) {
+    apiClient.get(`/api/course/${classId}/chapters`)
+        .then(function (data) {
 
             console.log("API SUCCESS - Chapters:", data);
 
             $(document).trigger('classChaptersLoaded', [data]);
-        },
-        error: function (xhr) {
+        })
+        .catch(function (err) {
 
             console.error("Chapter API ERROR");
-            console.error("Status:", xhr.status);
-            console.error("Response:", xhr.responseText);
-        }
-    });
+            console.error("Status:", err.xhr ? err.xhr.status : err.status);
+            console.error("Response:", err.message);
+        });
 }

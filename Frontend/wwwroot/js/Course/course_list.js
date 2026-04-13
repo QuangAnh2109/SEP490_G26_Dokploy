@@ -35,28 +35,14 @@ function initRoleUI() {
 }
 
 function loadCourses() {
-    const token = getToken();
-    if (!token) {
-        showToast("Bạn chưa đăng nhập.", "error");
-        return;
-    }
-
-    fetch(`${API_BASE_URL}/api/course/my`, {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
-    })
-    .then(data => {
-        renderCourses(data);
-        initFilters();
-    })
-    .catch(() => {
-        showToast("Không thể tải danh sách lớp.", "error");
-    });
+    apiClient.get('/api/course/my')
+        .then(data => {
+            renderCourses(data);
+            initFilters();
+        })
+        .catch(() => {
+            showToast("Không thể tải danh sách lớp.", "error");
+        });
 }
 
 function renderCourses(courses) {
@@ -79,7 +65,7 @@ function renderCourses(courses) {
 
     courses.forEach(c => {
         semesters.add(c.semester);
-        
+
         const subjectDisplay = c.subjectCode ? c.subjectCode + ' - ' + (c.subjectName || '') : (c.subjectName || '');
         if (subjectDisplay) {
             subjects.add(subjectDisplay);
@@ -127,7 +113,7 @@ function renderCourses(courses) {
                 btnLeave.textContent = "Rời lớp";
                 actionsDiv.appendChild(btnLeave);
             }
-        } 
+        }
         if (article) grid.appendChild(article);
     });
 
@@ -156,7 +142,7 @@ function initFilters() {
     const semester = document.getElementById("courseSemesterFilter");
     const subject = document.getElementById("courseSubjectFilter");
 
-    if(search && semester && subject) {
+    if (search && semester && subject) {
         [search, semester, subject].forEach(el => {
             el.addEventListener("input", applyFilters);
             el.addEventListener("change", applyFilters);
@@ -181,22 +167,14 @@ function applyFilters() {
 
 function leaveCourse(classId) {
     showConfirm("Bạn chắc chắn muốn rời khóa học này?", "Xác nhận rời lớp", () => {
-        const token = getToken();
-
-        fetch(`${API_BASE_URL}/api/course/${classId}/leave`, {
-            method: "POST",
-            headers: {
-                "Authorization": "Bearer " + token
-            }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error();
-            showToast("Đã rời khóa học.", "success");
-            loadCourses();
-        })
-        .catch(() => {
-            showToast("Không thể rời khóa học.", "error");
-        });
+        apiClient.post(`/api/course/${classId}/leave`)
+            .then(() => {
+                showToast("Đã rời khóa học.", "success");
+                loadCourses();
+            })
+            .catch(() => {
+                showToast("Không thể rời khóa học.", "error");
+            });
     });
 }
 
@@ -214,30 +192,20 @@ function initJoinForm() {
 
             if (!code) return;
 
-            const token = getToken();
+            apiClient.post('/api/course/join', { invitationCode: code })
+                .then(() => {
+                    showToast("Bạn đã gửi yêu cầu tham gia lớp, vui lòng chờ duyệt.", "success");
 
-            fetch(`${API_BASE_URL}/api/course/join`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({ invitationCode: code })
-            })
-            .then(res => {
-                if (!res.ok) throw new Error();
-                showToast("Bạn đã gửi yêu cầu tham gia lớp, vui lòng chờ duyệt.", "success");
+                    const modalEl = document.getElementById("joinClassModal");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
 
-                const modalEl = document.getElementById("joinClassModal");
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                modal.hide();
-
-                joinForm.reset();
-                loadCourses();
-            })
-            .catch(() => {
-                showToast("Mã mời không hợp lệ hoặc đã xảy ra lỗi.", "error");
-            });
+                    joinForm.reset();
+                    loadCourses();
+                })
+                .catch(err => {
+                    showToast(err.message || "Mã mời không hợp lệ hoặc đã xảy ra lỗi.", "error");
+                });
         });
     }
 }

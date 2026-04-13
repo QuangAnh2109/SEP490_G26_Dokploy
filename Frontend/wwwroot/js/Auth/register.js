@@ -94,12 +94,8 @@ $(document).ready(function () {
         const needsCompletion = localStorage.getItem('tempGoogleNeedsCompletion') === '1';
         const endpoint = needsCompletion ? "/api/auth/google-complete-profile" : "/api/auth/google-register";
 
-        $.ajax({
-            url: API_BASE_URL + endpoint,
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify(requestData),
-            success: function (response) {
+        apiClient.post(endpoint, requestData)
+            .then(function (response) {
                 if (response.token) {
                     // Successful registration & login
                     setToken(response.token);
@@ -112,14 +108,13 @@ $(document).ready(function () {
 
                     window.location.href = '/';
                 }
-            },
-            error: function (xhr) {
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    $('#formError').text(xhr.responseJSON.message);
+            })
+            .catch(function (err) {
+                if (err.message) {
+                    $('#formError').text(err.message);
                 } else {
                     $('#formError').text("Đăng ký không thành công. Vui lòng thử lại.");
                 }
-            }
-        });
+            });
     });
 });
