@@ -1,40 +1,50 @@
 @{
     ViewData["Title"] = "Phê duyệt học sinh";
     var classId = ViewBag.ClassId ?? 0;
+    ViewBag.IsFullWidth = true;
 }
-
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
 }
 
-<div class="d-flex" style="min-height: 100vh;">
+<div class="course-wrapper">
     <!-- Sidebar -->
-    <aside class="bg-light border-end" style="width: 250px;">
-        <div class="p-3 border-bottom">
-            <h5 class="mb-0">Quản lý lớp học</h5>
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
-        <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId" class="list-group-item list-group-item-action">
-                <i class="fas fa-list me-2"></i> Danh sách đề
-            </a>
-            <a href="/Course/StudentList/@classId" class="list-group-item list-group-item-action">
-                <i class="fas fa-users me-2"></i> Danh sách học sinh
-            </a>
-            <a href="/Course/PendingStudents/@classId" class="list-group-item list-group-item-action active" id="pendingMenuItem">
-                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
-            </a>
-            <a href="/Course/Settings/@classId" id="settingsMenuItem" class="list-group-item list-group-item-action">
-                <i class="fas fa-cog me-2"></i> Cài đặt
-            </a>
-        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link active">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 p-4">
+    <main class="course-content">
 
         <section class="mb-4">
-            <h2>Phê duyệt học sinh</h2>
+            <h2 class="fw-bold">Phê duyệt học sinh</h2>
             <p class="text-muted">Danh sách học sinh đang chờ phê duyệt để tham gia lớp.</p>
         </section>
 
@@ -78,142 +88,25 @@
     </main>
 </div>
 
+<!-- Template cho một học sinh chờ duyệt -->
+<template id="pending-row-template">
+    <tr>
+        <td class="fw-bold student-index"></td>
+        <td class="student-code"></td>
+        <td class="student-name"></td>
+        <td class="student-email"></td>
+        <td class="student-action">
+            <button class="btn btn-sm btn-success me-2 btn-approve" title="Cho phép">
+                <i class="fas fa-check"></i>
+            </button>
+            <button class="btn btn-sm btn-danger btn-reject" title="Từ chối">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+
 @section Scripts {
-    <script>
-        const classId = @classId;
-        const API_BASE = "https://localhost:7167";
-        let allPendingStudents = [];
-
-        async function loadPendingStudents() {
-            const token = getToken();
-            if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            const role = getUserRole();
-            if (role === "Student") {
-                showToast("Bạn không có quyền truy cập", "error");
-                window.location.href = `/Course/ExamListInCourse/${classId}`;
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/students/pending`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (response.status === 401) {
-                    showToast("Phiên đăng nhập hết hạn", "error");
-                    window.location.href = "/Auth/Login";
-                    return;
-                }
-
-                if (!response.ok) throw new Error("Không thể tải danh sách chờ phê duyệt");
-
-                allPendingStudents = await response.json();
-                renderStudents(allPendingStudents);
-            } catch (error) {
-                console.error(error);
-                document.getElementById("studentTableBody").innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center text-danger">Có lỗi xảy ra khi tải danh sách.</td>
-                    </tr>
-                `;
-            }
-        }
-
-        function filterStudents() {
-            const emailFilter = document.getElementById("searchEmail").value.toLowerCase();
-            const idFilter = document.getElementById("searchStudentId").value.toLowerCase();
-
-            const filtered = allPendingStudents.filter(s => {
-                const mailMatch = !emailFilter || (s.email && s.email.toLowerCase().includes(emailFilter));
-                const idMatch = !idFilter || (s.studentCode && s.studentCode.toLowerCase().includes(idFilter));
-                return mailMatch && idMatch;
-            });
-
-            renderStudents(filtered);
-        }
-
-        function renderStudents(students) {
-            const tbody = document.getElementById("studentTableBody");
-            tbody.innerHTML = "";
-
-            if (!students || students.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center">Không có học sinh nào đang chờ duyệt.</td>
-                    </tr>
-                `;
-                return;
-            }
-
-            students.forEach((student, index) => {
-                const row = document.createElement("tr");
-
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${student.studentCode || '-'}</td>
-                    <td>${student.fullName || '-'}</td>
-                    <td>${student.email || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-success me-2" onclick="approveStudent(${student.studentId})" title="Cho phép">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectStudent(${student.studentId})" title="Từ chối">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                `;
-
-                tbody.appendChild(row);
-            });
-        }
-
-        async function approveStudent(studentId) {
-            if (!confirm("Cho phép học sinh này tham gia lớp?")) return;
-            const token = getToken();
-
-            try {
-                const res = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}/approve`, {
-                    method: 'POST',
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (res.ok) {
-                    showToast("Đã phê duyệt thành công", "success");
-                    loadPendingStudents();
-                } else {
-                    showToast("Lỗi khi phê duyệt", "error");
-                }
-            } catch (e) {
-                showToast("Đã xảy ra lỗi hệ thống", "error");
-            }
-        }
-
-        async function rejectStudent(studentId) {
-            if (!confirm("Bạn chắc chắn muốn từ chối học sinh này?")) return;
-            const token = getToken();
-
-            try {
-                const res = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}/reject`, {
-                    method: 'DELETE',
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (res.ok) {
-                    showToast("Đã từ chối thành công", "success");
-                    loadPendingStudents();
-                } else {
-                    showToast("Lỗi khi từ chối", "error");
-                }
-            } catch (e) {
-                showToast("Đã xảy ra lỗi hệ thống", "error");
-            }
-        }
-
-        document.addEventListener("DOMContentLoaded", loadPendingStudents);
-    </script>
+    <div id="courseData" data-class-id="@classId" style="display: none;"></div>
+    <script src="~/js/Course/pending_students.js" asp-append-version="true"></script>
 }

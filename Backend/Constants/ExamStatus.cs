@@ -8,7 +8,6 @@ public static class ExamStatus
     public const int Ready = 0;
     public const int Published = 1;
     public const int InProgress = 2;
-    public const int Deleted = 3;
-    public const int Cancelled = 4;
-    public const int Closed = 5;
+    public const int Cancelled = 3;
+    public const int Closed = 4;
 }

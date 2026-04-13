@@ -1,3 +1,164 @@
+/* ═══ Stepper ═══ */
+.stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    position: relative;
+    padding: 0 1rem;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    color: var(--text-muted, #677285);
+    position: relative;
+    z-index: 2;
+    transition: all .4s cubic-bezier(.4, 0, .2, 1);
+    cursor: pointer;
+}
+
+.step-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--line, #d7dce2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    background: #fff;
+    font-size: 1.05rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    transition: inherit;
+}
+
+.step-label {
+    font-size: .88rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.step.active {
+    color: var(--primary, #0d6efd);
+    transform: translateY(-3px);
+}
+
+.step.active .step-icon {
+    border-color: var(--primary, #0d6efd);
+    background: var(--primary, #0d6efd);
+    color: #fff;
+    box-shadow: 0 8px 12px -3px rgba(13, 110, 253, .3);
+}
+
+.step.completed {
+    color: var(--success, #198754);
+}
+
+.step.completed .step-icon {
+    border-color: var(--success, #198754);
+    background: var(--success, #198754);
+    color: #fff;
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--line, #d7dce2);
+    margin: 0 1rem;
+    position: relative;
+    top: -12px;
+}
+
+.step-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: var(--primary, #0d6efd);
+    transition: width .5s cubic-bezier(.4, 0, .2, 1);
+}
+
+.step-line.progress-full::after {
+    width: 100%;
+}
+
+.step-content {
+    animation: stepFadeIn .4s ease;
+}
+
+@keyframes stepFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 575.98px) {
+    .step-label { font-size: .78rem; }
+    .step-icon { width: 36px; height: 36px; font-size: .95rem; }
+}
+
+/* ═══ Collapsible Question Accordion ═══ */
+.question-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+    user-select: none;
+    padding: .25rem 0;
+}
+
+.question-item-header:hover {
+    opacity: .85;
+}
+
+.question-item-header .toggle-icon {
+    transition: transform .25s ease;
+    font-size: .85rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.question-item-header .toggle-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.question-item-body {
+    overflow: hidden;
+    transition: max-height .35s ease, opacity .25s ease;
+    max-height: 5000px;
+    opacity: 1;
+}
+
+.question-item-body.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.form-section.is-collapsed {
+    padding-bottom: .45rem;
+}
+
+.question-item-badges {
+    display: flex;
+    gap: .35rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.question-item-badges .badge {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .2rem .45rem;
+}
+
 .constraint-grid {
     display: flex;
     flex-wrap: wrap;

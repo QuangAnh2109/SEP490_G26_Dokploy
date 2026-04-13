@@ -173,10 +173,18 @@
     <div class="col-12 col-xl-4">
         <section class="soft-card">
             <h3 class="section-title">Thông tin phân loại</h3>
-            <label class="form-label">Môn học</label>
-            <select class="form-select mb-2" data-subject-select>
-                <option value="">Chọn môn học</option>
-            </select>
+            <!-- Subject/Purpose: hidden in batch add mode, visible in edit mode -->
+            <div data-classification-shared>
+                <label class="form-label">Môn học</label>
+                <select class="form-select mb-2" data-subject-select>
+                    <option value="">Chọn môn học</option>
+                </select>
+                <label class="form-label">Mục đích</label>
+                <select class="form-select mb-2" data-purpose-select>
+                    <option value="1" selected>Kiểm tra</option>
+                    <option value="2">Luyện tập</option>
+                </select>
+            </div>
             <label class="form-label">Chương</label>
             <select class="form-select mb-2" data-chapter-select>
                 <option value="">Chọn chương</option>

@@ -45,10 +45,12 @@ namespace Backend.Controllers
                 return Unauthorized();
 
             var myCourses = await _service.GetCoursesForUserAsync(userId);
-            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+            var myRole = myCourses.FirstOrDefault(c => c.ClassId == id);
+            if (myRole == null || myRole.Role == "Pending")
                 return Forbid();
 
-            var exams = await _service.GetExamsByClassAsync(id);
+            var isTeacher = myRole.Role == "Teacher";
+            var exams = await _service.GetExamsByClassAsync(id, isTeacher);
             return Ok(exams);
         }
 
@@ -150,7 +152,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/settings")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> GetClassSettings(int id)
         {
             var course = await _service.GetByIdAsync(id);
@@ -247,21 +249,38 @@ namespace Backend.Controllers
             }
         }
 
-        [HttpDelete("{id}/students/{studentId}")]
+        [HttpDelete("{id}/students/{studentId}/remove")]
         [Authorize(Roles = "Teacher")]
-        public async Task<IActionResult> RemoveStudentFromClass(int id, int studentId)
+        public async Task<IActionResult> RemoveStudent(int id, int studentId)
         {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var teacherId))
-                return Unauthorized();
-
-            try
-            {
-                await _service.RemoveStudentFromClassAsync(teacherId, id, studentId);
+            try {
+                await _service.RemoveStudentAsync(id, studentId);
                 return Ok(new { message = "Đã xóa học sinh khỏi lớp." });
+            } catch (Exception ex) {
+                return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
+        }
+
+        [HttpPost("{id}/close")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> CloseClass(int id)
+        {
+            try {
+                await _service.CloseClassAsync(id);
+                return Ok(new { message = "Đã đóng lớp học." });
+            } catch (Exception ex) {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/reopen")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> ReopenClass(int id)
+        {
+            try {
+                await _service.ReopenClassAsync(id);
+                return Ok(new { message = "Đã mở lại lớp học." });
+            } catch (Exception ex) {
                 return BadRequest(new { message = ex.Message });
             }
         }

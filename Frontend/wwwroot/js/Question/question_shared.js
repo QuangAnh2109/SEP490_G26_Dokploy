@@ -117,6 +117,7 @@ window.QuestionEditor = (() => {
 
             const chapterSel = item.querySelector('[data-chapter-select]');
             const diffSel = item.querySelector('[data-difficulty-select]');
+            const purposeSel = item.querySelector('[data-purpose-select]');
             const expText = item.querySelector('[data-explanation]');
 
             const payload = {
@@ -124,7 +125,8 @@ window.QuestionEditor = (() => {
                 stem: stem,
                 explanation: expText?.value || '',
                 chapterId: parseInt(chapterSel?.value) || null,
-                difficulty: parseInt(diffSel?.value) || 1
+                difficulty: parseInt(diffSel?.value) || 1,
+                questionPurpose: parseInt(purposeSel?.value) || 1
             };
 
             if (type === 'FillInBlank') {
@@ -138,6 +140,8 @@ window.QuestionEditor = (() => {
         setData: (item, data, { inputTypesData, subjectsData }) => {
             item.querySelector('[data-question-type-select]').value = data.questionType;
             item.querySelector('[data-difficulty-select]').value = data.difficulty;
+            const purposeSel = item.querySelector('[data-purpose-select]');
+            if (purposeSel) purposeSel.value = data.questionPurpose || 1;
             item.querySelector('[data-explanation]').value = data.explanation || '';
 
             if (item._stemEditor) {

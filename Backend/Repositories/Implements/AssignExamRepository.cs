@@ -1,3 +1,4 @@
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -200,7 +201,8 @@ public class AssignExamRepository : IAssignExamRepository
     public async Task<List<int>> GetQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, int count, string[] activeStatus, CancellationToken ct)
     {
         return await _db.Questions
-            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
+            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty
+                     && q.QuestionPurpose == QuestionPurpose.Exam)
             .OrderBy(q => Guid.NewGuid())
             .Take(count)
             .Select(q => q.QuestionId)
@@ -210,7 +212,8 @@ public class AssignExamRepository : IAssignExamRepository
     public async Task<List<int>> GetAllQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, string[] activeStatus, CancellationToken ct)
     {
         return await _db.Questions
-            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty)
+            .Where(q => activeStatus.Contains(q.Status) && q.ChapterId == chapterId && q.Difficulty == difficulty
+                     && q.QuestionPurpose == QuestionPurpose.Exam)
             .Select(q => q.QuestionId)
             .ToListAsync(ct);
     }
@@ -326,7 +329,7 @@ public class AssignExamRepository : IAssignExamRepository
         // Delete old question from all papers that have it
         var idsStr = string.Join(",", paperIdsToProcess);
         await _db.Database.ExecuteSqlRawAsync(
-            $"DELETE FROM PaperQuestion WHERE PaperId IN ({idsStr}) AND QuestionId = {{0}}",
+            "DELETE FROM PaperQuestion WHERE PaperId IN (" + idsStr + ") AND QuestionId = {0}",
             oldQuestionId);
 
         // Find which papers ALREADY have the NEW question
@@ -340,9 +343,10 @@ public class AssignExamRepository : IAssignExamRepository
 
         if (targetIds.Count > 0)
         {
-            var insertBatch = string.Join(",", targetIds.Select(pid => $"({pid}, {newQuestionId})"));
+            var insertBatch = string.Join(",", targetIds.Select(pid => $"({pid}, @p0)"));
             await _db.Database.ExecuteSqlRawAsync(
-                $"INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES {insertBatch}");
+                "INSERT INTO PaperQuestion (PaperId, QuestionId) VALUES " + insertBatch,
+                newQuestionId);
         }
     }
 
@@ -375,12 +379,99 @@ public class AssignExamRepository : IAssignExamRepository
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task UpdateBlueprintToInprogressAsync(int examId, CancellationToken ct)
+    {
+        var exam = await _db.Exams.FindAsync(new object[] { examId }, ct);
+        if (exam != null && exam.ExamBlueprintId.HasValue)
+        {
+            var bp = await _db.ExamBlueprints.FindAsync(new object[] { exam.ExamBlueprintId.Value }, ct);
+            if (bp != null)
+            {
+                bp.Status = ExamBlueprintStatus.Inprogress;
+                bp.UpdatedAtUtc = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+    }
+
+    public async Task UpdateQuestionsToInprogressAsync(IEnumerable<int> questionIds, CancellationToken ct)
+    {
+        var ids = questionIds.ToList();
+        if (ids.Count == 0) return;
+
+        await _db.Questions
+            .Where(q => ids.Contains(q.QuestionId) && q.Status == QuestionStatus.Active)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, QuestionStatus.Inprogress), ct);
+    }
+
+    public async Task<List<int>> GetAllQuestionIdsInExamAsync(int examId, CancellationToken ct)
+    {
+        return await _db.Papers
+            .Where(p => p.ExamId == examId)
+            .SelectMany(p => p.Questions)
+            .Select(q => q.QuestionId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public async Task<Exam?> GetExamByIdAsync(int id, CancellationToken ct)
+    {
+        return await _db.Exams.FindAsync(new object[] { id }, ct);
+    }
+
+    public async Task<bool> HasSubmissionsForExamAsync(int examId, CancellationToken ct)
+    {
+        return await _db.Submissions
+            .AnyAsync(s => s.Paper.ExamId == examId, ct);
+    }
+
+    public async Task HardDeleteExamAsync(int examId, CancellationToken ct)
+    {
+        var paperIds = await _db.Papers
+            .Where(p => p.ExamId == examId)
+            .Select(p => p.PaperId)
+            .ToListAsync(ct);
+
+        if (paperIds.Count > 0)
+        {
+            // 1. Xóa PaperQuestion (many-to-many join table)
+            var idsStr = string.Join(",", paperIds);
+            await _db.Database.ExecuteSqlRawAsync(
+                "DELETE FROM PaperQuestion WHERE PaperId IN (" + idsStr + ")", ct);
+
+            // 2. Xóa Papers
+            await _db.Papers
+                .Where(p => p.ExamId == examId)
+                .ExecuteDeleteAsync(ct);
+        }
+
+        // 3. Xóa Exam
+        await _db.Exams
+            .Where(e => e.ExamId == examId)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task UpdateExamInfoAsync(int examId, string? title, DateTime? visibleFrom, DateTime? openAt, DateTime? closeAt, CancellationToken ct)
+    {
+        var exam = await _db.Exams.FindAsync(new object[] { examId }, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (title != null) exam.Title = title;
+        exam.VisibleFrom = visibleFrom;
+        exam.OpenAt = openAt;
+        exam.CloseAt = closeAt;
+        exam.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+    }
+
     private IQueryable<QuestionQueryRow> BuildQuestionQuery(string[] activeStatus)
     {
         return from q in _db.Questions
                join c in _db.Chapters on q.ChapterId equals c.ChapterId
                join s in _db.Subjects on c.SubjectId equals s.SubjectId
                where activeStatus.Contains(q.Status)
+                  && q.QuestionPurpose == QuestionPurpose.Exam
                select new QuestionQueryRow { q = q, c = c, s = s };
     }
 }

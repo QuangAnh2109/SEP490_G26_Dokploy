@@ -6,6 +6,10 @@ namespace Backend.Models;
 
 public partial class MtcaSep490G26Context : DbContext
 {
+    public MtcaSep490G26Context()
+    {
+    }
+
     public MtcaSep490G26Context(DbContextOptions<MtcaSep490G26Context> options)
         : base(options)
     {
@@ -44,6 +48,14 @@ public partial class MtcaSep490G26Context : DbContext
     public virtual DbSet<Submission> Submissions { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Server=(local);Database=MTCA_SEP490_G26;User Id=sa;Password=123;TrustServerCertificate=True;");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -138,7 +150,6 @@ public partial class MtcaSep490G26Context : DbContext
                 .IsConcurrencyToken();
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.MaxAttempts).HasDefaultValue(1);
-            entity.Property(e => e.AnswerTimingMode).HasDefaultValue(0);
             entity.Property(e => e.Status).HasDefaultValue(1);
             entity.Property(e => e.Title).HasMaxLength(500);
             entity.Property(e => e.UpdatedAtUtc).HasDefaultValueSql("(getutcdate())");
@@ -230,7 +241,6 @@ public partial class MtcaSep490G26Context : DbContext
 
             entity.HasOne(d => d.Exam).WithMany(p => p.Papers)
                 .HasForeignKey(d => d.ExamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Papers_Exams");
 
             entity.HasMany(d => d.Questions).WithMany(p => p.Papers)
@@ -258,6 +268,7 @@ public partial class MtcaSep490G26Context : DbContext
             entity.Property(e => e.ConcurrencyStamp)
                 .IsRowVersion()
                 .IsConcurrencyToken();
+            entity.Property(e => e.QuestionPurpose).HasDefaultValue((byte)1);
             entity.Property(e => e.QuestionType).HasMaxLength(50);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)

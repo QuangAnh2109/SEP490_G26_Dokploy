@@ -11,5 +11,6 @@ namespace Backend.Services.Interfaces
         Task<CreateExamBlueprintResponse> CreateBlueprintAsync(int currentUserId, CreateExamBlueprintRequest request);
         Task<CreateExamBlueprintResponse> UpdateBlueprintAsync(int id, int currentUserId, CreateExamBlueprintRequest request);
         Task<int> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int currentUserId, int status);
+        Task DeleteBlueprintAsync(int id, int currentUserId);
     }
 }

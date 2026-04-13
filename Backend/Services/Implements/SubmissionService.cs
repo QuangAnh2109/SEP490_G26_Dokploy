@@ -30,7 +30,8 @@ public class SubmissionService : ISubmissionService
         if (submission.Status != SubmissionStatus.InProgress)
             throw new InvalidOperationException(ErrorMessages.SubmissionAlreadySubmitted);
 
-        var exam = submission.Paper.Exam;
+        var exam = submission.Paper?.Exam
+            ?? throw new InvalidOperationException("Submission has no associated exam.");
 
         // ── 2. Kiểm tra thời gian (chỉ dùng DateTime.UtcNow) ──────────
         var now = DateTime.UtcNow;

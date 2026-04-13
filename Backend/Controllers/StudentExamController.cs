@@ -89,7 +89,26 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy lịch sử bài nộp tổng hợp (kiểm tra + luyện tập) của sinh viên.
+        /// </summary>
+        [HttpGet("history")]
+        public async Task<IActionResult> GetSubmissionHistory([FromQuery] int? classId)
+        {
+            var studentId = GetStudentId();
+            if (studentId == 0) return Unauthorized(new { message = "Token không hợp lệ." });
 
+            try
+            {
+                var result = await _studentExamService.GetAllSubmissionHistoryAsync(studentId, classId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting submission history for student {StudentId}", studentId);
+                return StatusCode(500, new { message = "Lỗi hệ thống khi tải lịch sử bài nộp." });
+            }
+        }
 
     }
 }

@@ -137,6 +137,23 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteBlueprint(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0) return Unauthorized(new { message = "Invalid token." });
+
+                await _examBlueprintService.DeleteBlueprintAsync(id, userId);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
         private int GetCurrentUserId()
         {
             var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;

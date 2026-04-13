@@ -95,5 +95,20 @@ namespace Backend.Controllers
             var result = await _questionService.GetQuestionMetadataAsync();
             return Ok(result);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteQuestionAsync(int id)
+        {
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            await _questionService.DeleteQuestionAsync(id, userId);
+            return Ok(new { message = "Đã xóa câu hỏi thành công." });
+        }
+
+
     }
 }

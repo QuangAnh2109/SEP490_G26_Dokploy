@@ -38,9 +38,9 @@ namespace Backend.Services.Implements
         }
 
         // New: delegate to repo
-        public Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId)
+        public Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
         {
-            return _repo.GetExamsByClassAsync(classId);
+            return _repo.GetExamsByClassAsync(classId, isTeacher);
         }
         public async Task<CourseDTO> CreateCourseAsync(int teacherId, CreateCourseRequestDTO dto)
         {
@@ -97,6 +97,10 @@ namespace Backend.Services.Implements
 
         public async Task UpdateClassSettingsAsync(int classId, string newName, int invitationStatus)
         {
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể thay đổi cài đặt.");
+
             if (string.IsNullOrWhiteSpace(newName)) 
                 throw new Exception("Tên lớp không được để trống.");
 
@@ -106,6 +110,10 @@ namespace Backend.Services.Implements
 
         public async Task LeaveCourseAsync(int classId, int userId)
         {
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể rời lớp.");
+
             await _repo.LeaveClassAsync(classId, userId);
         }
 
@@ -130,6 +138,8 @@ namespace Backend.Services.Implements
 
             var course = await _repo.GetByIdAsync(classId);
             if (course == null) throw new Exception("Không tìm thấy lớp học.");
+            if (course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể mời thêm học sinh.");
 
             var existingMembership = await _repo.GetClassMemberAsync(classId, user.UserId);
             if (existingMembership != null)
@@ -188,6 +198,10 @@ namespace Backend.Services.Implements
 
             if (!int.TryParse(parts[0], out int classId)) throw new Exception("Token không hợp lệ.");
 
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể tham gia.");
+
             string stampBase64 = parts[1].Replace("-", "+").Replace("_", "/");
             switch (stampBase64.Length % 4)
             {
@@ -210,33 +224,44 @@ namespace Backend.Services.Implements
 
         public async Task ApproveStudentAsync(int classId, int studentId)
         {
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể phê duyệt học sinh.");
+
             var success = await _repo.ApproveStudentAsync(classId, studentId);
             if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
         }
 
         public async Task RejectStudentAsync(int classId, int studentId)
         {
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng.");
+
             var success = await _repo.RejectStudentAsync(classId, studentId);
             if (!success) throw new Exception("Học sinh không tồn tại hoặc không ở trạng thái chờ duyệt.");
         }
 
-        public async Task RemoveStudentFromClassAsync(int teacherUserId, int classId, int studentId)
+        public async Task RemoveStudentAsync(int classId, int studentId)
         {
-            var isTeacherOfClass = await _repo.IsTeacherOfClassAsync(classId, teacherUserId);
-            if (!isTeacherOfClass)
-                throw new Exception("Bạn không có quyền quản lý lớp này.");
+            var course = await _repo.GetByIdAsync(classId);
+            if (course != null && course.Status == Backend.Constants.ClassStatus.Closed)
+                throw new Exception("Lớp học đã bị đóng, không thể xóa học sinh.");
 
-            var member = await _repo.GetClassMemberAsync(classId, studentId);
-            if (member == null || member.MemberStatus != MemberStatus.Active)
-                throw new Exception("Học sinh không thuộc lớp hoặc không ở trạng thái đang học.");
+            var success = await _repo.RemoveStudentAsync(classId, studentId);
+            if (!success) throw new Exception("Học sinh không tồn tại trong lớp .");
+        }
 
-            var hasActiveSubmission = await _repo.StudentHasInProgressSubmissionInClassAsync(classId, studentId);
-            if (hasActiveSubmission)
-                throw new Exception("Không thể xóa học sinh đang làm dở một bài kiểm tra trong lớp.");
+        public async Task CloseClassAsync(int classId)
+        {
+            var success = await _repo.CloseClassAsync(classId);
+            if (!success) throw new Exception("Không tìm thấy lớp học.");
+        }
 
-            var success = await _repo.RemoveActiveStudentFromClassAsync(classId, studentId);
-            if (!success)
-                throw new Exception("Không thể xóa học sinh khỏi lớp.");
+        public async Task ReopenClassAsync(int classId)
+        {
+            var success = await _repo.ReopenClassAsync(classId);
+            if (!success) throw new Exception("Không tìm thấy lớp học.");
         }
 
         public async Task<List<SubjectOptionDto>> GetSubjectsAsync()

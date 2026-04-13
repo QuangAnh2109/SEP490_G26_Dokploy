@@ -66,7 +66,6 @@ namespace Backend.Services.Implements
         {
             var existing = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
             if (existing == null || existing.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền sửa.");
-            if (existing.Status == QuestionStatus.Archive) throw new QuestionValidationException(new[] { "Không thể sửa câu hỏi đã lưu trữ (Archive)." });
 
             var errors = await ValidateQuestionItemAsync(request, "Câu hỏi");
             if (errors.Any()) throw new QuestionValidationException(errors);
@@ -74,10 +73,11 @@ namespace Backend.Services.Implements
             var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
             Question result;
 
-            if (existing.Status == QuestionStatus.Inprogress || isUsed)
+            if (existing.Status == QuestionStatus.Inprogress || existing.Status == QuestionStatus.Archive || isUsed)
             {
                 existing.Status = QuestionStatus.Archive;
-                if (request.Status == QuestionStatus.Inprogress) request.Status = QuestionStatus.Active;
+                if (request.Status == QuestionStatus.Inprogress || request.Status == QuestionStatus.Archive) 
+                    request.Status = QuestionStatus.Active;
                 result = MapToQuestionEntity(request, userId);
                 await _questionRepository.CreateQuestionsAsync(new List<Question> { result });
                 _logger.LogInformation("Cloned question {OldId} into {NewId} (Used={IsUsed}).", questionId, result.QuestionId, isUsed);
@@ -101,7 +101,7 @@ namespace Backend.Services.Implements
             if (q == null || q.CreatedByUserId != userId) throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xem.");
 
             var (stem, frame) = ParseContent(q.QuestionContent);
-            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem, Frame = frame };
+            var dto = new QuestionDto { QuestionType = q.QuestionType, ChapterId = q.ChapterId, Difficulty = q.Difficulty, Status = q.Status, Stem = stem ?? string.Empty, Frame = frame, QuestionPurpose = q.QuestionPurpose };
 
             dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
@@ -153,12 +153,38 @@ namespace Backend.Services.Implements
             return updatedCount;
         }
 
+        public async Task DeleteQuestionAsync(int questionId, int userId)
+        {
+            var existing = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
+            if (existing == null || existing.CreatedByUserId != userId)
+            {
+                throw new KeyNotFoundException("Không tìm thấy câu hỏi hoặc bạn không có quyền xóa.");
+            }
+
+            if (existing.Status != QuestionStatus.Draft && existing.Status != QuestionStatus.Active)
+            {
+                throw new QuestionValidationException(new[] { "Chỉ có thể xóa câu hỏi ở trạng thái Draft hoặc Active." });
+            }
+
+            var isUsed = await _questionRepository.IsQuestionUsedAsync(questionId);
+            if (isUsed)
+            {
+                throw new QuestionValidationException(new[] { "Không thể xóa câu hỏi đã được sử dụng trong bài thi." });
+            }
+
+            await _questionRepository.DeleteQuestionAsync(existing);
+            await _questionRepository.SaveChangesAsync();
+            
+            _logger.LogInformation("Nhà giáo viên {UserId} đã xóa câu hỏi {QuestionId}.", userId, questionId);
+        }
+
         private Question MapToQuestionEntity(QuestionDto item, int userId, Question? existing = null)
         {
             var q = existing ?? new Question { CreatedByUserId = userId };
             q.QuestionType = item.QuestionType;
             q.ChapterId = item.ChapterId;
             q.Difficulty = item.Difficulty;
+            q.QuestionPurpose = item.QuestionPurpose;
             q.Status = item.Status;
             q.UpdatedAtUtc = DateTime.UtcNow;
             q.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
@@ -220,6 +246,8 @@ namespace Backend.Services.Implements
                 ChapterName = "",
                 UpdatedAt = question.UpdatedAtUtc,
                 Status = question.Status,
+                QuestionPurpose = question.QuestionPurpose,
+                QuestionPurposeLabel = Constants.QuestionPurpose.GetLabel(question.QuestionPurpose),
                 AnswerCount = question.QuestionAnswers?.Count ?? 0
             };
         }
@@ -320,6 +348,7 @@ namespace Backend.Services.Implements
             if (string.IsNullOrWhiteSpace(item.Stem)) errs.Add($"{prefix}: Đề bài không được để trống.");
             if (!DifficultyLevel.IsValid(item.Difficulty)) errs.Add($"{prefix}: Mức độ phải từ 1 đến 4.");
             if (!QuestionStatus.IsValid(item.Status)) errs.Add($"{prefix}: Trạng thái không hợp lệ.");
+            if (!Constants.QuestionPurpose.IsValid(item.QuestionPurpose)) errs.Add($"{prefix}: Mục đích câu hỏi không hợp lệ (1=Kiểm tra, 2=Luyện tập).");
             if (!await _questionRepository.ChapterExistsAsync(item.ChapterId)) errs.Add($"{prefix}: Chương không tồn tại.");
             if (!(item.Answers?.Any() ?? false)) return new() { $"{prefix}: Phải có ít nhất 1 đáp án." };
 

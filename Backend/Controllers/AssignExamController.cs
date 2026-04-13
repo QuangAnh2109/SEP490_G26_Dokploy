@@ -73,6 +73,19 @@ public class AssignExamController : ControllerBase
         }
     }
 
+
+    [HttpGet("blueprints")]
+    public async Task<ActionResult<IReadOnlyList<BlueprintListItemDto>>> GetBlueprints(
+        [FromQuery] int? teacherId,
+        [FromQuery] string? subjectCode,
+        [FromQuery] string? keyword,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _assignExamService.GetBlueprintsAsync(
+            teacherId, subjectCode, keyword, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("blueprints/{id:int}/detail")]
     public async Task<ActionResult<IReadOnlyList<BlueprintDetailRowDto>>> GetBlueprintDetail(
         [FromRoute] int id,
@@ -187,6 +200,87 @@ public class AssignExamController : ControllerBase
         {
             await _assignExamService.ApproveExamAsync(id, cancellationToken);
             return Ok(new { message = "Exam approved successfully." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("cancel/{id:int}")]
+    public async Task<ActionResult> CancelExam(
+        [FromRoute] int id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _assignExamService.CancelExamAsync(id, cancellationToken);
+            return Ok(new { message = "Đề thi đã được hủy thành công." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("restore/{id:int}")]
+    public async Task<ActionResult> RestoreExam(
+        [FromRoute] int id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _assignExamService.RestoreExamAsync(id, cancellationToken);
+            return Ok(new { message = "Đề thi đã được khôi phục thành công." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> DeleteExam(
+        [FromRoute] int id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _assignExamService.DeleteExamAsync(id, cancellationToken);
+            return Ok(new { message = "Đề thi đã được xóa thành công." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:int}/info")]
+    public async Task<ActionResult> UpdateExamInfo(
+        [FromRoute] int id,
+        [FromBody] UpdateExamInfoRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _assignExamService.UpdateExamInfoAsync(id, request, cancellationToken);
+            return Ok(new { message = "Cập nhật thông tin đề thi thành công." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {

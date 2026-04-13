@@ -36,8 +36,17 @@
         </div>
 
         <div class="pt-4 border-top">
-            <button class="btn btn-success w-100 mb-2 py-2 fw-bold" id="btnApprove" onclick="approveExam()">
+            <button class="btn btn-success w-100 mb-2 py-2 fw-bold d-none" id="btnApprove" onclick="approveExam()">
                 <i class="fas fa-check-circle me-1"></i> PHÊ DUYỆT
+            </button>
+            <button class="btn btn-warning w-100 mb-2 py-2 fw-bold d-none" id="btnCancel" onclick="cancelExam()">
+                <i class="fas fa-ban me-1"></i> HỦY ĐỀ THI
+            </button>
+            <button class="btn btn-primary w-100 mb-2 py-2 fw-bold d-none" id="btnRestore" onclick="restoreExam()">
+                <i class="fas fa-undo me-1"></i> KHÔI PHỤC
+            </button>
+            <button class="btn btn-danger w-100 mb-2 py-2 fw-bold d-none" id="btnDelete" onclick="deleteExam()">
+                <i class="fas fa-trash me-1"></i> XÓA ĐỀ THI
             </button>
             <button class="nav-item-custom text-center justify-content-center bg-transparent border-0 w-100" onclick="goBack()">
                 <i class="fas fa-arrow-left"></i> Quay lại
@@ -49,22 +58,58 @@
     <main class="review-content">
         <!-- View: Exam Info -->
         <div id="view-info" class="section-view active">
-            <div class="preview-header">
-                <h2 id="info-exam-title" class="fw-bold mb-1 text-dark">---</h2>
-                <div class="d-flex gap-2">
-                    <span id="info-subject-code" class="meta-badge">---</span>
-                    <span id="info-status-badge" class="meta-badge">---</span>
+            <div class="preview-header d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 id="info-exam-title" class="fw-bold mb-1 text-dark">---</h2>
+                    <div class="d-flex gap-2">
+                        <span id="info-subject-code" class="meta-badge">---</span>
+                        <span id="info-status-badge" class="meta-badge">---</span>
+                    </div>
                 </div>
+                <button class="btn btn-outline-primary btn-sm d-none" id="btnEditInfo" onclick="toggleEditMode()">
+                    <i class="fas fa-pencil-alt me-1"></i> Chỉnh sửa
+                </button>
             </div>
 
-            <section class="panel-card">
+            <!-- Read-only view -->
+            <section class="panel-card" id="infoReadOnly">
                 <h2 class="panel-title">Chi tiết cấu hình</h2>
                 <div class="row g-3">
                     <div class="col-md-4"><div class="summary-card"><p class="summary-label">Mã môn</p><p class="summary-value" id="card-subject-code">---</p></div></div>
                     <div class="col-md-4"><div class="summary-card"><p class="summary-label">Số câu hỏi</p><p class="summary-value" id="card-total-questions">---</p></div></div>
                     <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian làm bài</p><p class="summary-value" id="card-duration">---</p></div></div>
-                    <div class="col-md-6"><div class="summary-card"><p class="summary-label">Thời gian mở</p><p class="summary-value" id="card-open-at">---</p></div></div>
-                    <div class="col-md-6"><div class="summary-card"><p class="summary-label">Thời gian đóng</p><p class="summary-value" id="card-close-at">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian hiển thị đề</p><p class="summary-value" id="card-visible-from">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian mở</p><p class="summary-value" id="card-open-at">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian đóng</p><p class="summary-value" id="card-close-at">---</p></div></div>
+                </div>
+            </section>
+
+            <!-- Editable form (hidden by default) -->
+            <section class="panel-card d-none" id="infoEditForm">
+                <h2 class="panel-title">Chỉnh sửa thông tin đề thi</h2>
+                <div class="row g-3">
+                    <div class="col-12" id="edit-title-group">
+                        <label class="form-label fw-bold">Tên bài thi</label>
+                        <input type="text" class="form-control" id="edit-title" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian hiển thị đề</label>
+                        <input type="datetime-local" class="form-control" id="edit-visible-from" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian mở</label>
+                        <input type="datetime-local" class="form-control" id="edit-open-at" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian đóng</label>
+                        <input type="datetime-local" class="form-control" id="edit-close-at" />
+                    </div>
+                    <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+                        <button class="btn btn-light" onclick="toggleEditMode()">Hủy</button>
+                        <button class="btn btn-primary" id="btnSaveInfo" onclick="saveExamInfo()">
+                            <i class="fas fa-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -312,7 +357,7 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     <script src="~/js/Question/question_utils.js"></script>
-    <script src="~/js/exam_review.js"></script>
+    <script src="~/js/Exam/exam_review.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Force full width for the review wrapper by bypassing Bootstrap container

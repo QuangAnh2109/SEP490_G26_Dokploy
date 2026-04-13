@@ -8,7 +8,7 @@ namespace Frontend.Controllers
         public IActionResult ExamListInCourse(int id)
         {
             ViewBag.ClassId = id;
-            ViewBag.ClassName = (string)Request.Query["className"];
+            ViewBag.ClassName = (string?)Request.Query["className"];
             return View();
         }
 
@@ -16,7 +16,7 @@ namespace Frontend.Controllers
         public IActionResult StudentList(int id)
         {
             ViewBag.ClassId = id;
-            ViewBag.ClassName = (string)Request.Query["className"];
+            ViewBag.ClassName = (string?)Request.Query["className"];
             return View();
         }
 
@@ -24,7 +24,7 @@ namespace Frontend.Controllers
         public IActionResult Settings(int id)
         {
             ViewBag.ClassId = id;
-            ViewBag.ClassName = (string)Request.Query["className"];
+            ViewBag.ClassName = (string?)Request.Query["className"];
             return View();
         }
 
@@ -59,7 +59,7 @@ namespace Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExamAnalytics(int examId)
+        public IActionResult ExamAnalytics(int examId)
         {
             // Do Frontend call trực tiếp từ Browser qua JS fetch
             // Nên Controller MVC chỉ cần hứng ID để gài vào View

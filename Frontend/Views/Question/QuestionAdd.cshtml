@@ -9,14 +9,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thêm câu hỏi</title>
   <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/css/Exam_preview.css">
-  <link rel="stylesheet" href="/css/question_add.css">
+  <link rel="stylesheet" href="/css/StudentExam/Exam_preview.css">
+  <link rel="stylesheet" href="/css/Question/question_add.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
-
-
 </head>
 
 <body>
@@ -28,63 +25,124 @@
           <p class="page-subtitle">Thêm nhiều câu hỏi vào ngân hàng câu hỏi của giáo viên trên cùng một màn hình.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-outline-secondary" data-bs-toggle="modal"
-            data-bs-target="#questionImportModal">Nhập</button>
-          <a class="btn btn-outline-secondary" href="/Question">Hủy</a>
+          <a class="btn btn-outline-secondary" href="/Question">Hủy bỏ</a>
           <button class="btn btn-outline-secondary" id="saveDraftBtn">Lưu nháp</button>
-          <button class="btn btn-primary" id="saveAllBtn">Lưu tất cả</button>
+          <button class="btn btn-primary px-4" id="saveAllBtn">Lưu tất cả</button>
         </div>
       </section>
 
-      <section class="panel-card mb-3">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
-          <div>
-            <h2 class="section-title mb-1">Thêm nhiều câu hỏi trong một lần</h2>
-            <p class="form-note mb-0">Mỗi giáo viên chỉ có một ngân hàng câu hỏi duy nhất.</p>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="form-note mb-0" id="questionCountText">Đang soạn: 1 câu hỏi</span>
-            <button class="btn btn-outline-primary" type="button" id="addQuestionItemBtn">Thêm câu hỏi mới</button>
-          </div>
+      <!-- ═══ STEPPER ═══ -->
+      <section class="stepper mb-4" id="stepper">
+        <div class="step active" data-step="1">
+          <div class="step-icon">1</div>
+          <div class="step-label">Thông tin chung</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+          <div class="step-icon">2</div>
+          <div class="step-label">Nội dung câu hỏi</div>
         </div>
       </section>
 
-      <div class="vstack gap-3" id="questionBatchList">
-        <section class="form-section" data-question-item data-question-index="1">
-          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-            <h2 class="section-title mb-0" data-question-title>Câu hỏi #1</h2>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-remove-question>Xóa câu hỏi</button>
+      <!-- ═══════════════════════════════════════════════ -->
+      <!--  STEP 1: THÔNG TIN CHUNG                      -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <div id="step1Content" class="step-content">
+        <section class="panel-card mb-4">
+          <h2 class="section-title mb-4">Thông tin chung</h2>
+          <p class="form-note mb-3">Các thông tin dưới đây sẽ được áp dụng cho <strong>tất cả</strong> câu hỏi bạn sắp tạo.</p>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Môn học *</label>
+              <select class="form-select" id="sharedSubjectSelect">
+                <option value="">Chọn môn học</option>
+              </select>
+              <div class="invalid-feedback">Vui lòng chọn môn học.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Mục đích câu hỏi</label>
+              <select class="form-select" id="sharedPurposeSelect">
+                <option value="1" selected>Kiểm tra</option>
+                <option value="2">Luyện tập</option>
+              </select>
+            </div>
           </div>
-          
-          <partial name="_QuestionEditor" />
+
+          <hr class="section-divider">
+
+          <!-- Summary preview -->
+          <div id="step1Summary" class="d-none">
+            <h2 class="section-title mb-3">Xác nhận thông tin</h2>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <div class="summary-card py-3 px-3">
+                  <p class="summary-label mb-1">Môn học</p>
+                  <p class="mb-0 fw-semibold" id="summarySubject">-</p>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="summary-card py-3 px-3">
+                  <p class="summary-label mb-1">Mục đích</p>
+                  <p class="mb-0 fw-semibold" id="summaryPurpose">Kiểm tra</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-4">
+            <button class="btn btn-primary px-5 py-3" type="button" id="btnNext1">Tiếp theo: Nội dung câu hỏi ➔</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!--  STEP 2: NỘI DUNG CÂU HỎI                    -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <div id="step2Content" class="step-content d-none">
+        <section class="panel-card mb-4">
+          <!-- Step 2 header with summary badges -->
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+            <div>
+              <h2 class="section-title mb-1">Nội dung câu hỏi</h2>
+              <p class="form-note mb-0">
+                Môn: <strong id="step2SubjectBadge">-</strong> · 
+                Mục đích: <strong id="step2PurposeBadge">Kiểm tra</strong>
+              </p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="form-note mb-0" id="questionCountText">Đang soạn: 1 câu hỏi</span>
+              <button class="btn btn-outline-primary" type="button" id="addQuestionItemBtn">Thêm câu hỏi mới</button>
+            </div>
+          </div>
+
+          <div class="vstack gap-3" id="questionBatchList">
+            <section class="form-section" data-question-item data-question-index="1">
+              <div class="question-item-header" data-question-toggle>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="toggle-icon" data-toggle-icon>▼</span>
+                  <h2 class="section-title mb-0" data-question-title>Câu hỏi #1</h2>
+                  <div class="question-item-badges" data-question-badges></div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" type="button" data-remove-question>Xóa</button>
+              </div>
+              <div class="question-item-body" data-question-body>
+                <partial name="_QuestionEditor" />
+              </div>
+            </section>
+          </div>
+
+          <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <button class="btn btn-outline-secondary px-4" type="button" id="btnBack2">← Quay lại</button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" id="saveDraftBtn2">Lưu nháp</button>
+              <button class="btn btn-primary px-5" id="saveAllBtn2">Lưu tất cả</button>
+            </div>
+          </div>
         </section>
       </div>
     </div>
   </main>
-
-  <div class="modal fade" id="questionImportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title fs-5">Nhập câu hỏi</h2><button type="button" class="btn-close" data-bs-dismiss="modal"
-            aria-label="Đóng"></button>
-        </div>
-        <form class="modal-body" data-import-form data-allowed-ext=".csv,.xlsx,.json">
-          <div class="mb-2"><label class="form-label">Chọn tệp nguồn</label><input class="form-control" type="file"
-              data-import-file></div>
-          <div class="mb-2"><label class="form-label">Chế độ nhập</label><select class="form-select">
-              <option>Thêm mới (Append)</option>
-              <option>Ghi đè (Replace)</option>
-              <option>Chỉ kiểm tra (Validate only)</option>
-            </select></div>
-          <div class="import-result" data-import-result></div>
-          <div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-outline-secondary"
-              data-bs-dismiss="modal">Đóng</button><button type="submit" class="btn btn-primary">Nhập dữ liệu mô
-              phỏng</button></div>
-        </form>
-      </div>
-    </div>
-  </div>
 
   <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
     <template id="toastTemplate">
@@ -127,3 +185,5 @@
 </body>
 
 </html>
+
+

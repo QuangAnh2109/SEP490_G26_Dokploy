@@ -31,13 +31,14 @@ namespace Backend.Repositories.Implements
                     // Use the Subject navigation for subject name
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     // Map Semester from DB
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
+                    Status = c.Status,
                     Role = c.TeacherId == userId ? "Teacher" : (c.ClassMembers.Any(m => m.StudentId == userId && m.MemberStatus == Backend.Constants.MemberStatus.Pending) ? "Pending" : "Student")
                 })
                 .ToListAsync();
@@ -52,12 +53,13 @@ namespace Backend.Repositories.Implements
                     ClassName = c.Name,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
+                    Status = c.Status,
                     Role = "Teacher" // When listing all classes, role is not user-specific; consumer can ignore or override.
                 })
                 .ToListAsync();
@@ -74,11 +76,12 @@ namespace Backend.Repositories.Implements
                     SubjectId = c.SubjectId,
                     SubjectName = c.Subject != null ? c.Subject.Name : string.Empty,
                     SubjectCode = c.Subject != null ? c.Subject.Code : string.Empty,
-                    TeacherName = c.Teacher != null ? c.Teacher.FullName : string.Empty,
+                    TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     Semester = c.Semester ?? string.Empty,
-                    Chapters = c.Subject.Chapters
+                    Status = c.Status,
+                    Chapters = c.Subject != null ? c.Subject.Chapters
                         .Select(ch => new ChapterDTO
                         {
                             ChapterId = ch.ChapterId,
@@ -86,7 +89,7 @@ namespace Backend.Repositories.Implements
                             Name = ch.Name
                         })
                         .OrderBy(ch => ch.Name)
-                        .ToList()
+                        .ToList() : new List<ChapterDTO>()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -97,15 +100,30 @@ namespace Backend.Repositories.Implements
         // - 1 => Open (now between OpenAt and CloseAt)
         // - 2 => Upcoming (within 30 minutes before OpenAt)
         // - 0 => Closed (otherwise)
-        public async Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId)
+        public async Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
         {
             var now = DateTime.UtcNow;
             var upcomingThreshold = now.AddMinutes(30);
 
-            // Include exams where VisibleFrom is null (considered visible immediately)
-            // or VisibleFrom is in the past (<= now).
-            var query = _context.Exams
-                .Where(e => e.ClassId == classId && (e.VisibleFrom == null || e.VisibleFrom <= now));
+            IQueryable<Models.Exam> query;
+
+            if (isTeacher)
+            {
+                // Teachers see all exams except hard-deleted ones
+                query = _context.Exams
+                    .Where(e => e.ClassId == classId);
+            }
+            else
+            {
+                // Students only see Published (1), InProgress (2), Closed (5)
+                // and only if VisibleFrom has passed
+                query = _context.Exams
+                    .Where(e => e.ClassId == classId
+                        && (e.Status == Backend.Constants.ExamStatus.Published
+                            || e.Status == Backend.Constants.ExamStatus.InProgress
+                            || e.Status == Backend.Constants.ExamStatus.Closed)
+                        && (e.VisibleFrom == null || e.VisibleFrom <= now));
+            }
 
             // Project to DTO including ChapterId and computed Status
             return await query
@@ -125,12 +143,15 @@ namespace Backend.Repositories.Implements
                     OpenAt = e.OpenAt,
                     CloseAt = e.CloseAt,
                     DurationMinutes = e.Duration,
-                    // Compute status using OpenAt/CloseAt where available, otherwise fall back to stored Status.
-                    Status = e.OpenAt != null
-                        ? ((e.OpenAt <= now && (e.CloseAt == null || e.CloseAt >= now)) ? 1
-                            : (e.OpenAt > now && e.OpenAt <= upcomingThreshold) ? 2
-                            : 0)
-                        : e.Status,
+                    // For teachers: use the raw DB status directly
+                    // For students: compute status from OpenAt/CloseAt
+                    Status = isTeacher
+                        ? e.Status
+                        : (e.OpenAt != null
+                            ? ((e.OpenAt <= now && (e.CloseAt == null || e.CloseAt >= now)) ? 1
+                                : (e.OpenAt > now && e.OpenAt <= upcomingThreshold) ? 2
+                                : 0)
+                            : e.Status),
                     ShowScore = e.ShowScore,
                     ShowAnswer = e.ShowAnswer,
                     AnswerTimingMode = e.AnswerTimingMode
@@ -280,9 +301,9 @@ namespace Backend.Repositories.Implements
                 .Select(cm => new StudentInClassDTO
                 {
                     StudentId = cm.StudentId,
-                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    FullName = cm.Student != null ? cm.Student.FullName ?? string.Empty : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
-                    StudentCode = cm.Student != null ? cm.Student.StudentId : string.Empty,
+                    StudentCode = cm.Student != null ? cm.Student.StudentId ?? string.Empty : string.Empty,
                     JoinedAtUtc = DateTime.UtcNow
                 })
                 .ToListAsync();
@@ -308,6 +329,16 @@ namespace Backend.Repositories.Implements
             return rows > 0;
         }
 
+        public async Task<bool> RemoveStudentAsync(int classId, int studentId)
+        {
+            var rows = await _context.ClassMembers
+                .Where(cm => cm.ClassId == classId
+                             && cm.StudentId == studentId 
+                             && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
+                .ExecuteDeleteAsync();
+            return rows > 0;
+        }
+
         public async Task LeaveClassAsync(int classId, int userId)
         {
             var membership = await _context.ClassMembers
@@ -327,9 +358,9 @@ namespace Backend.Repositories.Implements
                 .Select(cm => new StudentInClassDTO
                 {
                     StudentId = cm.StudentId,
-                    FullName = cm.Student != null ? cm.Student.FullName : string.Empty,
+                    FullName = cm.Student != null ? cm.Student.FullName ?? string.Empty : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
-                    StudentCode = cm.Student != null ? cm.Student.StudentId : string.Empty,
+                    StudentCode = cm.Student != null ? cm.Student.StudentId ?? string.Empty : string.Empty,
                     JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this
                 })
                 .ToListAsync();
@@ -403,6 +434,24 @@ namespace Backend.Repositories.Implements
                              && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
                 .ExecuteDeleteAsync();
             return rows > 0;
+        public async Task<bool> CloseClassAsync(int classId)
+        {
+            var course = await _context.Classes.FirstOrDefaultAsync(c => c.ClassId == classId);
+            if (course == null) return false;
+
+            course.Status = Backend.Constants.ClassStatus.Closed;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ReopenClassAsync(int classId)
+        {
+            var course = await _context.Classes.FirstOrDefaultAsync(c => c.ClassId == classId);
+            if (course == null) return false;
+
+            course.Status = Backend.Constants.ClassStatus.Active;
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

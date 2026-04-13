@@ -137,7 +137,8 @@
 				</div>
 				<div class="d-flex justify-content-start gap-4 border-top pt-3 border-secondary-subtle">
 					<a class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-edit" href="#"><i class="bi bi-pencil"></i> Sửa ma trận</a>
-					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-danger" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+					<button class="btn btn-link text-warning text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+					<button class="btn btn-link text-danger text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-delete" type="button"><i class="bi bi-trash"></i> Xóa</button>
 				</div>
 			</div>
 		</td>
@@ -166,34 +167,65 @@
 <div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content border-0 shadow-lg">
-			<div class="modal-header bg-danger text-white border-0">
+			<div class="modal-header bg-warning text-dark border-0">
 				<h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">Xác nhận lưu trữ</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body p-4">
 				<div class="d-flex align-items-center mb-3">
-					<div class="text-danger me-3">
-						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+					<div class="text-warning me-3">
+						<i class="bi bi-archive" style="font-size: 2.5rem;"></i>
 					</div>
 					<div>
-						<h6 class="mb-1 text-dark fw-bold">Cảnh báo quan trọng!</h6>
+						<h6 class="mb-1 text-dark fw-bold">Cảnh báo !</h6>
 						<p class="mb-0 text-muted small">Bạn đang thực hiện lưu trữ ma trận đề.</p>
 					</div>
 				</div>
 				<div class="alert alert-warning border-0 mb-0 small">
 					<ul class="mb-0 ps-3">
-						<li>Ma trận đề khi sang trạng thái <strong>Lưu trữ</strong> sẽ <strong>không sửa được nữa</strong>.</li>
-						<li>Không thể sử dụng để <strong>giao đề thi</strong> nữa.</li>
+						<li>Ma trận đề khi sang trạng thái <strong>Lưu trữ</strong> sửa sẽ thành bản mới.</li>
+						<li>Không thể sử dụng để <strong>giao đề thi</strong> với ma trận nháp nữa.</li>
 					</ul>
 				</div>
 			</div>
 			<div class="modal-footer border-0 p-3">
 				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
-				<button type="button" class="btn btn-danger px-4 fw-bold" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
+				<button type="button" class="btn btn-warning px-4 fw-bold" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
 			</div>
 		</div>
 	</div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title fw-bold" id="deleteConfirmModalLabel">Xác nhận xóa ma trận</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="text-danger me-3">
+                        <i class="bi bi-trash" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 text-dark fw-bold">Xóa vĩnh viễn!</h6>
+                        <p class="mb-0 text-muted small">Bạn đang thực hiện xóa ma trận đề.</p>
+                    </div>
+                </div>
+                <div class="alert alert-danger border-0 mb-0 small">
+                    Hành động này không thể hoàn tác. Dữ liệu ma trận này sẽ bị xóa khỏi hệ thống.
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">Đồng ý xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
 	<script>

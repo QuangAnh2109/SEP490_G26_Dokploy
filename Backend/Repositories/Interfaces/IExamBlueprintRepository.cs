@@ -13,5 +13,7 @@ namespace Backend.Repositories.Interfaces
         Task<ExamBlueprint> CreateBlueprintAsync(ExamBlueprint blueprint, IEnumerable<ExamBlueprintChapter> rows);
         Task<ExamBlueprint?> UpdateBlueprintAsync(int id, int currentUserId, ExamBlueprint blueprint, IEnumerable<ExamBlueprintChapter> rows);
         Task<int> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int currentUserId, int status);
+        Task<bool> IsBlueprintUsedAsync(int blueprintId);
+        Task DeleteBlueprintAsync(int blueprintId, int currentUserId);
     }
 }

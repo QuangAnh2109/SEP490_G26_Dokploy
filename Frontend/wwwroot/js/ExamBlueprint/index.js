@@ -137,6 +137,7 @@ $(document).ready(function () {
         const totalEl = detailRowEl.querySelector('.detail-total');
         const editBtn = detailRowEl.querySelector('.btn-edit');
         const archiveBtn = detailRowEl.querySelector('.btn-archive');
+        const deleteBtn = detailRowEl.querySelector('.btn-delete');
 
         const subjectCode = detail.subjectCode || detail.subjectName || '';
         titleEl.textContent = `Chi tiết ma trận đề${subjectCode ? ` (${subjectCode})` : ''}`;
@@ -164,25 +165,28 @@ $(document).ready(function () {
         if (editBtn) {
             editBtn.href = '/ExamBlueprint/Edit/' + detail.examBlueprintId;
             editBtn.title = 'Sửa ma trận đề';
-            if (detail.status === 3) {
-                editBtn.classList.add('disabled');
-                editBtn.removeAttribute('href');
-                editBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (typeof showToast === 'function') showToast('Ma trận đề đã lưu trữ, không thể sửa.', 'warning');
-                });
-            }
         }
         if (archiveBtn) {
-            archiveBtn.dataset.blueprintId = detail.examBlueprintId;
-            archiveBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (detail.status === 3) {
-                    if (typeof showToast === 'function') showToast('Ma trận đề đã được lưu trữ.', 'info');
-                    return;
-                }
-                showArchiveConfirm([detail.examBlueprintId]);
-            };
+            if (detail.status === 3) {
+                archiveBtn.classList.add('d-none');
+            } else {
+                archiveBtn.dataset.blueprintId = detail.examBlueprintId;
+                archiveBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showArchiveConfirm([detail.examBlueprintId]);
+                };
+            }
+        }
+        if (deleteBtn) {
+            if (detail.status === 2 || detail.status === 3) {
+                deleteBtn.classList.add('d-none');
+            } else {
+                deleteBtn.dataset.blueprintId = detail.examBlueprintId;
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showDeleteConfirm(detail.examBlueprintId);
+                };
+            }
         }
     }
 
@@ -191,13 +195,42 @@ $(document).ready(function () {
     const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
     let archiveModal = null;
 
-    if (archiveModalEl) {
-        archiveModal = new bootstrap.Modal(archiveModalEl);
-    }
+    let pendingDeleteId = 0;
+    const deleteModalEl = document.getElementById('deleteConfirmModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    let deleteModal = null;
+
+    if (archiveModalEl) archiveModal = new bootstrap.Modal(archiveModalEl);
+    if (deleteModalEl) deleteModal = new bootstrap.Modal(deleteModalEl);
 
     function showArchiveConfirm(ids) {
         pendingArchiveIds = ids || [];
         if (archiveModal) archiveModal.show();
+    }
+
+    function showDeleteConfirm(id) {
+        pendingDeleteId = id;
+        if (deleteModal) deleteModal.show();
+    }
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!pendingDeleteId) return;
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'Đang xử lý...';
+            try {
+                await apiClient.delete('/api/exam-blueprints/' + pendingDeleteId);
+                if (deleteModal) deleteModal.hide();
+                if (typeof showToast === 'function') showToast('Đã xóa ma trận thành công!');
+                loadList(state.page);
+            } catch (err) {
+                const msg = err?.xhr?.responseJSON?.message || err?.message || 'Đã xảy ra lỗi.';
+                if (typeof showToast === 'function') showToast(msg, 'error');
+            } finally {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.textContent = 'Đồng ý xóa';
+            }
+        });
     }
 
     if (confirmArchiveBtn) {

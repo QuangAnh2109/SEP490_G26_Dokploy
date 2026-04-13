@@ -3,40 +3,51 @@
     var classId = ViewBag.ClassId ?? 0;
     var className = ViewBag.ClassName as string;
     var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
 }
 
-<div class="d-flex" style="min-height: 100vh;">
+<div class="course-wrapper">
     <!-- Sidebar -->
-    <aside class="bg-light border-end" style="width: 250px;">
-        <div class="p-3 border-bottom">
-            <h5 class="mb-0">Quản lý lớp học</h5>
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
-        <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action">
-                <i class="fas fa-list me-2"></i> Danh sách đề
-            </a>
-            <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action active">
-                <i class="fas fa-users me-2"></i> Danh sách học sinh
-            </a>
-            <a href="/Course/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="list-group-item list-group-item-action">
-                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
-            </a>
-            <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action">
-                <i class="fas fa-cog me-2"></i> Cài đặt
-            </a>
-        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId@classNameParam" class="sidebar-link active">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 p-4">
+    <main class="course-content">
 
         <section class="mb-4">
-            <h2>Danh sách học sinh trong lớp</h2>
+            <h2 class="fw-bold">Danh sách học sinh trong lớp</h2>
         </section>
 
         <!-- Table -->
@@ -50,7 +61,7 @@
                             <th>Họ tên</th>
                             <th>Email</th>
                             <th>Ngày tham gia</th>
-                            <th id="studentActionHeader" style="display: none;">Thao tác</th>
+                            <th class="action-col" style="display:none;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
@@ -65,181 +76,23 @@
     </main>
 </div>
 
+<!-- Template cho một học sinh -->
+<template id="student-row-template">
+    <tr>
+        <td class="fw-bold student-index"></td>
+        <td class="student-code"></td>
+        <td class="student-name"></td>
+        <td class="student-email"></td>
+        <td class="student-date"></td>
+        <td class="action-col" style="display:none;">
+            <button class="btn btn-sm btn-outline-danger btn-remove-student" title="Xóa học sinh khỏi lớp">
+                <i class="fas fa-user-minus"></i> Xóa
+            </button>
+        </td>
+    </tr>
+</template>
+
 @section Scripts {
-    <script>
-        const classId = @classId;
-        const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
-        const API_BASE = "https://localhost:7167";
-
-        function isTeacherView() {
-            const role = getUserRole();
-            return role === "Teacher" || role === "Giáo viên";
-        }
-
-        function getTableColspan() {
-            return isTeacherView() ? 6 : 5;
-        }
-
-        function initBreadcrumb(name) {
-            setBreadcrumb([
-                { text: "Khóa học", url: "/Course/CourseList" },
-                { text: name, url: "/Course/ExamListInCourse/" + classId + (name ? "?className=" + encodeURIComponent(name) : "") },
-                { text: "Danh sách học sinh", url: null }
-            ]);
-        }
-
-        async function ensureClassNameAndBreadcrumb() {
-            if (classNameFromServer) {
-                initBreadcrumb(classNameFromServer);
-                return;
-            }
-            const token = getToken();
-            if (!token) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
-                if (res.ok) {
-                    const data = await res.json();
-                    initBreadcrumb(data.className || "Lớp " + classId);
-                } else {
-                    initBreadcrumb("Lớp " + classId);
-                }
-            } catch {
-                initBreadcrumb("Lớp " + classId);
-            }
-        }
-
-        async function loadStudents() {
-            const token = getToken();
-
-            if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            try {
-                const role = getUserRole();
-                const actionHeader = document.getElementById("studentActionHeader");
-                if (actionHeader) {
-                    actionHeader.style.display = isTeacherView() ? "" : "none";
-                }
-
-                if (role === "Student") {
-                    const settingsMenu = document.getElementById("settingsMenuItem");
-                    if (settingsMenu) settingsMenu.style.display = 'none';
-                    const pendingMenu = document.getElementById("pendingMenuItem");
-                    if (pendingMenu) pendingMenu.style.display = 'none';
-                }
-
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/students`, {
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                if (response.status === 401) {
-                    showToast("Phiên đăng nhập hết hạn", "error");
-                    removeToken();
-                    window.location.href = "/Auth/Login";
-                    return;
-                }
-
-                if (!response.ok) {
-                    throw new Error("Không thể tải danh sách học sinh");
-                }
-
-                const students = await response.json();
-                renderStudents(students);
-            } catch (error) {
-                console.error(error);
-                document.getElementById("studentTableBody").innerHTML = `
-                    <tr>
-                        <td colspan="${getTableColspan()}" class="text-center text-danger">Có lỗi xảy ra khi tải danh sách.</td>
-                    </tr>
-                `;
-            }
-        }
-
-        function formatDateTime(dateString) {
-            if (!dateString) return "-";
-            return new Date(dateString).toLocaleString("vi-VN");
-        }
-
-        function renderStudents(students) {
-            const tbody = document.getElementById("studentTableBody");
-            const canManageStudents = isTeacherView();
-            tbody.innerHTML = "";
-
-            if (!students || students.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="${getTableColspan()}" class="text-center">
-                            Chưa có học sinh nào tham gia lớp này.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            students.forEach((student, index) => {
-                const row = document.createElement("tr");
-
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${student.studentCode || '-'}</td>
-                    <td>${student.fullName || '-'}</td>
-                    <td>${student.email || '-'}</td>
-                    <td>${formatDateTime(student.joinedAtUtc)}</td>
-                `;
-
-                if (canManageStudents) {
-                    const actionCell = document.createElement("td");
-                    const removeBtn = document.createElement("button");
-                    removeBtn.className = "btn btn-sm btn-outline-danger";
-                    removeBtn.type = "button";
-                    removeBtn.textContent = "Xóa khỏi lớp";
-                    removeBtn.addEventListener("click", function () {
-                        removeStudent(student.studentId, student.fullName || student.email || "học sinh");
-                    });
-                    actionCell.appendChild(removeBtn);
-                    row.appendChild(actionCell);
-                }
-
-                tbody.appendChild(row);
-            });
-        }
-
-        async function removeStudent(studentId, studentName) {
-            const token = getToken();
-            if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            const confirmed = window.confirm(`Bạn có chắc muốn xóa ${studentName} khỏi lớp không?`);
-            if (!confirmed) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/api/Course/${classId}/students/${studentId}`, {
-                    method: "DELETE",
-                    headers: { "Authorization": "Bearer " + token }
-                });
-
-                const data = await response.json().catch(() => null);
-                if (!response.ok) {
-                    throw new Error(data?.message || "Không thể xóa học sinh khỏi lớp.");
-                }
-
-                showToast(data?.message || "Đã xóa học sinh khỏi lớp.");
-                await loadStudents();
-            } catch (error) {
-                console.error(error);
-                showToast(error.message || "Có lỗi xảy ra khi xóa học sinh.", "error");
-            }
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            ensureClassNameAndBreadcrumb();
-            loadStudents();
-        });
-    </script>
+    <div id="courseData" data-class-id="@classId" data-class-name="@className" style="display: none;"></div>
+    <script src="~/js/Course/student_list.js" asp-append-version="true"></script>
 }

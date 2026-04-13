@@ -1,5 +1,6 @@
 using Backend.DTOs;
 using Backend.Constants;
+using Backend.Jobs;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Backend.Repositories.Interfaces;
@@ -138,10 +139,6 @@ public class AssignExamService : IAssignExamService
                     throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}. Needs {row.TotalOfQuestions}, has {bank.Count}.");
                 }
 
-                // Rolling Shuffle Strategy: 
-                // We use a "streaming" approach to pull questions from a shuffled bank.
-                // This ensures every question is used once before any question is used twice,
-                // minimizing overlap across papers and guaranteeing uniqueness within one paper.
                 var shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
                 int bankIdx = 0;
 
@@ -283,7 +280,7 @@ public class AssignExamService : IAssignExamService
 
                 await _repo.AddPaperQuestionsAsync(paper.PaperId, orderedQuestionIds, ct);
 
-                createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code));
+                createdPapers.Add(new CreatedPaperDto(paper.PaperId, paper.Code ?? 0));
             }
 
             await tx.CommitAsync(ct);
@@ -325,7 +322,7 @@ public class AssignExamService : IAssignExamService
 
         var papers = e.Papers.Select(p => new PaperReviewDto(
             p.PaperId,
-            p.Code,
+            p.Code ?? 0,
             p.Questions.Select(q => new QuestionReviewDto(
                 q.QuestionId,
                 q.QuestionType,
@@ -349,6 +346,7 @@ public class AssignExamService : IAssignExamService
             e.Description,
             e.Papers.FirstOrDefault()?.Questions.Count ?? 0,
             e.Duration,
+            e.VisibleFrom,
             e.OpenAt,
             e.CloseAt,
             e.Teacher?.FullName ?? "N/A",
@@ -368,6 +366,8 @@ public class AssignExamService : IAssignExamService
         if (old == null) throw new KeyNotFoundException("Question not found.");
 
         var currentIds = p.Questions.Select(q => q.QuestionId).ToList();
+
+        if (p.Exam == null) throw new InvalidOperationException("Paper has no associated exam.");
 
         return await _repo.GetAlternativeQuestionsAsync(
             p.Exam.SubjectId,
@@ -395,7 +395,7 @@ public class AssignExamService : IAssignExamService
 
         if (r.SwapGlobal)
         {
-            await _repo.SwapExamQuestionGloballyAsync(p.ExamId, r.OldQuestionId, r.NewQuestionId, ct);
+            await _repo.SwapExamQuestionGloballyAsync(p.ExamId ?? 0, r.OldQuestionId, r.NewQuestionId, ct);
         }
         else
         {
@@ -405,9 +405,122 @@ public class AssignExamService : IAssignExamService
 
     public async Task ApproveExamAsync(int id, CancellationToken ct = default)
     {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+
+        var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
+        await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
+        
+        await _repo.UpdateBlueprintToInprogressAsync(id, ct);
+
+        // Hangfire: Lập lịch tự động Published → InProgress tại OpenAt, InProgress → Closed tại CloseAt
+        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
     }
 
+    public async Task CancelExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        // Chỉ cho phép hủy khi đề đang ở trạng thái Published
+        if (exam.Status != ExamStatus.Published)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể hủy đề thi đang ở trạng thái Published.");
+        }
+
+        // Kiểm tra xem đã có học sinh nào làm bài chưa
+        bool hasSubmissions = await _repo.HasSubmissionsForExamAsync(id, ct);
+        if (hasSubmissions)
+        {
+            // Đã có học sinh làm → chuyển sang InProgress, không cho hủy
+            await _repo.UpdateExamStatusAsync(id, ExamStatus.InProgress, ct);
+            throw new InvalidOperationException(
+                "Đề thi đã có học sinh làm bài. Trạng thái đã được chuyển sang InProgress.");
+        }
+
+
+        // Tất cả điều kiện đều thỏa → hủy đề thi
+        await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
+    }
+
+    public async Task RestoreExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (exam.Status != ExamStatus.Cancelled)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể khôi phục đề thi đang ở trạng thái Cancelled.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        // 1. OpenAt phải nằm trong tương lai – nếu đã qua giờ mở, GV phải chỉnh thời gian trước
+        if (exam.OpenAt.HasValue && exam.OpenAt.Value <= now)
+        {
+            throw new InvalidOperationException(
+                "Thời điểm mở đề đã qua. Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+        }
+
+        // 2. Khoảng cách (CloseAt - OpenAt) phải >= Duration (phút)
+        if (exam.OpenAt.HasValue && exam.CloseAt.HasValue && exam.Duration > 0)
+        {
+            var windowMinutes = (exam.CloseAt.Value - exam.OpenAt.Value).TotalMinutes;
+            if (windowMinutes < exam.Duration)
+            {
+                throw new InvalidOperationException(
+                    $"Khoảng cách mở-đóng ({Math.Round(windowMinutes)} phút) phải >= thời lượng làm bài ({exam.Duration} phút). Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+            }
+        }
+
+        await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+
+        // Hangfire: Lập lịch lại sau khi khôi phục
+        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
+    }
+
+    public async Task DeleteExamAsync(int id, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        // Chỉ cho phép xóa cứng khi ở trạng thái Ready hoặc Cancelled
+        if (exam.Status != ExamStatus.Ready && exam.Status != ExamStatus.Cancelled)
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể xóa đề thi ở trạng thái Ready hoặc Cancelled.");
+        }
+
+        await _repo.HardDeleteExamAsync(id, ct);
+    }
+
+    public async Task UpdateExamInfoAsync(int id, UpdateExamInfoRequest request, CancellationToken ct = default)
+    {
+        var exam = await _repo.GetExamByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+
+        if (exam.Status == ExamStatus.Cancelled)
+        {
+            // Trạng thái Cancelled: chỉ cho phép điều chỉnh 3 mốc thời gian
+            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
+            await _repo.UpdateExamInfoAsync(id, null, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
+        }
+        else if (exam.Status == ExamStatus.Ready)
+        {
+            // Trạng thái Ready: cho phép sửa đầy đủ (Title + thời gian)
+            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
+            await _repo.UpdateExamInfoAsync(id, request.Title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                "Chỉ có thể chỉnh sửa thông tin đề thi khi đang ở trạng thái Chờ duyệt hoặc Đã hủy.");
+        }
+    }
 
     private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
     {

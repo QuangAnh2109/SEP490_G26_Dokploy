@@ -1,6 +1,50 @@
+:root {
+    --primary-ink: 221.2 83.2% 53.3%; /* Blue ink */
+    --primary-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --secondary-ink: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --grid-size: 30px;
+    --grid-color: rgba(37, 99, 235, 0.05);
+}
 
 html {
     font-size: 14px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: hsl(var(--secondary-ink));
+    color: hsl(var(--card-foreground));
+    margin-bottom: 0; /* Remove old margin */
+}
+
+/* Math Hero Typography */
+h1, h2, h3, .math-serif {
+    font-family: 'Libre Baskerville', serif;
+}
+
+/* Graph Paper Background */
+.graph-bg {
+    background-color: hsl(var(--paper-white));
+    background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
 }
 
 .toast-container {
@@ -160,14 +204,30 @@ body {
 .app-shell {
     display: flex;
     min-height: calc(100vh - 64px);
+    position: relative;
+    overflow-x: hidden;
+}
+
+.app-shell::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.6;
 }
 
 .app-sidebar {
     width: 280px;
     padding: 12px;
-    border-right: 1px solid #e5e7eb;
-    background: radial-gradient(circle at top left, #e0f2fe 0, transparent 55%), linear-gradient(180deg, #ffffff, #f9fafb);
-    transition: width 0.18s ease-out;
+    border-right: 1px solid hsl(var(--border));
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-sidebar-nav {

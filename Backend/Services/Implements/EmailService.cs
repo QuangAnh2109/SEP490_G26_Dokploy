@@ -34,7 +34,7 @@ namespace Backend.Services.Implements
 
             var message = new MailMessage
             {
-                From = new MailAddress(senderEmail, "Math Test Creator"),
+                From = new MailAddress(senderEmail!, "Math Test Creator"),
                 Subject = subject,
                 Body = htmlMessage,
                 IsBodyHtml = true

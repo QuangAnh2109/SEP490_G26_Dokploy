@@ -26,6 +26,10 @@ namespace Backend.Repositories.Interfaces
         Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId);
         Task<Submission?> GetActiveSubmissionForExamAsync(int studentId, int examId);
 
+        /// <summary>
+        /// Lấy lịch sử bài nộp tổng hợp — projection trực tiếp, không eager load.
+        /// </summary>
+        Task<List<SubmissionHistoryRaw>> GetSubmissionHistoryRawAsync(int studentId, int? classId);
     }
 
     public class ExamPreviewData
@@ -55,5 +59,20 @@ namespace Backend.Repositories.Interfaces
         public string ChapterName { get; set; } = string.Empty;
         public int Difficulty { get; set; }
         public int TotalOfQuestions { get; set; }
+    }
+
+    public class SubmissionHistoryRaw
+    {
+        public int SubmissionId { get; set; }
+        public bool IsExam { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? ClassName { get; set; }
+        public string SubjectName { get; set; } = string.Empty;
+        public int TotalQuestions { get; set; }
+        public int Status { get; set; }
+        public decimal? TotalPoints { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+        public DateTime UpdatedAtUtc { get; set; }
+        public int? ExamId { get; set; }
     }
 }

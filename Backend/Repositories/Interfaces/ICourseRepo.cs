@@ -11,7 +11,7 @@ namespace Backend.Repositories.Interfaces
         Task<List<CourseDTO>> GetCoursesForUserAsync(int userId);
         Task<List<CourseDTO>> GetAllAsync();
         Task<CourseDTO?> GetByIdAsync(int classId);
-        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId);
+        Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false);
 
         Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId);
         Task<CourseDTO> CreateCourseAsync(Class newClass);
@@ -25,10 +25,13 @@ namespace Backend.Repositories.Interfaces
         Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
         Task<bool> ApproveStudentAsync(int classId, int studentId);
         Task<bool> RejectStudentAsync(int classId, int studentId);
+        Task<bool> RemoveStudentAsync(int classId, int studentId);
 
         Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
         Task LeaveClassAsync(int classId, int userId);
         Task<bool> UpdateClassSettingsAsync(int classId, string newName, int invitationStatus);
+        Task<bool> CloseClassAsync(int classId);
+        Task<bool> ReopenClassAsync(int classId);
         Task<List<SubjectOptionDto>> GetSubjectsAsync();
         
         Task<User?> GetUserWithRoleByEmailAsync(string email);

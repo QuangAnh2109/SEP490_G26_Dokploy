@@ -9,6 +9,7 @@ namespace Backend.Services.Interfaces
         Task<List<QuestionSummaryDto>> CreateQuestionsAsync(int userId, List<QuestionDto> request);
         Task<QuestionSummaryDto> UpdateQuestionAsync(int questionId, int userId, QuestionDto request);
         Task<int> UpdateQuestionStatusAsync(List<int> questionIds, int userId, string status);
+        Task DeleteQuestionAsync(int questionId, int userId);
         Task<QuestionMetadataDto> GetQuestionMetadataAsync();
     }
 }

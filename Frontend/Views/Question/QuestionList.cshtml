@@ -82,6 +82,14 @@
 							<option value="Archived">Đã lưu trữ</option>
 						</select>
 					</div>
+					<div class="mb-4">
+						<label class="form-label text-secondary small fw-medium">Mục đích</label>
+						<select class="form-select form-select-sm shadow-none" id="filterPurpose">
+							<option value="">Tất cả</option>
+							<option value="1">Kiểm tra</option>
+							<option value="2">Luyện tập</option>
+						</select>
+					</div>
 					<div class="d-flex justify-content-end gap-2 border-top pt-3">
 						<button type="button" class="btn btn-light btn-sm px-3 fw-medium" id="clearFilterBtn">Xóa lọc</button>
 						<button type="button" class="btn btn-primary btn-sm px-4 fw-medium" id="applyFilterBtn">Áp dụng</button>
@@ -107,11 +115,12 @@
 					<th style="width: 140px;">Loại</th>
 					<th style="width: 130px;">Mức độ</th>
 					<th style="width: 130px;">Trạng thái</th>
+					<th style="width: 110px;">Mục đích</th>
 					<th style="width: 60px;" class="text-center">Hành động</th>
 				</tr>
 			</thead>
 			<tbody id="questionTableBody">
-				<tr><td colspan="9" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+				<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
 			</tbody>
 		</table>
 		</div>
@@ -136,6 +145,7 @@
 		<td data-field-type></td>
 		<td><span class="badge" data-field-difficulty></span></td>
 		<td><span class="badge" data-field-status></span></td>
+		<td><span class="badge" data-field-purpose></span></td>
 		<td class="text-center">
 			<button class="btn btn-link text-dark p-0 expand-btn" type="button" aria-label="Mở rộng"><i class="bi bi-chevron-down"></i></button>
 		</td>
@@ -143,7 +153,7 @@
 </template>
 <template id="questionDetailRowTemplate">
 	<tr class="table-light question-detail-row" data-question-id>
-		<td colspan="9" class="border-top-0 pt-0 pb-4 px-0 detail-cell">
+		<td colspan="10" class="border-top-0 pt-0 pb-4 px-0 detail-cell">
 			<div class="question-detail-content px-4">
 				<div class="mb-3 detail-row">
 					<span class="fw-bold me-2 text-nowrap detail-label">Đề bài:</span>
@@ -159,20 +169,21 @@
 				</div>
 				<div class="d-flex justify-content-end gap-4 border-top pt-3 border-secondary-subtle">
 					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-edit" type="button"><i class="bi bi-pencil"></i> Sửa</button>
-					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-danger" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-delete text-danger" type="button"><i class="bi bi-trash"></i> Xóa</button>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-warning" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
 				</div>
 			</div>
 		</td>
 	</tr>
 </template>
 <template id="tableLoadingTemplate">
-	<tr><td colspan="9" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+	<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
 </template>
 <template id="tableEmptyTemplate">
-	<tr><td colspan="9" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
+	<tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
 </template>
 <template id="tableErrorTemplate">
-	<tr><td colspan="9" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
+	<tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
 </template>
 <template id="paginationButtonTemplate">
 	<li class="page-item"><button class="page-link" type="button"></button></li>
@@ -191,13 +202,13 @@
 <div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content border-0 shadow-lg">
-			<div class="modal-header bg-danger text-white border-0">
+			<div class="modal-header bg-warning text-dark border-0">
 				<h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">Xác nhận lưu trữ</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body p-4">
 				<div class="d-flex align-items-center mb-3">
-					<div class="text-danger me-3">
+					<div class="text-warning me-3">
 						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
 					</div>
 					<div>
@@ -214,7 +225,37 @@
 			</div>
 			<div class="modal-footer border-0 p-3">
 				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
-				<button type="button" class="btn btn-danger px-4 fw-bold" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
+				<button type="button" class="btn btn-warning px-4 fw-bold text-dark" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content border-0 shadow-lg">
+			<div class="modal-header bg-danger text-white border-0">
+				<h5 class="modal-title fw-bold" id="deleteConfirmModalLabel">Xác nhận xóa câu hỏi</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-4">
+				<div class="d-flex align-items-center mb-3">
+					<div class="text-danger me-3">
+						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+					</div>
+					<div>
+						<h6 class="mb-1 text-dark fw-bold">Cảnh báo xóa vĩnh viễn!</h6>
+						<p class="mb-0 text-muted small">Hành động này không thể hoàn tác.</p>
+					</div>
+				</div>
+				<div class="alert alert-danger border-0 mb-0 small">
+					Bạn có chắc chắn muốn xóa vĩnh viễn câu hỏi này không? (Chỉ câu hỏi ở trạng thái Bản nháp hoặc Đã duyệt mới có thể xóa)
+				</div>
+			</div>
+			<div class="modal-footer border-0 p-3">
+				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+				<button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">Xóa vĩnh viễn</button>
 			</div>
 		</div>
 	</div>

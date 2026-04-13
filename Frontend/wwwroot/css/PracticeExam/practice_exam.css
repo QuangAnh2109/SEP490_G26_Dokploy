@@ -1,0 +1,346 @@
+/* ═══════════════════════════════════════════
+   Practice Exam — Setup & Take & Result CSS
+   ═══════════════════════════════════════════ */
+
+/* ── Setup Page: Chọn chương + số câu ── */
+.practice-setup-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 28px;
+    margin-bottom: 20px;
+}
+
+.chapter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.chapter-item {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fff;
+    position: relative;
+}
+
+.chapter-item:hover {
+    border-color: #adb5bd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.chapter-item.selected {
+    border-color: #0d6efd;
+    background: #f0f6ff;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.chapter-item .check-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #0d6efd;
+    font-size: 1.2rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.chapter-item.selected .check-icon {
+    opacity: 1;
+}
+
+.chapter-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.chapter-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.proficiency-bar {
+    width: 100%;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.proficiency-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.proficiency-fill.weak { background: #dc3545; }
+.proficiency-fill.medium { background: #ffc107; }
+.proficiency-fill.strong { background: #198754; }
+
+.question-count-input {
+    max-width: 200px;
+}
+
+/* ── Difficulty Level Selection Grid ── */
+.difficulty-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.difficulty-item {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fff;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.difficulty-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.difficulty-item .check-icon {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 1.1rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.difficulty-item.selected .check-icon {
+    opacity: 1;
+}
+
+.difficulty-info {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.difficulty-count {
+    font-size: 0.82rem;
+    color: #6c757d;
+}
+
+/* Color themes for each difficulty */
+.difficulty-item.diff-easy {
+    border-color: #d1f5d3;
+}
+.difficulty-item.diff-easy:hover {
+    border-color: #198754;
+}
+.difficulty-item.diff-easy.selected {
+    border-color: #198754;
+    background: #eafbec;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.15);
+}
+.difficulty-item.diff-easy .check-icon { color: #198754; }
+
+.difficulty-item.diff-medium {
+    border-color: #d0e8ff;
+}
+.difficulty-item.diff-medium:hover {
+    border-color: #0d6efd;
+}
+.difficulty-item.diff-medium.selected {
+    border-color: #0d6efd;
+    background: #eef5ff;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+.difficulty-item.diff-medium .check-icon { color: #0d6efd; }
+
+.difficulty-item.diff-hard {
+    border-color: #ffe5cc;
+}
+.difficulty-item.diff-hard:hover {
+    border-color: #fd7e14;
+}
+.difficulty-item.diff-hard.selected {
+    border-color: #fd7e14;
+    background: #fff5eb;
+    box-shadow: 0 2px 8px rgba(253, 126, 20, 0.15);
+}
+.difficulty-item.diff-hard .check-icon { color: #fd7e14; }
+
+.difficulty-item.diff-expert {
+    border-color: #f5d0d0;
+}
+.difficulty-item.diff-expert:hover {
+    border-color: #dc3545;
+}
+.difficulty-item.diff-expert.selected {
+    border-color: #dc3545;
+    background: #fdf0f0;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+}
+.difficulty-item.diff-expert .check-icon { color: #dc3545; }
+
+/* ── Difficulty Auto Preview ── */
+.diff-preview-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.diff-preview-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid #e9ecef;
+}
+
+.diff-preview-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.diff-preview-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.diff-easy-text   { color: #198754; }
+.diff-medium-text { color: #0d6efd; }
+.diff-hard-text   { color: #fd7e14; }
+.diff-expert-text { color: #dc3545; }
+
+.diff-preview-bar-wrapper {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.diff-preview-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    min-width: 0;
+}
+
+.diff-easy-bg   { background: #198754; }
+.diff-medium-bg { background: #0d6efd; }
+.diff-hard-bg   { background: #fd7e14; }
+.diff-expert-bg { background: #dc3545; }
+
+.diff-preview-count {
+    font-size: 0.82rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* ── Take Practice: Giao diện làm bài ── */
+.practice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.practice-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* ── Result Page: Đáp án từng câu ── */
+.result-summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-weight: 700;
+}
+
+.score-circle.excellent { background: #d1f5d3; color: #198754; border: 3px solid #198754; }
+.score-circle.good { background: #fff3cd; color: #856404; border: 3px solid #ffc107; }
+.score-circle.poor { background: #f8d7da; color: #842029; border: 3px solid #dc3545; }
+
+.score-circle .score-value { font-size: 1.8rem; line-height: 1; }
+.score-circle .score-label { font-size: 0.75rem; }
+
+.answer-review-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border-left: 4px solid;
+}
+
+.answer-review-card.correct { border-left-color: #198754; }
+.answer-review-card.wrong { border-left-color: #dc3545; }
+
+.answer-option {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.answer-option.student-correct { background: #d1f5d3; }
+.answer-option.student-wrong { background: #f8d7da; }
+.answer-option.correct-answer { background: #d1f5d3; border: 1px solid #198754; }
+.answer-option.not-selected { background: #f8f9fa; }
+
+/* ── History ── */
+.history-item {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: box-shadow 0.2s;
+}
+
+.history-item:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+.history-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.history-status.submitted { background: #d1f5d3; color: #198754; }
+.history-status.in-progress { background: #fff3cd; color: #856404; }

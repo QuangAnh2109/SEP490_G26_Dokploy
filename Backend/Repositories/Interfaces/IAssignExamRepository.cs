@@ -53,7 +53,17 @@ public interface IAssignExamRepository
     
     Task UpdateExamStatusAsync(int id, int status, CancellationToken ct);
     
+    Task UpdateQuestionsToInprogressAsync(IEnumerable<int> questionIds, CancellationToken ct);
+    
+    Task<List<int>> GetAllQuestionIdsInExamAsync(int examId, CancellationToken ct);
+    
     Task SaveChangesAsync(CancellationToken ct);
+    Task UpdateBlueprintToInprogressAsync(int examId, CancellationToken ct);
+    
+    Task<Exam?> GetExamByIdAsync(int id, CancellationToken ct);
+    Task<bool> HasSubmissionsForExamAsync(int examId, CancellationToken ct);
+    Task HardDeleteExamAsync(int examId, CancellationToken ct);
+    Task UpdateExamInfoAsync(int examId, string? title, DateTime? visibleFrom, DateTime? openAt, DateTime? closeAt, CancellationToken ct);
 }
 
 public record ClassWithCount(int ClassId, string Name, string Semester, string SubjectCode, int MemberCount);

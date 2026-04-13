@@ -3,40 +3,51 @@
     var classId = ViewBag.ClassId ?? 0;
     var className = ViewBag.ClassName as string;
     var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
 }
 
-<div class="d-flex" style="min-height: 100vh;">
+<div class="course-wrapper">
     <!-- Sidebar -->
-    <aside class="bg-light border-end" style="width: 250px;">
-        <div class="p-3 border-bottom">
-            <h5 class="mb-0">Quản lý lớp học</h5>
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
-        <div class="list-group list-group-flush">
-            <a href="/Course/ExamListInCourse/@classId@classNameParam" class="list-group-item list-group-item-action active">
-                <i class="fas fa-list me-2"></i> Danh sách đề
-            </a>
-            <a href="/Course/StudentList/@classId@classNameParam" class="list-group-item list-group-item-action">
-                <i class="fas fa-users me-2"></i> Danh sách học sinh
-            </a>
-            <a href="/Course/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="list-group-item list-group-item-action">
-                <i class="fas fa-user-clock me-2"></i> Phê duyệt học sinh
-            </a>
-            <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="list-group-item list-group-item-action">
-                <i class="fas fa-cog me-2"></i> Cài đặt
-            </a>
-        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId@classNameParam" class="sidebar-link active">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId@classNameParam" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 p-4">
+    <main class="course-content">
 
         <section class="mb-4 d-flex justify-content-between align-items-center">
-            <h2 class="mb-0">Danh sách đề trong lớp</h2>
+            <h2 class="mb-0 fw-bold">Danh sách đề trong lớp</h2>
             <a id="btnCreateExam" class="btn btn-primary d-none" href="/Exam/AssignExam?classId=@classId">
                 <i class="fas fa-plus me-1"></i> Tạo đề
             </a>
@@ -99,273 +110,29 @@
     </main>
 </div>
 
+<!-- Templates -->
+<template id="exam-row-template">
+    <tr class="exam-row">
+        <td class="exam-title"></td>
+        <td class="exam-time"></td>
+        <td class="exam-duration"></td>
+        <td class="exam-status"></td>
+        <td class="exam-actions"></td>
+    </tr>
+</template>
+
+<template id="teacher-action-template">
+    <a class="btn btn-sm btn-outline-secondary d-inline btn-detail" href="#">Chi tiết</a>
+    <a class="btn btn-sm btn-info text-white btn-result" href="#"><i class="fas fa-chart-bar"></i> Xem kết quả</a>
+    <a class="btn btn-sm btn-outline-info btn-analytics" href="#"><i class="fas fa-chart-pie"></i> Phân tích</a>
+</template>
+
+<template id="student-action-template">
+    <a class="btn btn-sm btn-outline-secondary d-inline btn-detail" href="#">Chi tiết</a>
+    <a class="btn btn-sm btn-primary d-inline btn-take" href="#">Vào làm</a>
+</template>
+
 @section Scripts {
-    <script>
-        const classId = @classId;
-        const classNameFromServer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(className));
-        const API_BASE = "https://localhost:7167";
-        let allExams = [];
-
-        function initBreadcrumb(name) {
-            setBreadcrumb([
-                { text: "Khóa học", url: "/Course/CourseList" },
-                { text: name, url: "/Course/ExamListInCourse/" + classId + (name ? "?className=" + encodeURIComponent(name) : "") },
-                { text: "Danh sách đề", url: null }
-            ]);
-        }
-
-        async function ensureClassNameAndBreadcrumb() {
-            if (classNameFromServer) {
-                initBreadcrumb(classNameFromServer);
-                return;
-            }
-            const token = getToken();
-            if (!token) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/Course/${classId}/settings`, { headers: { "Authorization": "Bearer " + token } });
-                if (res.ok) {
-                    const data = await res.json();
-                    initBreadcrumb(data.className || "Lớp " + classId);
-                } else {
-                    initBreadcrumb("Lớp " + classId);
-                }
-            } catch {
-                initBreadcrumb("Lớp " + classId);
-            }
-        }
-
-        async function loadExams() {
-
-            const token = getToken();
-
-            if (!token) {
-                showToast("Bạn chưa đăng nhập", "error");
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            const role = getUserRole();
-            if (role === "Student") {
-                const settingsMenu = document.getElementById("settingsMenuItem");
-                if (settingsMenu) settingsMenu.style.display = 'none';
-                const pendingMenu = document.getElementById("pendingMenuItem");
-                if (pendingMenu) pendingMenu.style.display = 'none';
-            }
-            if (role === "Teacher") {
-                const btnCreate = document.getElementById("btnCreateExam");
-                if (btnCreate) btnCreate.classList.remove("d-none");
-            }
-
-            await loadChapters();   // load chapter trước
-
-            const response = await fetch(`${API_BASE}/api/Course/${classId}/exams`, {
-                headers: { "Authorization": "Bearer " + token }
-            });
-
-            if (response.status === 401) {
-                showToast("Phiên đăng nhập hết hạn", "error");
-                removeToken();
-                window.location.href = "/Auth/Login";
-                return;
-            }
-
-            allExams = await response.json();
-            renderExams(allExams);
-            initFilters();
-        }
-        async function loadChapters() {
-
-            const token = getToken();
-            if (!token) return;
-
-            const response = await fetch(`${API_BASE}/api/Course/${classId}/chapters`, {
-                headers: { "Authorization": "Bearer " + token }
-            });
-
-            if (!response.ok) {
-                console.error("Không load được chapters");
-                return;
-            }
-
-            const chapters = await response.json();
-
-            const chapterSelect = document.getElementById("chapterFilter");
-            chapterSelect.innerHTML = '<option value="">Tất cả chương</option>';
-
-            if (!chapters || chapters.length === 0) return;
-
-            chapters.forEach(ch => {
-                chapterSelect.innerHTML += `
-                    <option value="${ch.chapterId}">
-                        ${ch.name ?? ch.title}
-                    </option>
-                `;
-            });
-        }
-        
-        function getExamStatus(openAt, closeAt) {
-
-            if (!openAt || !closeAt) return "unknown";
-
-            const now = new Date();
-            const openTime = new Date(openAt);
-            const closeTime = new Date(closeAt);
-
-            const diffMinutes = (openTime - now) / 1000 / 60;
-
-            if (now > closeTime) return "closed";
-            if (now >= openTime && now <= closeTime) return "open";
-            if (diffMinutes > 0 && diffMinutes <= 30) return "upcoming";
-
-            return "upcoming";
-        }
-
-        function applyFilter() {
-
-            const chapter = document.getElementById("chapterFilter").value;
-            const status = document.getElementById("statusFilter").value;
-            const keyword = document.getElementById("searchFilter").value.toLowerCase();
-
-            document.querySelectorAll(".exam-row").forEach(row => {
-
-                const matchChapter =
-                    !chapter || row.dataset.chapter == chapter;
-
-                const matchStatus =
-                    !status || row.dataset.status === status;
-
-                const matchKeyword =
-                    !keyword || row.dataset.keyword.includes(keyword);
-
-                row.classList.toggle(
-                    "d-none",
-                    !(matchChapter && matchStatus && matchKeyword)
-                );
-            });
-        }
-        function formatDateTime(dateString) {
-            if (!dateString) return "-";
-            return new Date(dateString).toLocaleString("vi-VN");
-        }
-
-        function renderStatusBadge(status) {
-
-            if (status === "open")
-                return '<span class="badge bg-primary">Mở</span>';
-
-            if (status === "closed")
-                return '<span class="badge bg-danger">Đóng</span>';
-
-            if (status === "upcoming")
-                return '<span class="badge bg-warning text-dark">Sắp diễn ra</span>';
-
-            return '<span class="badge bg-secondary">Không xác định</span>';
-        }
-
-        function renderExams(exams) {
-
-            const tbody = document.getElementById("examTableBody");
-            tbody.innerHTML = "";
-
-            if (!exams || exams.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center">
-                            Không có bài kiểm tra
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            const role = getUserRole();
-            const isStudent = role === "Student";
-            const isTeacher = role === "Teacher";
-
-            exams.forEach(exam => {
-
-                const status = getExamStatus(exam.openAt, exam.closeAt);
-
-                const detailUrl = isTeacher
-                    ? `/Exam/ExamReview?examId=${exam.examId}`
-                    : `/StudentExam/ExamPreview?examId=${exam.examId}`;
-
-                let actions = `
-                    <a class="btn btn-sm btn-outline-secondary d-inline" href="${detailUrl}">
-                        Chi tiết
-                    </a>
-                `;
-
-                if (isStudent && status === "open") {
-                    actions += `
-                        <a class="btn btn-sm btn-primary d-inline" href="/StudentExam/TakeExam?examId=${exam.examId}">
-                            Vào làm
-                        </a>
-                    `;
-                }
-
-                if (isStudent && (status === "closed" || exam.showScore)) {
-                    actions += `
-                        <a class="btn btn-sm btn-info text-white d-inline"
-                           href="/Analytics/StudentResult?examId=${exam.examId}">
-                            <i class="fas fa-chart-bar"></i> Xem kết quả
-                        </a>
-                    `;
-                }
-
-                if (isTeacher) {
-                    actions += `
-                        <a class="btn btn-sm btn-info text-white"
-                           href="/Analytics/ExamSubmitResults?examId=${exam.examId}&classId=${classId}">
-                            <i class="fas fa-chart-bar"></i> Xem kết quả
-                        </a>
-                        <a class="btn btn-sm btn-outline-info"
-                           href="/Analytics/ExamAnalytics?examId=${exam.examId}">
-                            <i class="fas fa-chart-pie"></i> Phân tích
-                        </a>
-                        <a class="btn btn-sm btn-primary"
-                           href="/Exam/Edit/${exam.examId}">
-                            Sửa
-                        </a>
-                    `;
-                }
-
-                const row = document.createElement("tr");
-
-                row.classList.add("exam-row");
-                row.dataset.chapter = exam.chapterId || "";
-                row.dataset.status = status;
-                row.dataset.keyword = exam.title.toLowerCase();
-
-                row.innerHTML = `
-                    <td>${exam.title}</td>
-                    <td>${formatDateTime(exam.openAt)} - ${formatDateTime(exam.closeAt)}</td>
-                    <td>${exam.durationMinutes ?? '-'} phút</td>
-                    <td>${renderStatusBadge(status)}</td>
-                    <td>${actions}</td>
-                `;
-
-                tbody.appendChild(row);
-            });
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            ensureClassNameAndBreadcrumb();
-            loadExams();
-        });
-        function initFilters() {
-
-            const chapter = document.getElementById("chapterFilter");
-            const status = document.getElementById("statusFilter");
-            const search = document.getElementById("searchFilter");
-
-            if (chapter && status && search) {
-                [chapter, status].forEach(el =>
-                    el.addEventListener("change", applyFilter)
-                );
-
-                search.addEventListener("input", applyFilter);
-            }
-        }
-    </script>
+    <div id="courseData" data-class-id="@classId" data-class-name="@className" style="display: none;"></div>
+    <script src="~/js/Exam/exam_list_in_course.js" asp-append-version="true"></script>
 }

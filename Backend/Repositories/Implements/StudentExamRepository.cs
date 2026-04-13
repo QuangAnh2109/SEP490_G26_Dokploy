@@ -37,11 +37,15 @@ namespace Backend.Repositories.Implements
         public async Task<Submission?> GetAnyActiveSubmissionAsync(int studentId)
         {
             // Status 1 = Active / In Progress
+            // Chỉ check submission bài thi chính thức (Paper.ExamId != null)
+            // Submission luyện tập (Paper.ExamId == null) KHÔNG block bài thi chính thức
             return await _context.Submissions
                 .Include(s => s.StudentAnswers)
                 .Include(s => s.Paper)
                     .ThenInclude(p => p.Exam)
-                .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1);
+                .FirstOrDefaultAsync(s => s.StudentId == studentId
+                                       && s.Status == 1
+                                       && s.Paper.ExamId != null);
         }
 
         public async Task<StudentAnswer?> GetStudentAnswerAsync(int submissionId, int questionAnswerId)
@@ -279,5 +283,57 @@ namespace Backend.Repositories.Implements
                     .ThenInclude(p => p.Exam)
                 .FirstOrDefaultAsync(s => s.StudentId == studentId && s.Status == 1 && s.Paper.ExamId == examId);
         }
+
+        public async Task<List<SubmissionHistoryRaw>> GetSubmissionHistoryRawAsync(int studentId, int? classId)
+        {
+            // Nếu có classId → lấy SubjectId để filter practice
+            int? filterSubjectId = null;
+            if (classId.HasValue)
+            {
+                filterSubjectId = await _context.Classes
+                    .Where(c => c.ClassId == classId.Value)
+                    .Select(c => (int?)c.SubjectId)
+                    .FirstOrDefaultAsync();
+            }
+
+            var query = _context.Submissions
+                .Where(s => s.StudentId == studentId)
+                .AsNoTracking();
+
+            // Filter: exam → classId, practice → subjectId
+            if (classId.HasValue)
+            {
+                query = query.Where(s =>
+                    (s.Paper.ExamId != null && s.Paper.Exam!.ClassId == classId.Value) ||
+                    (s.Paper.ExamId == null && s.Paper.Questions.Any(q => q.Chapter.SubjectId == filterSubjectId))
+                );
+            }
+
+            return await query
+                .OrderByDescending(s => s.CreatedAtUtc)
+                .Take(50)
+                .Select(s => new SubmissionHistoryRaw
+                {
+                    SubmissionId = s.SubmissionId,
+                    IsExam = s.Paper.ExamId != null,
+                    Title = s.Paper.ExamId != null
+                        ? s.Paper.Exam!.Title
+                        : string.Join(", ", s.Paper.Questions
+                            .Select(q => q.Chapter.Name)
+                            .Distinct()),
+                    ClassName = s.Paper.ExamId != null ? s.Paper.Exam!.Class!.Name : null,
+                    SubjectName = s.Paper.ExamId != null
+                        ? (s.Paper.Exam!.Subject != null ? s.Paper.Exam.Subject.Name : "N/A")
+                        : (s.Paper.Questions.Select(q => q.Chapter.Subject!.Name).FirstOrDefault() ?? "N/A"),
+                    TotalQuestions = s.Paper.Questions.Select(q => q.QuestionId).Distinct().Count(),
+                    Status = s.Status,
+                    TotalPoints = s.TotalPoints,
+                    CreatedAtUtc = s.CreatedAtUtc,
+                    UpdatedAtUtc = s.UpdatedAtUtc,
+                    ExamId = s.Paper.ExamId
+                })
+                .ToListAsync();
+        }
     }
 }
+

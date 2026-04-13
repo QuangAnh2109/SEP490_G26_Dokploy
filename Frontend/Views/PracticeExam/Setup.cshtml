@@ -1,0 +1,196 @@
+@{
+    ViewData["Title"] = "Luyện tập";
+    var classId = ViewBag.ClassId ?? 0;
+    ViewBag.IsFullWidth = true;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
+}
+
+<div class="course-wrapper">
+    <!-- Sidebar -->
+    <aside class="course-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
+        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link active" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Course/StudentList/@classId" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Course/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="course-content">
+        <section class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fw-bold pt-4 pb-2" style="font-family: 'Libre Baskerville', serif;">Luyện tập</h2>
+        </section>
+        <p class="text-muted mb-4">Chọn chương và số câu hỏi. Hệ thống sẽ tự phân bổ mức độ phù hợp dựa trên lịch sử luyện tập của bạn.</p>
+
+        <!-- Loading -->
+        <div id="setupLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="setupContent" class="d-none">
+            <!-- Chọn chương -->
+            <section class="card p-3 mb-4">
+                <h5 class="mb-3"><i class="fas fa-layer-group me-2"></i>Chọn chương muốn luyện tập</h5>
+                <p class="text-muted small mb-3">Chọn 1 hoặc nhiều chương. Thanh màu thể hiện tỉ lệ đúng của bạn.</p>
+                <div class="chapter-grid" id="chapterGrid"></div>
+            </section>
+
+            <!-- Số câu hỏi -->
+            <section class="card p-3 mb-4">
+                <h5 class="mb-3"><i class="fas fa-list-ol me-2"></i>Số câu hỏi</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <input type="range" class="form-range flex-grow-1" min="5" max="30" value="10" id="questionCountSlider" style="max-width: 400px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="number" class="form-control question-count-input text-center" min="5" max="30" value="10" id="questionCountInput">
+                        <span class="text-muted">câu</span>
+                    </div>
+                </div>
+                <div class="mt-2 text-muted small">
+                    Số câu khả dụng: <strong id="availableCount">0</strong> câu
+                </div>
+            </section>
+
+            <!-- Phân bổ mức độ (auto) -->
+            <section class="card p-3 mb-4">
+                <h5 class="mb-3"><i class="fas fa-signal me-2"></i>Phân bổ mức độ (tự động)</h5>
+                <p class="text-muted small mb-3">Hệ thống sẽ tự phân bổ mức độ dựa trên lịch sử luyện tập. Mức độ bạn yếu sẽ được ưu tiên nhiều hơn.</p>
+                <div class="difficulty-preview-grid" id="difficultyPreview"></div>
+            </section>
+
+            <!-- Bài luyện tập đang làm dở -->
+            <section id="inProgressSection" class="card p-3 mb-4 d-none">
+                <h5 class="mb-3"><i class="fas fa-clock text-warning me-2"></i>Bài luyện tập đang làm dở</h5>
+                <div id="inProgressList"></div>
+            </section>
+
+            <!-- Nút tạo đề -->
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary px-4">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                </a>
+                <button class="btn btn-primary px-4" id="btnCreatePractice" onclick="createPracticeExam()">
+                    <i class="fas fa-play me-1"></i> Bắt đầu luyện tập
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  HTML Templates (dùng bởi practice_setup.js)         -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<!-- Template: Chapter Item -->
+<template id="chapterItemTemplate">
+    <div class="chapter-item">
+        <i class="fas fa-check-circle check-icon"></i>
+        <div class="chapter-name"></div>
+        <div class="chapter-stats">
+            <span>Đúng: <span class="chapter-rate"></span></span>
+            <span class="chapter-available"></span>
+        </div>
+        <div class="proficiency-bar">
+            <div class="proficiency-fill"></div>
+        </div>
+    </div>
+</template>
+
+<!-- Template: In-Progress History Item -->
+<template id="inProgressItemTemplate">
+    <div class="history-item">
+        <div>
+            <strong class="history-chapter-names"></strong>
+            <div class="text-muted small history-detail"></div>
+        </div>
+        <a href="#" class="btn btn-sm btn-warning history-resume-link">
+            <i class="fas fa-redo me-1"></i> Làm tiếp
+        </a>
+    </div>
+</template>
+
+@section Scripts {
+    <script>
+        const practiceClassId = @classId;
+
+        // Load sidebar class name
+        document.addEventListener('DOMContentLoaded', async () => {
+            const role = getUserRole();
+            if (role === "Student") {
+                const settingsMenu = document.getElementById("settingsMenuItem");
+                if (settingsMenu) settingsMenu.style.display = 'none';
+                const pendingMenu = document.getElementById("pendingMenuItem");
+                if (pendingMenu) pendingMenu.style.display = 'none';
+            }
+
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/Course/${practiceClassId}/settings`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const className = data.className || 'Lớp ' + practiceClassId;
+                    const el = document.getElementById('sidebarClassName');
+                    if (el) el.textContent = className;
+                    
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: className, url: "/Course/ExamListInCourse/" + practiceClassId + "?className=" + encodeURIComponent(className) },
+                            { text: "Luyện tập", url: null }
+                        ]);
+                    }
+                } else {
+                    const classNameFallback = 'Lớp ' + practiceClassId;
+                    if (typeof setBreadcrumb === "function") {
+                        setBreadcrumb([
+                            { text: "Khóa học", url: "/Course/CourseList" },
+                            { text: classNameFallback, url: "/Course/ExamListInCourse/" + practiceClassId },
+                            { text: "Luyện tập", url: null }
+                        ]);
+                    }
+                }
+            } catch {
+                const classNameFallback = 'Lớp ' + practiceClassId;
+                if (typeof setBreadcrumb === "function") {
+                    setBreadcrumb([
+                        { text: "Khóa học", url: "/Course/CourseList" },
+                        { text: classNameFallback, url: "/Course/ExamListInCourse/" + practiceClassId },
+                        { text: "Luyện tập", url: null }
+                    ]);
+                }
+            }
+        });
+    </script>
+    <script src="~/js/PracticeExam/practice_setup.js" asp-append-version="true"></script>
+}
