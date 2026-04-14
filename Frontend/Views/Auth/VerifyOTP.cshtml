@@ -11,12 +11,14 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/Auth/verify-otp.css" asp-append-version="true" />
+
+    @await Html.PartialAsync("_ApiConfig")
 </head>
 <body>
     <div class="otp-container">
         <h2 class="otp-title">Xác thực Email</h2>
         <p class="otp-subtitle">
-            Chúng tôi vừa gửi một mã số gồm 6 chữ số đến email<br/>
+            Chúng tôi vừa gửi một mã số gồm 6 chữ số đến email<br />
             <strong id="displayEmail">...</strong>
         </p>
 
@@ -37,11 +39,11 @@
         <div class="resend-text">
             Chưa nhận được mã? <span class="resend-link disabled" id="resendLink" onclick="resendOtp()">Gửi lại mã (<span id="timer">60</span>s)</span>
         </div>
-        
+
         <div style="margin-top: 20px;">
             <a href="/Auth/Register" style="color: #718096; text-decoration: none; font-size: 0.875rem;">← Đổi Email khác</a>
         </div>
-        
+
         <div id="loadingOverlay">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -51,7 +53,6 @@
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    @await Html.PartialAsync("_ApiConfig")
     <script src="~/js/site.js"></script>
     <script src="~/js/Auth/verify-otp.js"></script>
 </body>
