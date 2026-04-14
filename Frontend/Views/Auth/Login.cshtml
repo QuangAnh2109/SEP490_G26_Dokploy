@@ -1,108 +1,104 @@
 @{
-	Layout = null;
+    Layout = null;
 }
 
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Đăng nhập - Math Test Creator</title>
-	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="~/css/Auth/login.css" asp-append-version="true" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng nhập - Math Test Creator</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/Auth/login.css" asp-append-version="true" />
+
+    @await Html.PartialAsync("_ApiConfig")
 </head>
 <body>
-	<div class="login-page">
-		<div class="login-illustration">
-			<div class="login-illustration-content">
-				<div class="login-illustration-header">
-					<span class="login-badge">Nền tảng giáo dục</span>
-					<h1 class="login-illustration-title">Ứng dụng Nghiên cứu & Phát triển Hệ thống Tạo Bài Kiểm Tra Toán</h1>
-					<p class="login-illustration-text">
-						Hỗ trợ giáo viên xây dựng đề kiểm tra phù hợp từng lớp, từng chủ đề và theo dõi tiến độ học tập của học sinh.
-					</p>
-				</div>
-				<ul class="login-illustration-list">
-					<li>Tạo đề nhanh từ ngân hàng câu hỏi chuẩn hóa</li>
-					<li>Phân loại theo chủ đề, mức độ và chương học</li>
-					<li>Theo dõi kết quả để điều chỉnh lộ trình dạy học</li>
-				</ul>
-			</div>
-			<div class="login-illustration-image">
-				<img src="~/images/login-education-illustration.png"
-					 alt="Minh họa học sinh và giáo viên trong lớp học Toán"
-					 loading="lazy" />
-			</div>
-		</div>
+    <div class="login-page">
+        <div class="login-illustration">
+            <div class="login-illustration-content">
+                <div class="login-illustration-header">
+                    <span class="login-badge">Nền tảng giáo dục</span>
+                    <h1 class="login-illustration-title">Ứng dụng Nghiên cứu & Phát triển Hệ thống Tạo Bài Kiểm Tra Toán</h1>
+                    <p class="login-illustration-text">
+                        Hỗ trợ giáo viên xây dựng đề kiểm tra phù hợp từng lớp, từng chủ đề và theo dõi tiến độ học tập của học sinh.
+                    </p>
+                </div>
+                <ul class="login-illustration-list">
+                    <li>Tạo đề nhanh từ ngân hàng câu hỏi chuẩn hóa</li>
+                    <li>Phân loại theo chủ đề, mức độ và chương học</li>
+                    <li>Theo dõi kết quả để điều chỉnh lộ trình dạy học</li>
+                </ul>
+            </div>
+            <div class="login-illustration-image">
+                <img src="~/images/login-education-illustration.png"
+                     alt="Minh họa học sinh và giáo viên trong lớp học Toán"
+                     loading="lazy" />
+            </div>
+        </div>
 
-		<div class="login-container">
-			<h2 class="login-title">Đăng nhập</h2>
-			<p class="login-subtitle">Đăng nhập để bắt đầu tạo và quản lý bài kiểm tra Toán.</p>
+        <div class="login-container">
+            <h2 class="login-title">Đăng nhập</h2>
+            <p class="login-subtitle">Đăng nhập để bắt đầu tạo và quản lý bài kiểm tra Toán.</p>
 
-			<!-- Google Login API container -->
-			<div id="g_id_onload"
-				 data-client_id="@ViewData["GoogleClientId"]"
-				 data-context="signin"
-				 data-ux_mode="popup"
-				 data-callback="handleCredentialResponse"
-				 data-auto_prompt="false">
-			</div>
+            <div id="g_id_onload"
+                 data-client_id="@ViewData["GoogleClientId"]"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
 
-			<!-- Custom Styled Google Button to match mockup -->
-			<button type="button" class="btn btn-google" onclick="triggerGoogleLogin()">
-				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
-				Đăng nhập bằng Google
-			</button>
+            <button type="button" class="btn btn-google" onclick="triggerGoogleLogin()">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
+                Đăng nhập bằng Google
+            </button>
 
-			<!-- Invisible native button needed by Google Identity Services API for rendering click intercept -->
-			<div class="g_id_signin" data-type="standard" style="display:none;" id="googleSignInWrapper"></div>
+            <div class="g_id_signin" data-type="standard" style="display:none;" id="googleSignInWrapper"></div>
 
-			<div class="divider-container">Hoặc</div>
+            <div class="divider-container">Hoặc</div>
 
-			<form id="loginForm">
-				<input type="hidden" id="returnUrl" value="@ViewData["ReturnUrl"]" />
-				<div id="formError" class="text-danger mb-3" style="font-size: 0.875rem;"></div>
+            <form id="loginForm">
+                <input type="hidden" id="returnUrl" value="@ViewData["ReturnUrl"]" />
+                <div id="formError" class="text-danger mb-3" style="font-size: 0.875rem;"></div>
 
-				<div class="mb-3">
-					<label for="Email" class="form-label">Email</label>
-					<input id="Email" type="email" class="form-control" placeholder="Email của bạn" />
-					<span id="EmailError" class="text-danger" style="font-size: 0.875rem;"></span>
-				</div>
+                <div class="mb-3">
+                    <label for="Email" class="form-label">Email</label>
+                    <input id="Email" type="email" class="form-control" placeholder="Email của bạn" />
+                    <span id="EmailError" class="text-danger" style="font-size: 0.875rem;"></span>
+                </div>
 
-				<div class="mb-3">
-					<label for="Password" class="form-label">Mật khẩu</label>
-					<input id="Password" type="password" class="form-control" placeholder="Mật khẩu" />
-					<span id="PasswordError" class="text-danger" style="font-size: 0.875rem;"></span>
-				</div>
+                <div class="mb-3">
+                    <label for="Password" class="form-label">Mật khẩu</label>
+                    <input id="Password" type="password" class="form-control" placeholder="Mật khẩu" />
+                    <span id="PasswordError" class="text-danger" style="font-size: 0.875rem;"></span>
+                </div>
 
-				<div class="d-flex justify-content-between align-items-center mb-4">
-					<div class="form-check">
-						<input class="form-check-input" type="checkbox" id="rememberMe">
-						<label class="form-check-label" for="rememberMe">
-							Ghi nhớ đăng nhập
-						</label>
-					</div>
-					<a href="/Auth/ForgotPassword" class="forgot-password">Quên mật khẩu?</a>
-				</div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">
+                            Ghi nhớ đăng nhập
+                        </label>
+                    </div>
+                    <a href="/Auth/ForgotPassword" class="forgot-password">Quên mật khẩu?</a>
+                </div>
 
-				<button type="submit" class="btn btn-login">Đăng nhập</button>
-			</form>
+                <button type="submit" class="btn btn-login">Đăng nhập</button>
+            </form>
 
-			<a href="/Auth/SelectRole" class="register-link">
-				Chưa có tài khoản?
-				<span class="register-link-primary">Đăng ký ngay</span>
-			</a>
-		</div>
-	</div>
+            <a href="/Auth/SelectRole" class="register-link">
+                Chưa có tài khoản?
+                <span class="register-link-primary">Đăng ký ngay</span>
+            </a>
+        </div>
+    </div>
 
-	<script src="~/lib/jquery/dist/jquery.min.js"></script>
-	@await Html.PartialAsync("_ApiConfig")
-	<script src="~/js/site.js"></script>
-	<!-- Google Identity Services JS -->
-	<script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-	<!-- Page-specific JS -->
-	<script src="~/js/Auth/login.js"></script>
+    <script src="~/js/Auth/login.js"></script>
 </body>
 </html>
