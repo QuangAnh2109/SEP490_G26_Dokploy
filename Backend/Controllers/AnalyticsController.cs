@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ public class AnalyticsController : ControllerBase
     /// Phân tích chi tiết bài thi — dành cho Giáo viên.
     /// </summary>
     [HttpGet("exam/{examId}/detail")]
-    [Authorize(Roles = "Teacher")]
+    [Authorize(Policy = nameof(Roles.Teacher))]
     public async Task<IActionResult> GetExamAnalyticsDetail(int examId)
     {
         try
@@ -44,7 +45,7 @@ public class AnalyticsController : ControllerBase
     /// Phân tích bài làm cá nhân — dành cho Học sinh.
     /// </summary>
     [HttpGet("exam/{examId}/student")]
-    [Authorize(Roles = "Student,Học sinh")]
+    [Authorize(Policy = nameof(Roles.Student))]
     public async Task<IActionResult> GetStudentSubmissionAnalytics(int examId)
     {
         try
@@ -72,7 +73,7 @@ public class AnalyticsController : ControllerBase
     /// Thống kê nộp bài — danh sách học sinh + lịch sử nộp (dành cho Giáo viên).
     /// </summary>
     [HttpGet("exam/{examId}/submissions")]
-    [Authorize(Roles = "Teacher")]
+    [Authorize(Policy = nameof(Roles.Teacher))]
     public async Task<IActionResult> GetExamSubmitResults(int examId)
     {
         try
@@ -94,7 +95,7 @@ public class AnalyticsController : ControllerBase
     /// Xem chi tiết bài làm theo submissionId — dành cho Giáo viên.
     /// </summary>
     [HttpGet("submission/{submissionId}")]
-    [Authorize(Roles = "Teacher")]
+    [Authorize(Policy = nameof(Roles.Teacher))]
     public async Task<IActionResult> GetSubmissionBySubmissionId(int submissionId)
     {
         try

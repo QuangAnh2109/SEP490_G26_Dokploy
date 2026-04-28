@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.DTOs.Question;
 using Backend.Exceptions;
 using Backend.Services.Interfaces;
@@ -9,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/questions")]
     [ApiController]
-    [Authorize(Roles = "Teacher")]
+    [Authorize(Policy = nameof(Roles.Teacher))]
     public class QuestionController : BaseController
     {
         private readonly IQuestionService _questionService;

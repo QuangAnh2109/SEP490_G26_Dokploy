@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.Jobs;
 using Backend.Models;
 using Backend.Repositories.Implements;
@@ -11,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
+using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 
 namespace Backend
@@ -159,6 +162,12 @@ namespace Backend
                     )
                 };
             });
+
+            builder.Services.AddAuthorizationBuilder()
+                .AddPolicy(nameof(Roles.Teacher), p => p.RequireClaim(
+                    ClaimTypes.Role, ((int)Roles.Teacher).ToString(CultureInfo.InvariantCulture)))
+                .AddPolicy(nameof(Roles.Student), p => p.RequireClaim(
+                    ClaimTypes.Role, ((int)Roles.Student).ToString(CultureInfo.InvariantCulture)));
 
             // =========================
             // OTHER SERVICES

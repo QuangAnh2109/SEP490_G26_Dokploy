@@ -1,5 +1,6 @@
+using System.Globalization;
 using System.Security.Claims;
-using Backend.Constants;
+using Backend.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
@@ -25,12 +26,12 @@ namespace Backend.Controllers
 
         protected bool IsTeacher()
         {
-            return GetCurrentUserRole() == UserRoles.Teacher;
+            return GetCurrentUserRole() == ((int)Roles.Teacher).ToString(CultureInfo.InvariantCulture);
         }
 
         protected bool IsStudent()
         {
-            return GetCurrentUserRole() == UserRoles.Student;
+            return GetCurrentUserRole() == ((int)Roles.Student).ToString(CultureInfo.InvariantCulture);
         }
 
         protected bool IsAuthenticated => User.Identity?.IsAuthenticated ?? false;

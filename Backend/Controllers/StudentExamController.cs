@@ -10,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/student/exams")]
     [ApiController]
-    [Authorize(Roles = "Student,Học sinh,Teacher,Giáo viên")]
+    [Authorize]
     public class StudentExamController : ControllerBase
     {
         private readonly IStudentExamService _studentExamService;
@@ -73,7 +73,7 @@ namespace Backend.Controllers
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
                 return Unauthorized("Invalid token.");
 
-            var isTeacher = User.IsInRole("Teacher") || User.IsInRole("Giáo viên");
+            var isTeacher = User.IsInRole(((int)Roles.Teacher).ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             try
             {

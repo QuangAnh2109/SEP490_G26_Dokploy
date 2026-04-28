@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.DTOs.ExamBlueprint;
 using Backend.Exceptions;
 using Backend.Services.Interfaces;
@@ -9,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/exam-blueprints")]
     [ApiController]
-    [Authorize(Roles = "Teacher")]
+    [Authorize(Policy = nameof(Roles.Teacher))]
     public class ExamBlueprintController : ControllerBase
     {
         private readonly IExamBlueprintService _examBlueprintService;

@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Services.Interfaces;
@@ -20,7 +21,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("my")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize]
         public async Task<IActionResult> GetMyClasses()
         {
             // Keep same behaviour as before; now it will run without auth
@@ -37,7 +38,7 @@ namespace Backend.Controllers
 
         // New: return exams for a class that are visible now
         [HttpGet("{id}/exams")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize]
         public async Task<IActionResult> GetExamsForClass(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -74,7 +75,7 @@ namespace Backend.Controllers
             return Ok(course.Chapters);
         }
         [HttpPost("{id}/leave")]
-        [Authorize(Roles = "Student")]
+        [Authorize(Policy = nameof(Roles.Student))]
         public async Task<IActionResult> LeaveCourse(int id)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -95,7 +96,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("join")]
-        [Authorize(Roles = "Student")]
+        [Authorize(Policy = nameof(Roles.Student))]
         public async Task<IActionResult> JoinCourse([FromBody] JoinCourseRequestDTO request)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -116,7 +117,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -144,7 +145,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/students")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize]
         public async Task<IActionResult> GetStudentsInClass(int id)
         {
             var students = await _service.GetStudentsInClassAsync(id);
@@ -152,7 +153,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/settings")]
-        [Authorize(Roles = "Teacher,Student")]
+        [Authorize]
         public async Task<IActionResult> GetClassSettings(int id)
         {
             var course = await _service.GetByIdAsync(id);
@@ -161,7 +162,7 @@ namespace Backend.Controllers
         }
 
         [HttpPut("{id}/settings")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
         {
             try
@@ -176,7 +177,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("{id}/invite")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -199,7 +200,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("accept-invite")]
-        [Authorize(Roles = "Student")]
+        [Authorize(Policy = nameof(Roles.Student))]
         public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequestDTO request)
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
@@ -218,7 +219,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}/students/pending")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> GetPendingStudents(int id)
         {
             var students = await _service.GetPendingStudentsAsync(id);
@@ -226,7 +227,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("{id}/students/{studentId}/approve")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> ApproveStudent(int id, int studentId)
         {
             try {
@@ -238,7 +239,7 @@ namespace Backend.Controllers
         }
 
         [HttpDelete("{id}/students/{studentId}/reject")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> RejectStudent(int id, int studentId)
         {
             try {
@@ -250,7 +251,7 @@ namespace Backend.Controllers
         }
 
         [HttpDelete("{id}/students/{studentId}/remove")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> RemoveStudent(int id, int studentId)
         {
             try {
@@ -262,7 +263,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("{id}/close")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> CloseClass(int id)
         {
             try {
@@ -274,7 +275,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("{id}/reopen")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> ReopenClass(int id)
         {
             try {
@@ -286,7 +287,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("subjects")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Policy = nameof(Roles.Teacher))]
         public async Task<IActionResult> GetSubjects()
         {
             var subjects = await _service.GetSubjectsAsync();

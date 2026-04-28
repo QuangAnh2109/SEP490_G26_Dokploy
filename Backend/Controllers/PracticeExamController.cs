@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.DTOs.PracticeExam;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ namespace Backend.Controllers
 {
     [Route("api/practice")]
     [ApiController]
-    [Authorize(Roles = "Student,Học sinh")]
+    [Authorize(Policy = nameof(Roles.Student))]
     public class PracticeExamController : ControllerBase
     {
         private readonly IPracticeExamService _practiceService;

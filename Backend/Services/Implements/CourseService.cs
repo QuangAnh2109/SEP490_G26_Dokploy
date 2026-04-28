@@ -1,9 +1,10 @@
+using Backend.Common;
+using Backend.Constants;
 using Backend.DTOs.Course;
 using Backend.DTOs.ExamBlueprint;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
-using Backend.Constants;
 
 namespace Backend.Services.Implements
 {
@@ -131,7 +132,7 @@ namespace Backend.Services.Implements
                 throw new Exception("Học sinh chưa có tài khoản trong hệ thống.");
             }
 
-            if (user.Role?.Name != UserRoles.Student)
+            if (user.Role?.Name != nameof(Roles.Student))
             {
                 throw new Exception("Chỉ có thể mời người dùng có vai trò là học sinh tham gia lớp học.");
             }
