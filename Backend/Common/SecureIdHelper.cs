@@ -1,6 +1,6 @@
 ﻿using Eleven41.Skip32;
 
-namespace Backend.Helpers
+namespace Backend.Common
 {
     public static class SecureIdHelper
     {

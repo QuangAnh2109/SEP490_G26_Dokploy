@@ -1,5 +1,5 @@
 using Backend.DTOs.StudentExam;
-using Backend.Helpers;
+using Backend.Common;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;

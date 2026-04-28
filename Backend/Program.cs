@@ -83,6 +83,8 @@ namespace Backend
                 )
             );
 
+            builder.Services.AddHttpContextAccessor();
+
             // Register Repositories
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IExamBlueprintRepository, ExamBlueprintRepository>();
@@ -97,6 +99,7 @@ namespace Backend
             builder.Services.AddScoped<IAssignExamRepository, AssignExamRepository>();
 
             // Register Services
+            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IExamBlueprintService, ExamBlueprintService>();

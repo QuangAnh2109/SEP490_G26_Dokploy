@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Backend.Helpers
+namespace Backend.Common
 {
     public static class ListUtilities
     {

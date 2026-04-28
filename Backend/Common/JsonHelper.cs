@@ -1,4 +1,4 @@
-﻿namespace Backend.Helper
+﻿namespace Backend.Common
 {
     public class JsonHelper
     {

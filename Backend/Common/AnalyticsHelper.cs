@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Backend.Helper;
+namespace Backend.Common;
 
 /// <summary>
 /// Helper methods cho module Analytics: kiểm tra đúng/sai, tính median, phân bố điểm, sinh đề xuất.
