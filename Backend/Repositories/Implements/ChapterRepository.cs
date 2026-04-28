@@ -11,11 +11,11 @@ namespace Backend.Repositories.Implements
     /// <summary>
     /// Concrete repository implementation for chapters.
     /// </summary>
-    public class ChapterRepo : IChapterRepo
+    public class ChapterRepository : IChapterRepository
     {
         private readonly MtcaSep490G26Context _context;
 
-        public ChapterRepo(MtcaSep490G26Context context)
+        public ChapterRepository(MtcaSep490G26Context context)
         {
             _context = context;
         }

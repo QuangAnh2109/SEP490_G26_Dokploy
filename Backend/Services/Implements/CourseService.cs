@@ -9,11 +9,11 @@ namespace Backend.Services.Implements
 {
     public class CourseService : ICourseService
     {
-        private readonly ICourseRepo _repo;
+        private readonly ICourseRepository _repo;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _config;
 
-        public CourseService(ICourseRepo repo, IEmailService emailService, IConfiguration config)
+        public CourseService(ICourseRepository repo, IEmailService emailService, IConfiguration config)
         {
             _repo = repo;
             _emailService = emailService;

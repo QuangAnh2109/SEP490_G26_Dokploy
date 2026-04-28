@@ -7,7 +7,7 @@ namespace Backend.Repositories.Interfaces
     /// <summary>
     /// Repository interface for accessing chapter data.
     /// </summary>
-    public interface IChapterRepo
+    public interface IChapterRepository
     {
         Task<List<ChapterDTO>> GetAllAsync();
         Task<ChapterDTO?> GetByIdAsync(int chapterId);

@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace Backend.Repositories.Implements
 {
-    public class CourseRepo : ICourseRepo
+    public class CourseRepository : ICourseRepository
     {
         private readonly MtcaSep490G26Context _context;
 
-        public CourseRepo(MtcaSep490G26Context context)
+        public CourseRepository(MtcaSep490G26Context context)
         {
             _context = context;
         }

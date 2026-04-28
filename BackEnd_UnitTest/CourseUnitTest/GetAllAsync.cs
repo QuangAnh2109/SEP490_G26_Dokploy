@@ -13,14 +13,14 @@ namespace Backend_UnitTest
 {
     public class CourseUnitTest
     {
-        private readonly Mock<ICourseRepo> _mockRepo;
+        private readonly Mock<ICourseRepository> _mockRepo;
         private readonly Mock<IEmailService> _mockEmail;
         private readonly Mock<IConfiguration> _mockConfig;
         private readonly CourseService _courseService;
 
         public CourseUnitTest()
         {
-            _mockRepo = new Mock<ICourseRepo>();
+            _mockRepo = new Mock<ICourseRepository>();
             _mockEmail = new Mock<IEmailService>();
             _mockConfig = new Mock<IConfiguration>();
 

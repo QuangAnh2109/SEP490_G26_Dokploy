@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Backend.Repositories.Interfaces
 {
-    public interface ICourseRepo
+    public interface ICourseRepository
     {
         Task<List<CourseDTO>> GetCoursesForUserAsync(int userId);
         Task<List<CourseDTO>> GetAllAsync();

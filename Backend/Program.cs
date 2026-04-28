@@ -86,10 +86,9 @@ namespace Backend
             // Register Repositories
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IExamBlueprintRepository, ExamBlueprintRepository>();
-            builder.Services.AddScoped<ICourseRepo, CourseRepo>();
-            builder.Services.AddScoped<IChapterRepo, ChapterRepo>();
+            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
             builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-            builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
             builder.Services.AddScoped<IExamRepository, ExamRepository>();
             builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();

@@ -11,9 +11,9 @@ namespace Backend.Services.Implements
     /// </summary>
     public class ChapterService : IChapterService
     {
-        private readonly IChapterRepo _repo;
+        private readonly IChapterRepository _repo;
 
-        public ChapterService(IChapterRepo repo)
+        public ChapterService(IChapterRepository repo)
         {
             _repo = repo;
         }
