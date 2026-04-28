@@ -420,6 +420,7 @@ FodyWeavers.xsd
 # AI Agent Rules
 .agents/
 .claude/
+.plan/
 CLAUDE.md
 
 database/
