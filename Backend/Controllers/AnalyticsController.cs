@@ -6,18 +6,16 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
+using Backend.Common.Errors;
+
 namespace Backend.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AnalyticsController : ControllerBase
+public class AnalyticsController(IAnalyticsService analyticsService, ICurrentUserService currentUserService) : ControllerBase
 {
-    private readonly IAnalyticsService _analyticsService;
-
-    public AnalyticsController(IAnalyticsService analyticsService)
-    {
-        _analyticsService = analyticsService;
-    }
+    private readonly IAnalyticsService _analyticsService = analyticsService;
+    private readonly ICurrentUserService _currentUserService = currentUserService;
 
     /// <summary>
     /// Phân tích chi tiết bài thi — dành cho Giáo viên.
@@ -26,19 +24,8 @@ public class AnalyticsController : ControllerBase
     [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetExamAnalyticsDetail(int examId)
     {
-        try
-        {
-            var result = await _analyticsService.GetExamAnalyticsDetailAsync(examId);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích chi tiết bài thi.", details = ex.Message });
-        }
+        var result = await _analyticsService.GetExamAnalyticsDetailAsync(examId);
+        return result.ToActionResult(this);
     }
 
     /// <summary>
@@ -48,25 +35,9 @@ public class AnalyticsController : ControllerBase
     [Authorize(Roles = RoleIds.Student)]
     public async Task<IActionResult> GetStudentSubmissionAnalytics(int examId)
     {
-        try
-        {
-            var userIdString = User.Claims
-                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var studentId))
-                return Unauthorized(new { message = "Token không hợp lệ." });
-
-            var result = await _analyticsService.GetStudentSubmissionAnalyticsAsync(examId, studentId);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Lỗi hệ thống khi phân tích bài làm.", details = ex.Message });
-        }
+        int studentId = _currentUserService.UserId;
+        var result = await _analyticsService.GetStudentSubmissionAnalyticsAsync(examId, studentId);
+        return result.ToActionResult(this);
     }
 
     /// <summary>
@@ -76,19 +47,8 @@ public class AnalyticsController : ControllerBase
     [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetExamSubmitResults(int examId)
     {
-        try
-        {
-            var result = await _analyticsService.GetExamSubmitResultsAsync(examId);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Lỗi hệ thống khi tải thống kê nộp bài.", details = ex.Message });
-        }
+        var result = await _analyticsService.GetExamSubmitResultsAsync(examId);
+        return result.ToActionResult(this);
     }
 
     /// <summary>
@@ -98,18 +58,7 @@ public class AnalyticsController : ControllerBase
     [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetSubmissionBySubmissionId(int submissionId)
     {
-        try
-        {
-            var result = await _analyticsService.GetSubmissionBySubmissionIdAsync(submissionId);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Lỗi hệ thống khi tải bài làm.", details = ex.Message });
-        }
+        var result = await _analyticsService.GetSubmissionBySubmissionIdAsync(submissionId);
+        return result.ToActionResult(this);
     }
 }

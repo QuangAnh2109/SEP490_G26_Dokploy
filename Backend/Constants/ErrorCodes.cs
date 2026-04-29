@@ -106,4 +106,9 @@ public static class ErrorCodes
     public const string PracticeExamPaperNotFound = "PRACTICE_EXAM_PAPER_NOT_FOUND";
     public const string PracticeExamInvalidAnswer = "PRACTICE_EXAM_INVALID_ANSWER";
     public const string PracticeExamNotSubmitted = "PRACTICE_EXAM_NOT_SUBMITTED";
+
+    // Analytics
+    public const string AnalyticsExamNotFound = "ANALYTICS_EXAM_NOT_FOUND";
+    public const string AnalyticsSubmissionNotFound = "ANALYTICS_SUBMISSION_NOT_FOUND";
+    public const string AnalyticsInvalidToken = "ANALYTICS_INVALID_TOKEN";
 }

@@ -1,6 +1,7 @@
 using Backend.Constants;
 using Backend.DTOs.Analytics;
 using Backend.Common;
+using Backend.Common.Models;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
@@ -9,27 +10,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Backend.Common.Errors;
+
 namespace Backend.Services.Implements;
 
-public class AnalyticsService : IAnalyticsService
+public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRepository studentExamRepo) : IAnalyticsService
 {
-    private readonly IAnalyticsRepository _analyticsRepo;
-    private readonly IStudentExamRepository _studentExamRepo;
-
-    public AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRepository studentExamRepo)
-    {
-        _analyticsRepo = analyticsRepo;
-        _studentExamRepo = studentExamRepo;
-    }
+    private readonly IAnalyticsRepository _analyticsRepo = analyticsRepo;
+    private readonly IStudentExamRepository _studentExamRepo = studentExamRepo;
 
     // ════════════════════════════════════════════════════════
     //  GIÁO VIÊN — Phân tích chi tiết bài thi
     // ════════════════════════════════════════════════════════
-    public async Task<ExamAnalyticsDetailDto> GetExamAnalyticsDetailAsync(int examId)
+    public async Task<Result<ExamAnalyticsDetailDto>> GetExamAnalyticsDetailAsync(int examId)
     {
         var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
         if (exam == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài thi với ID {examId}.");
+            return AnalyticsErrors.ExamNotFound;
 
         var rawSubmissions = exam.Papers.SelectMany(p => p.Submissions).ToList();
         
@@ -175,11 +172,11 @@ public class AnalyticsService : IAnalyticsService
     // ════════════════════════════════════════════════════════
     //  HỌC SINH — Phân tích bài làm cá nhân
     // ════════════════════════════════════════════════════════
-    public async Task<StudentSubmissionAnalyticsDto> GetStudentSubmissionAnalyticsAsync(int examId, int studentId)
+    public async Task<Result<StudentSubmissionAnalyticsDto>> GetStudentSubmissionAnalyticsAsync(int examId, int studentId)
     {
         var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
         if (exam == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài thi với ID {examId}.");
+            return AnalyticsErrors.ExamNotFound;
 
         // Lấy lượt làm bài mới nhất của học sinh này
         var submission = exam.Papers
@@ -189,7 +186,7 @@ public class AnalyticsService : IAnalyticsService
             .FirstOrDefault();
 
         if (submission == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài làm của học sinh {studentId} cho bài thi {examId}.");
+            return AnalyticsErrors.SubmissionNotFound;
 
         return await BuildSubmissionAnalyticsDtoAsync(exam, submission, exam.ShowScore, exam.ShowAnswer);
     }
@@ -197,24 +194,24 @@ public class AnalyticsService : IAnalyticsService
     // ════════════════════════════════════════════════════════
     //  GIÁO VIÊN — Xem chi tiết bài làm theo submissionId
     // ════════════════════════════════════════════════════════
-    public async Task<StudentSubmissionAnalyticsDto> GetSubmissionBySubmissionIdAsync(int submissionId)
+    public async Task<Result<StudentSubmissionAnalyticsDto>> GetSubmissionBySubmissionIdAsync(int submissionId)
     {
         var submission = await _analyticsRepo.GetSubmissionByIdWithPaperAsync(submissionId);
         if (submission?.Paper == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài làm với ID {submissionId}.");
+            return AnalyticsErrors.SubmissionNotFound;
 
         var examId = submission.Paper.ExamId ?? 0;
         var studentId = submission.StudentId;
 
         var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
         if (exam == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài thi.");
+            return AnalyticsErrors.ExamNotFound;
 
         var targetSubmission = exam.Papers
             .SelectMany(p => p.Submissions)
             .FirstOrDefault(s => s.SubmissionId == submissionId);
         if (targetSubmission == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài làm trong dữ liệu bài thi.");
+            return AnalyticsErrors.SubmissionNotFound;
 
         // Giáo viên luôn xem được điểm và đáp án
         var dto = await BuildSubmissionAnalyticsDtoAsync(exam, targetSubmission, showScore: 1, showAnswer: 2);
@@ -308,12 +305,12 @@ public class AnalyticsService : IAnalyticsService
     // ════════════════════════════════════════════════════════
     //  GIÁO VIÊN — Thống kê nộp bài (danh sách học sinh + lịch sử)
     // ════════════════════════════════════════════════════════
-    public async Task<ExamSubmitResultsDto> GetExamSubmitResultsAsync(int examId)
+    public async Task<Result<ExamSubmitResultsDto>> GetExamSubmitResultsAsync(int examId)
     {
         await _studentExamRepo.ForceSubmitOverdueExamsAsync(examId);
         var exam = await _analyticsRepo.GetExamWithFullGraphAsync(examId);
         if (exam == null)
-            throw new KeyNotFoundException($"Không tìm thấy bài thi với ID {examId}.");
+            return AnalyticsErrors.ExamNotFound;
 
         var rawSubmissions = exam.Papers.SelectMany(p => p.Submissions).ToList();
         var maxAttempts = exam.MaxAttempts > 0 ? exam.MaxAttempts : 999;
