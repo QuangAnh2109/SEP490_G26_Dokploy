@@ -8,14 +8,9 @@ namespace Backend.Controllers
 {
     [Route("api/exam-blueprints")]
     [ApiController]
-    public class ExamBlueprintController : ControllerBase
+    public class ExamBlueprintController(IExamBlueprintService examBlueprintService) : ControllerBase
     {
-        private readonly IExamBlueprintService _examBlueprintService;
-
-        public ExamBlueprintController(IExamBlueprintService examBlueprintService)
-        {
-            _examBlueprintService = examBlueprintService;
-        }
+        private readonly IExamBlueprintService _examBlueprintService = examBlueprintService;
 
         [HttpGet]
         [Authorize(Roles = RoleIds.Teacher)]

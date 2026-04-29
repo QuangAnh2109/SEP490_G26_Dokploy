@@ -4,41 +4,27 @@ using Backend.Jobs;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Backend.Repositories.Interfaces;
+using Backend.Common.Models;
+using Backend.Common.Errors;
 using System.Linq;
 
 namespace Backend.Services.Implements;
 
-public class AssignExamService : IAssignExamService
+public class AssignExamService(IAssignExamRepository repo, ICurrentUserService currentUserService) : IAssignExamService
 {
     private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
-    private readonly IAssignExamRepository _repo;
+    private readonly IAssignExamRepository _repo = repo;
+    private readonly ICurrentUserService _currentUserService = currentUserService;
 
-    public AssignExamService(IAssignExamRepository repo)
+    private async Task<Result> EnsureUserActiveAsync(int id, CancellationToken ct)
     {
-        _repo = repo;
-    }
-
-    private async Task EnsureUserActiveAsync(int? id, CancellationToken ct)
-    {
-        if (id is null or <= 0)
-        {
-            throw new ArgumentException("TeacherId is required.");
-        }
-
-        bool isActive = await _repo.IsUserActiveAsync(id.Value, ct);
+        bool isActive = await _repo.IsUserActiveAsync(id, ct);
         if (!isActive)
         {
-            throw new KeyNotFoundException($"User with Id {id} not found or is inactive.");
+            return AssignExamErrors.TeacherNotFound;
         }
-    }
-
-    private static void ThrowIf(bool condition, string msg)
-    {
-        if (condition)
-        {
-            throw new ArgumentException(msg);
-        }
+        return Result.Success();
     }
 
     private static string Clean(string? s)
@@ -46,79 +32,56 @@ public class AssignExamService : IAssignExamService
         return s?.Trim() ?? string.Empty;
     }
 
-    //public async Task<AssignExamFiltersResponseDto> GetFiltersAsync(int? teacherId, CancellationToken ct = default)
-    //{
-    //    await EnsureUserActiveAsync(teacherId, ct);
-
-    //    return await _repo.GetAssignExamFilterOptionsAsync(teacherId!.Value, ct);
-    //}
-
-    //public async Task<PagedResultDto<ClassListItemDto>> GetClassesAsync(
-    //    int? teacherId, string? kw, string? subj, string? sem, int page, int size, CancellationToken ct = default)
-    //{
-    //    page = Math.Max(1, page);
-    //    size = Math.Clamp(size, 1, 200);
-
-    //    kw = kw?.Trim();
-    //    subj = subj?.Trim();
-    //    sem = sem?.Trim();
-
-    //    var (items, total) = await _repo.GetPagedClassesForTeacherAsync(teacherId, kw, subj, sem, page, size, ct);
-
-    //    var classListItems = items.Select(x => new ClassListItemDto(
-    //        x.ClassId,
-    //        x.Name,
-    //        x.SubjectCode,
-    //        x.Semester,
-    //        x.MemberCount
-    //    )).ToList();
-
-    //    return new PagedResultDto<ClassListItemDto>(page, size, total, classListItems);
-    //}
-
-    public async Task<IReadOnlyList<BlueprintListItemDto>> GetBlueprintsAsync(
-        int? teacherId, string? subj, string? kw, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<BlueprintListItemDto>>> GetBlueprintsAsync(
+        string? subj, string? kw, CancellationToken ct = default)
     {
-        await EnsureUserActiveAsync(teacherId, ct);
+        int teacherId = _currentUserService.UserId;
+        var userCheck = await EnsureUserActiveAsync(teacherId, ct);
+        if (userCheck.IsFailure) return userCheck.Error!;
 
         subj = subj?.Trim();
         kw = kw?.Trim();
 
-        return await _repo.GetBlueprintsAsync(teacherId, subj, kw, ct);
+        var res = await _repo.GetBlueprintsAsync(teacherId, subj, kw, ct);
+        return Result<IReadOnlyList<BlueprintListItemDto>>.Success(res);
     }
 
-    public async Task<IReadOnlyList<BlueprintDetailRowDto>> GetBlueprintDetailAsync(int id, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<BlueprintDetailRowDto>>> GetBlueprintDetailAsync(int id, CancellationToken ct = default)
     {
-        return await _repo.GetBlueprintDetailAsync(id, ct);
+        var res = await _repo.GetBlueprintDetailAsync(id, ct);
+        return Result<IReadOnlyList<BlueprintDetailRowDto>>.Success(res);
     }
 
-    public async Task<IReadOnlyList<QuestionListItemDto>> GetQuestionsAsync(
-        int? teacherId, string? subj, int? ch, int? diff, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<QuestionListItemDto>>> GetQuestionsAsync(
+        string? subj, int? ch, int? diff, CancellationToken ct = default)
     {
-        await EnsureUserActiveAsync(teacherId, ct);
+        int teacherId = _currentUserService.UserId;
+        var userCheck = await EnsureUserActiveAsync(teacherId, ct);
+        if (userCheck.IsFailure) return userCheck.Error!;
 
         subj = subj?.Trim();
-        return await _repo.GetQuestionsAsync(teacherId, subj, ch, diff, ActiveStatus, ct);
+        var res = await _repo.GetQuestionsAsync(teacherId, subj, ch, diff, ActiveStatus, ct);
+        return Result<IReadOnlyList<QuestionListItemDto>>.Success(res);
     }
 
-    public async Task<CreateAssignExamResponse> CreateAssignExamAsync(CreateAssignExamRequest r, CancellationToken ct = default)
+    public async Task<Result<CreateAssignExamResponse>> CreateAssignExamAsync(CreateAssignExamRequest r, CancellationToken ct = default)
     {
-        ValidateTimeWindow(r.VisibleFrom, r.OpenAt, r.CloseAt);
-        await EnsureUserActiveAsync(r.TeacherId, ct);
+        var valResult = ValidateTimeWindow(r.VisibleFrom, r.OpenAt, r.CloseAt);
+        if (valResult.IsFailure) return valResult.Error!;
 
-        ThrowIf(string.IsNullOrWhiteSpace(r.Title), "Title is required.");
-        ThrowIf(r.Duration <= 0, "Duration must be > 0.");
-        ThrowIf(r.MaxAttempts <= 0, "MaxAttempts must be > 0.");
-        ThrowIf(r.PaperCount <= 0, "PaperCount must be > 0.");
+        int teacherId = _currentUserService.UserId;
+        var userCheck = await EnsureUserActiveAsync(teacherId, ct);
+        if (userCheck.IsFailure) return userCheck.Error!;
+
+        if (r.IsPublic == false && !r.ClassId.HasValue) return new Error(ErrorCodes.Validation, ErrorType.Validation);
+        if (r.IsPublic == true && r.ClassId.HasValue) return new Error(ErrorCodes.Validation, ErrorType.Validation);
 
         string generationMode = Clean(r.GenerationMode).ToLower();
         var mode = generationMode == "manual" ? "manual" : "blueprint";
 
-        ThrowIf(!r.IsPublic && !r.ClassId.HasValue, "ClassId required for non-public.");
-        ThrowIf(r.IsPublic && r.ClassId.HasValue, "Public exam must not include ClassId.");
-
         var papersQuestions = new List<List<int>>();
-        for (int i = 0; i < r.PaperCount; i++) papersQuestions.Add([]);
+        int paperCount = r.PaperCount ?? 1;
+        for (int i = 0; i < paperCount; i++) papersQuestions.Add([]);
 
         int subjectId;
         int? blueprintId;
@@ -126,7 +89,7 @@ public class AssignExamService : IAssignExamService
         if (mode == "blueprint")
         {
             var bp = await _repo.GetBlueprintWithChaptersAsync(r.ExamBlueprintId ?? 0, ct);
-            if (bp == null) throw new KeyNotFoundException("Blueprint not found.");
+            if (bp == null) return AssignExamErrors.BlueprintNotFound;
             
             subjectId = bp.SubjectId;
             blueprintId = bp.ExamBlueprintId;
@@ -136,64 +99,56 @@ public class AssignExamService : IAssignExamService
                 var bank = await _repo.GetAllQuestionIdsForBlueprintRowAsync(row.ChapterId, row.Difficulty, ActiveStatus, ct);
                 if (bank.Count < row.TotalOfQuestions)
                 {
-                    throw new InvalidOperationException($"Not enough questions for chapter {row.ChapterId} with difficulty {row.Difficulty}. Needs {row.TotalOfQuestions}, has {bank.Count}.");
+                    return AssignExamErrors.InsufficientQuestions;
                 }
 
                 var shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
                 int bankIdx = 0;
 
-                for (int i = 0; i < r.PaperCount; i++)
+                for (int i = 0; i < paperCount; i++)
                 {
                     var paperSet = new List<int>();
-                    int k = row.TotalOfQuestions;
+                    int neededQuestions = row.TotalOfQuestions;
 
-                    if (bankIdx + k > shuffledBank.Count)
+                    if (bankIdx + neededQuestions > shuffledBank.Count)
                     {
-                        // Take the remainder of the current shuffle
                         var firstPart = shuffledBank.GetRange(bankIdx, shuffledBank.Count - bankIdx);
                         paperSet.AddRange(firstPart);
-                        int remainingCount = k - firstPart.Count;
+                        int remainingCount = neededQuestions - firstPart.Count;
 
-                        // Reshuffle the entire bank for the next "lap"
                         shuffledBank = bank.OrderBy(_ => Guid.NewGuid()).ToList();
                         
-                        // Pick the rest from the new shuffle, ensuring no duplicates within THIS paper
-                        // (Only an issue if k > bank.Count, which is prevented by the check above)
                         var nextPart = shuffledBank.Except(firstPart).Take(remainingCount).ToList();
                         paperSet.AddRange(nextPart);
 
-                        // Update index to start after what we just took from the new shuffle
-                        // Note: If we took everything from the new shuffle, we'll hit the 'if' again next time.
                         bankIdx = remainingCount;
                     }
                     else
                     {
-                        paperSet.AddRange(shuffledBank.GetRange(bankIdx, k));
-                        bankIdx += k;
+                        paperSet.AddRange(shuffledBank.GetRange(bankIdx, neededQuestions));
+                        bankIdx += neededQuestions;
                     }
 
-                    // Distribute the questions into the paper list
-                    // If ShuffleQuestion is requested, the order WITHIN the paper will be random later
                     papersQuestions[i].AddRange(paperSet);
                 }
             }
         }
         else
         {
-            var res = await BuildFromManualAsync(r.SubjectId, r.QuestionIds, ct);
-            subjectId = res.SubjId;
-            blueprintId = res.BpId;
-            var pool = res.QIds;
+            var res = await BuildFromManualAsync(r.SubjectId, r.QuestionIds ?? [], ct);
+            if (res.IsFailure) return res.Error!;
 
-            if (r.ShuffleQuestion)
+            subjectId = res.Value.SubjId;
+            blueprintId = res.Value.BpId;
+            var pool = res.Value.QIds;
+
+            if (r.ShuffleQuestion == true)
             {
                 var shuffledPool = pool.OrderBy(_ => Guid.NewGuid()).ToList();
                 int poolIdx = 0;
 
-                for (int i = 0; i < r.PaperCount; i++)
+                for (int i = 0; i < paperCount; i++)
                 {
-                    // For manual mode, pool size N usually equals questions-per-paper K,
-                    // so we refill and shuffle for every paper.
                     if (poolIdx + pool.Count > shuffledPool.Count)
                     {
                         shuffledPool = pool.OrderBy(_ => Guid.NewGuid()).ToList();
@@ -206,18 +161,16 @@ public class AssignExamService : IAssignExamService
             }
             else
             {
-                for (int i = 0; i < r.PaperCount; i++)
+                for (int i = 0; i < paperCount; i++)
                 {
                     papersQuestions[i].AddRange(pool);
                 }
             }
         }
 
-        // Extra Step: If ShuffleQuestion is enabled, shuffle the final question list for each paper.
-        // This ensures the order is random even if questions came from different blueprint rows.
-        if (r.ShuffleQuestion)
+        if (r.ShuffleQuestion == true)
         {
-            for (int i = 0; i < r.PaperCount; i++)
+            for (int i = 0; i < paperCount; i++)
             {
                 papersQuestions[i] = papersQuestions[i].OrderBy(_ => Guid.NewGuid()).ToList();
             }
@@ -226,16 +179,13 @@ public class AssignExamService : IAssignExamService
         if (r.ClassId.HasValue)
         {
             var cls = await _repo.GetClassByIdAsync(r.ClassId.Value, ct);
-            if (cls == null)
-            {
-                throw new KeyNotFoundException("Class not found.");
-            }
+            if (cls == null) return AssignExamErrors.ClassNotFound;
 
-            ThrowIf(cls.TeacherId != r.TeacherId, "Class belongs to another teacher.");
-            ThrowIf(cls.SubjectId != subjectId, "Subject mismatch.");
+            if (cls.TeacherId != teacherId) return AssignExamErrors.ClassNotOwnedByTeacher;
+            if (cls.SubjectId != subjectId) return AssignExamErrors.SubjectMismatch;
         }
 
-        ThrowIf(papersQuestions[0].Count == 0, "No questions selected.");
+        if (papersQuestions[0].Count == 0) return AssignExamErrors.NoQuestionsSelected;
 
         using var tx = await _repo.BeginTransactionAsync(ct);
         try
@@ -243,20 +193,20 @@ public class AssignExamService : IAssignExamService
             var exam = new Exam
             {
                 ExamBlueprintId = blueprintId,
-                TeacherId = r.TeacherId,
+                TeacherId = teacherId,
                 ClassId = r.ClassId,
-                Title = r.Title,
+                Title = r.Title ?? "Untitled",
                 SubjectId = subjectId,
                 Description = r.Description,
-                Duration = r.Duration,
-                ShowScore = r.ShowScore,
-                ShowAnswer = r.ShowAnswer,
-                AnswerTimingMode = r.AnswerTimingMode,
-                MaxAttempts = r.MaxAttempts,
+                Duration = r.Duration ?? 0,
+                ShowScore = r.ShowScore ?? 0,
+                ShowAnswer = r.ShowAnswer ?? 0,
+                AnswerTimingMode = r.AnswerTimingMode ?? 0,
+                MaxAttempts = r.MaxAttempts ?? 1,
                 VisibleFrom = r.VisibleFrom,
                 OpenAt = r.OpenAt,
                 CloseAt = r.CloseAt,
-                ShuffleQuestion = r.ShuffleQuestion,
+                ShuffleQuestion = r.ShuffleQuestion ?? false,
                 Status = ExamStatus.Ready,
                 UpdatedAtUtc = DateTime.UtcNow
             };
@@ -264,9 +214,9 @@ public class AssignExamService : IAssignExamService
             await _repo.SaveExamAsync(exam, ct);
 
             var createdPapers = new List<CreatedPaperDto>();
-            int startCode = r.PaperCode > 0 ? r.PaperCode : 1;
+            int startCode = (r.PaperCode > 0 ? r.PaperCode : 1) ?? 1;
 
-            for (int i = 0; i < r.PaperCount; i++)
+            for (int i = 0; i < paperCount; i++)
             {
                 var paper = new Paper
                 {
@@ -285,12 +235,12 @@ public class AssignExamService : IAssignExamService
 
             await tx.CommitAsync(ct);
 
-            return new CreateAssignExamResponse(
+            return Result<CreateAssignExamResponse>.Success(new CreateAssignExamResponse(
                 exam.ExamId,
                 createdPapers[0].PaperId,
                 papersQuestions[0].Count,
                 createdPapers
-            );
+            ));
         }
         catch
         {
@@ -299,13 +249,10 @@ public class AssignExamService : IAssignExamService
         }
     }
 
-    public async Task<ExamReviewDto> GetExamReviewAsync(int id, CancellationToken ct = default)
+    public async Task<Result<ExamReviewDto>> GetExamReviewAsync(int id, CancellationToken ct = default)
     {
-        var e = await _repo.GetExamReviewDataAsync(id, ct);
-        if (e == null)
-        {
-            throw new KeyNotFoundException("Exam not found.");
-        }
+        var exam = await _repo.GetExamReviewDataAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
 
         var matrix = (e.ExamBlueprint?.ExamBlueprintChapters ?? [])
             .GroupBy(bc => bc.Chapter?.Name ?? "N/A")
@@ -320,8 +267,8 @@ public class AssignExamService : IAssignExamService
             })
             .ToList();
 
-        var papers = e.Papers.Select(p => new PaperReviewDto(
-            p.PaperId,
+        var papers = exam.Papers.Select(p => new PaperReviewDto(
+            paper.PaperId,
             p.Code ?? 0,
             p.Questions.Select(q => new QuestionReviewDto(
                 q.QuestionId,
@@ -338,13 +285,13 @@ public class AssignExamService : IAssignExamService
             )).ToList()
         )).ToList();
 
-        return new ExamReviewDto(
-            e.ExamId,
+        return Result<ExamReviewDto>.Success(new ExamReviewDto(
+            exam.ExamId,
             e.ClassId,
             e.Title,
             e.Subject?.Code ?? "N/A",
             e.Description,
-            e.Papers.FirstOrDefault()?.Questions.Count ?? 0,
+            exam.Papers.FirstOrDefault()?.Questions.Count ?? 0,
             e.Duration,
             e.VisibleFrom,
             e.OpenAt,
@@ -354,59 +301,66 @@ public class AssignExamService : IAssignExamService
             e.Status,
             matrix,
             papers
-        );
+        ));
     }
 
-    public async Task<IReadOnlyList<QuestionListItemDto>> GetAlternativeQuestionsAsync(int pid, int qid, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<QuestionListItemDto>>> GetAlternativeQuestionsAsync(int pid, int qid, CancellationToken ct = default)
     {
-        var p = await _repo.GetPaperWithQuestionsAsync(pid, ct);
-        if (p == null) throw new KeyNotFoundException("Paper not found.");
+        var paper = await _repo.GetPaperWithQuestionsAsync(pid, ct);
+        if (paper == null) return AssignExamErrors.PaperNotFound;
 
         var old = await _repo.GetQuestionByIdAsync(qid, ct);
-        if (old == null) throw new KeyNotFoundException("Question not found.");
+        if (old == null) return AssignExamErrors.QuestionNotFound;
 
         var currentIds = p.Questions.Select(q => q.QuestionId).ToList();
 
-        if (p.Exam == null) throw new InvalidOperationException("Paper has no associated exam.");
+        if (paper.Exam == null) return AssignExamErrors.ExamNotFound;
 
-        return await _repo.GetAlternativeQuestionsAsync(
-            p.Exam.SubjectId,
+        var res = await _repo.GetAlternativeQuestionsAsync(
+            paper.Exam.SubjectId,
             old.ChapterId,
             old.Difficulty,
             ActiveStatus,
             currentIds,
             ct);
+        
+        return Result<IReadOnlyList<QuestionListItemDto>>.Success(res);
     }
 
-    public async Task SwapPaperQuestionAsync(SwapQuestionRequestDto r, CancellationToken ct = default)
+    public async Task<Result> SwapPaperQuestionAsync(SwapQuestionRequestDto r, CancellationToken ct = default)
     {
-        var p = await _repo.GetPaperWithQuestionsAsync(r.PaperId, ct);
-        if (p == null) throw new KeyNotFoundException("Paper not found.");
+        if (!r.PaperId.HasValue || !r.OldQuestionId.HasValue || !r.NewQuestionId.HasValue)
+            return new Error(ErrorCodes.Validation, ErrorType.Validation);
 
-        var old = p.Questions.FirstOrDefault(q => q.QuestionId == r.OldQuestionId);
-        if (old == null) throw new ArgumentException("Old question not found in this paper.");
+        var paper = await _repo.GetPaperWithQuestionsAsync(r.PaperId.Value, ct);
+        if (paper == null) return AssignExamErrors.PaperNotFound;
 
-        var @new = await _repo.GetQuestionByIdAsync(r.NewQuestionId, ct);
-        if (@new == null) throw new KeyNotFoundException("New question not found.");
+        var old = p.Questions.FirstOrDefault(q => q.QuestionId == r.OldQuestionId.Value);
+        if (old == null) return AssignExamErrors.QuestionNotInPaper;
 
-        ThrowIf(!ActiveStatus.Contains(@new.Status), "New question is inactive.");
-        ThrowIf(@new.Difficulty != old.Difficulty, "Difficulty mismatch.");
-        ThrowIf(@new.ChapterId != old.ChapterId, "Chapter mismatch.");
+        var @new = await _repo.GetQuestionByIdAsync(r.NewQuestionId.Value, ct);
+        if (@new == null) return AssignExamErrors.QuestionNotFound;
 
-        if (r.SwapGlobal)
+        if (!ActiveStatus.Contains(@new.Status)) return AssignExamErrors.QuestionInactive;
+        if (@new.Difficulty != old.Difficulty) return AssignExamErrors.DifficultyMismatch;
+        if (@new.ChapterId != old.ChapterId) return AssignExamErrors.ChapterMismatch;
+
+        if (r.SwapGlobal == true)
         {
-            await _repo.SwapExamQuestionGloballyAsync(p.ExamId ?? 0, r.OldQuestionId, r.NewQuestionId, ct);
+            await _repo.SwapExamQuestionGloballyAsync(paper.ExamId ?? 0, r.OldQuestionId.Value, r.NewQuestionId.Value, ct);
         }
         else
         {
-            await _repo.SwapPaperQuestionAsync(r.PaperId, r.OldQuestionId, r.NewQuestionId, ct);
+            await _repo.SwapPaperQuestionAsync(r.PaperId.Value, r.OldQuestionId.Value, r.NewQuestionId.Value, ct);
         }
+
+        return Result.Success();
     }
 
-    public async Task ApproveExamAsync(int id, CancellationToken ct = default)
+    public async Task<Result> ApproveExamAsync(int id, CancellationToken ct = default)
     {
-        var exam = await _repo.GetExamByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException("Exam not found.");
+        var exam = await _repo.GetExamByIdAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
 
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
 
@@ -415,150 +369,131 @@ public class AssignExamService : IAssignExamService
         
         await _repo.UpdateBlueprintToInprogressAsync(id, ct);
 
-        // Hangfire: Lập lịch tự động Published → InProgress tại OpenAt, InProgress → Closed tại CloseAt
         ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
+        return Result.Success();
     }
 
-    public async Task CancelExamAsync(int id, CancellationToken ct = default)
+    public async Task<Result> CancelExamAsync(int id, CancellationToken ct = default)
     {
-        var exam = await _repo.GetExamByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException("Exam not found.");
+        var exam = await _repo.GetExamByIdAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
 
-        // Chỉ cho phép hủy khi đề đang ở trạng thái Published
         if (exam.Status != ExamStatus.Published)
         {
-            throw new InvalidOperationException(
-                "Chỉ có thể hủy đề thi đang ở trạng thái Published.");
+            return AssignExamErrors.InvalidStatusForCancel;
         }
 
-        // Kiểm tra xem đã có học sinh nào làm bài chưa
         bool hasSubmissions = await _repo.HasSubmissionsForExamAsync(id, ct);
         if (hasSubmissions)
         {
-            // Đã có học sinh làm → chuyển sang InProgress, không cho hủy
             await _repo.UpdateExamStatusAsync(id, ExamStatus.InProgress, ct);
-            throw new InvalidOperationException(
-                "Đề thi đã có học sinh làm bài. Trạng thái đã được chuyển sang InProgress.");
+            return AssignExamErrors.ExamAlreadyStarted;
         }
 
-
-        // Tất cả điều kiện đều thỏa → hủy đề thi
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
+        return Result.Success();
     }
 
-    public async Task RestoreExamAsync(int id, CancellationToken ct = default)
+    public async Task<Result> RestoreExamAsync(int id, CancellationToken ct = default)
     {
-        var exam = await _repo.GetExamByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException("Exam not found.");
+        var exam = await _repo.GetExamByIdAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
 
         if (exam.Status != ExamStatus.Cancelled)
         {
-            throw new InvalidOperationException(
-                "Chỉ có thể khôi phục đề thi đang ở trạng thái Cancelled.");
+            return AssignExamErrors.InvalidStatusForRestore;
         }
 
         var now = DateTime.UtcNow;
 
-        // 1. OpenAt phải nằm trong tương lai – nếu đã qua giờ mở, GV phải chỉnh thời gian trước
         if (exam.OpenAt.HasValue && exam.OpenAt.Value <= now)
         {
-            throw new InvalidOperationException(
-                "Thời điểm mở đề đã qua. Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+            return AssignExamErrors.OpenTimePassed;
         }
 
-        // 2. Khoảng cách (CloseAt - OpenAt) phải >= Duration (phút)
         if (exam.OpenAt.HasValue && exam.CloseAt.HasValue && exam.Duration > 0)
         {
             var windowMinutes = (exam.CloseAt.Value - exam.OpenAt.Value).TotalMinutes;
             if (windowMinutes < exam.Duration)
             {
-                throw new InvalidOperationException(
-                    $"Khoảng cách mở-đóng ({Math.Round(windowMinutes)} phút) phải >= thời lượng làm bài ({exam.Duration} phút). Vui lòng điều chỉnh thời gian trước khi khôi phục.");
+                return AssignExamErrors.DurationMismatch;
             }
         }
 
         await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
-
-        // Hangfire: Lập lịch lại sau khi khôi phục
         ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
+        return Result.Success();
     }
 
-    public async Task DeleteExamAsync(int id, CancellationToken ct = default)
+    public async Task<Result> DeleteExamAsync(int id, CancellationToken ct = default)
     {
-        var exam = await _repo.GetExamByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException("Exam not found.");
+        var exam = await _repo.GetExamByIdAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
 
-        // Chỉ cho phép xóa cứng khi ở trạng thái Ready hoặc Cancelled
         if (exam.Status != ExamStatus.Ready && exam.Status != ExamStatus.Cancelled)
         {
-            throw new InvalidOperationException(
-                "Chỉ có thể xóa đề thi ở trạng thái Ready hoặc Cancelled.");
+            return AssignExamErrors.InvalidStatusForDelete;
         }
 
         await _repo.HardDeleteExamAsync(id, ct);
+        return Result.Success();
     }
 
-    public async Task UpdateExamInfoAsync(int id, UpdateExamInfoRequest request, CancellationToken ct = default)
+    public async Task<Result> UpdateExamInfoAsync(int id, UpdateExamInfoRequest request, CancellationToken ct = default)
     {
-        var exam = await _repo.GetExamByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException("Exam not found.");
+        var exam = await _repo.GetExamByIdAsync(id, ct);
+        if (exam == null) return AssignExamErrors.ExamNotFound;
+
+        var valResult = ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
+        if (valResult.IsFailure) return valResult.Error!;
 
         if (exam.Status == ExamStatus.Cancelled)
         {
-            // Trạng thái Cancelled: chỉ cho phép điều chỉnh 3 mốc thời gian
-            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
             await _repo.UpdateExamInfoAsync(id, null, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
         }
         else if (exam.Status == ExamStatus.Ready)
         {
-            // Trạng thái Ready: cho phép sửa đầy đủ (Title + thời gian)
-            ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
             await _repo.UpdateExamInfoAsync(id, request.Title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
         }
         else
         {
-            throw new InvalidOperationException(
-                "Chỉ có thể chỉnh sửa thông tin đề thi khi đang ở trạng thái Chờ duyệt hoặc Đã hủy.");
+            return AssignExamErrors.InvalidStatusForUpdate;
         }
+
+        return Result.Success();
     }
 
-    private async Task<(int SubjId, int? BpId, List<int> QIds)> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
+    private async Task<Result<(int SubjId, int? BpId, List<int> QIds)>> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)
     {
         if (ids == null || ids.Count == 0)
         {
-            throw new ArgumentException("QuestionIds required.");
+            return new Error(ErrorCodes.Validation, ErrorType.Validation);
         }
 
         var sel = await _repo.GetQuestionsWithSubjectByIdsAsync(ids, ActiveStatus, ct);
         if (sel.Count != ids.Distinct().Count())
         {
-            throw new ArgumentException("One or more invalid or inactive questions.");
+            return AssignExamErrors.InvalidOrInactiveQuestions;
         }
 
         var subjectIds = sel.Select(x => x.SubjectId).Distinct().ToList();
         if (subjectIds.Count != 1)
         {
-            throw new ArgumentException("Questions must belong to the same subject.");
+            return AssignExamErrors.MultipleSubjects;
         }
 
         if (sid.HasValue && sid.Value != subjectIds[0])
         {
-            throw new ArgumentException("Subject mismatch.");
+            return AssignExamErrors.SubjectMismatch;
         }
 
-        return (subjectIds[0], null, sel.Select(x => x.QuestionId).ToList());
+        return Result<(int SubjId, int? BpId, List<int> QIds)>.Success((subjectIds[0], null, sel.Select(x => x.QuestionId).ToList()));
     }
 
-
-    private static void ValidateTimeWindow(DateTime? v, DateTime? o, DateTime? c)
+    private static Result ValidateTimeWindow(DateTime? v, DateTime? o, DateTime? c)
     {
-        if (v > o)
-        {
-            throw new ArgumentException("VisibleFrom > OpenAt.");
-        }
-        if (o >= c)
-        {
-            throw new ArgumentException("OpenAt >= CloseAt.");
-        }
+        if (v > o) return new Error(ErrorCodes.Validation, ErrorType.Validation);
+        if (o >= c) return new Error(ErrorCodes.Validation, ErrorType.Validation);
+        return Result.Success();
     }
 }

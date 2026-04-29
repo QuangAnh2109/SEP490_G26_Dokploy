@@ -421,6 +421,7 @@ FodyWeavers.xsd
 .agents/
 .claude/
 .plan/
+docs
 CLAUDE.md
 
 database/

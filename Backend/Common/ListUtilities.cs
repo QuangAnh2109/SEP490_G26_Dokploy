@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Backend.Common
@@ -12,15 +12,15 @@ namespace Backend.Common
 
             Random rng = seed.HasValue ? new Random(seed.Value) : new Random();
 
-            int n = list.Count;
-            while (n > 1)
+            int currentIndex = list.Count;
+            while (currentIndex > 1)
             {
-                n--;
-                int k = rng.Next(n + 1);
+                currentIndex--;
+                int randomIndex = rng.Next(currentIndex + 1);
 
-                T value = list[k];
-                list[k] = list[n];
-                list[n] = value;
+                T value = list[randomIndex];
+                list[randomIndex] = list[currentIndex];
+                list[currentIndex] = value;
             }
         }
     }

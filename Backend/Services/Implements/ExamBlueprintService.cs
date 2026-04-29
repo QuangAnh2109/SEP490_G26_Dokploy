@@ -8,16 +8,10 @@ using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements
 {
-    public class ExamBlueprintService : IExamBlueprintService
+    public class ExamBlueprintService(IExamBlueprintRepository examBlueprintRepository, ICurrentUserService currentUserService) : IExamBlueprintService
     {
-        private readonly IExamBlueprintRepository _examBlueprintRepository;
-        private readonly ICurrentUserService _currentUserService;
-
-        public ExamBlueprintService(IExamBlueprintRepository examBlueprintRepository, ICurrentUserService currentUserService)
-        {
-            _examBlueprintRepository = examBlueprintRepository;
-            _currentUserService = currentUserService;
-        }
+        private readonly IExamBlueprintRepository _examBlueprintRepository = examBlueprintRepository;
+        private readonly ICurrentUserService _currentUserService = currentUserService;
 
         public async Task<Result<List<SubjectOptionDto>>> GetSubjectsAsync()
         {

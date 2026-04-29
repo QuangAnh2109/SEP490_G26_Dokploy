@@ -46,38 +46,32 @@ public record SubjectOptionDto(
     string Name
 );
 
-//public record AssignExamFiltersResponseDto(
-//    IReadOnlyList<SubjectOptionDto> Subjects,
-//    IReadOnlyList<string> Semesters
-//);
-
 public class CreateAssignExamRequest
 {
-    public int TeacherId { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public string? Description { get; set; }
-    public int Duration { get; set; }
+    public int? Duration { get; set; }
     /// <summary>0 = none, 1 = immediate, 2 = after_exam</summary>
-    public int ShowScore { get; set; }
+    public int? ShowScore { get; set; }
     /// <summary>0 = none, 1 = student_only, 2 = with_correct</summary>
-    public int ShowAnswer { get; set; }
+    public int? ShowAnswer { get; set; }
     /// <summary>0 = after_submit, 1 = after_exam</summary>
-    public int AnswerTimingMode { get; set; }
-    public int MaxAttempts { get; set; } = 1;
+    public int? AnswerTimingMode { get; set; }
+    public int? MaxAttempts { get; set; }
     public DateTime? VisibleFrom { get; set; }
     public DateTime? OpenAt { get; set; }
     public DateTime? CloseAt { get; set; }
-    public bool ShuffleQuestion { get; set; }
-    public bool IsPublic { get; set; }
+    public bool? ShuffleQuestion { get; set; }
+    public bool? IsPublic { get; set; }
     public int? ClassId { get; set; }
 
     // "blueprint" or "manual"
-    public string GenerationMode { get; set; } = "blueprint";
+    public string? GenerationMode { get; set; }
     public int? ExamBlueprintId { get; set; }
     public int? SubjectId { get; set; }
-    public List<int> QuestionIds { get; set; } = [];
-    public int PaperCount { get; set; } = 1;
-    public int PaperCode { get; set; } = 1;
+    public List<int>? QuestionIds { get; set; }
+    public int? PaperCount { get; set; }
+    public int? PaperCode { get; set; }
 }
 
 public record CreatedPaperDto(
@@ -140,7 +134,6 @@ public class UpdateExamInfoRequest
     public DateTime? CloseAt { get; set; }
 }
 
-// Reuse or define BlueprintRowDto if not available in this namespace
 public record BlueprintRowDto
 {
     public string ChapterName { get; init; } = "";
@@ -151,9 +144,10 @@ public record BlueprintRowDto
     public int Total { get; init; }
 }
 
-public record SwapQuestionRequestDto(
-    int PaperId,
-    int OldQuestionId,
-    int NewQuestionId,
-    bool SwapGlobal = false
-);
+public class SwapQuestionRequestDto
+{
+    public int? PaperId { get; set; }
+    public int? OldQuestionId { get; set; }
+    public int? NewQuestionId { get; set; }
+    public bool? SwapGlobal { get; set; }
+}

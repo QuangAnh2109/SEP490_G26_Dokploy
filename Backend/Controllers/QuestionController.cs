@@ -8,13 +8,9 @@ namespace Backend.Controllers
 {
     [Route("api/questions")]
     [ApiController]
-    public class QuestionController : ControllerBase
+    public class QuestionController(IQuestionService questionService) : ControllerBase
     {
-        private readonly IQuestionService _questionService;
-        public QuestionController(IQuestionService questionService)
-        {
-            _questionService = questionService;
-        }
+        private readonly IQuestionService _questionService = questionService;
 
         [HttpGet]
         [Authorize(Roles = RoleIds.Teacher)]

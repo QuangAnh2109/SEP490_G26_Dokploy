@@ -56,4 +56,29 @@ public static class ErrorCodes
     public const string ExamBlueprintCannotDelete = "EXAM_BLUEPRINT_CANNOT_DELETE";
     public const string ExamBlueprintInUse = "EXAM_BLUEPRINT_IN_USE";
     public const string ExamBlueprintDuplicateName = "EXAM_BLUEPRINT_DUPLICATE_NAME";
+
+    // AssignExam
+    public const string AssignExamTeacherNotFound = "ASSIGN_EXAM_TEACHER_NOT_FOUND";
+    public const string AssignExamBlueprintNotFound = "ASSIGN_EXAM_BLUEPRINT_NOT_FOUND";
+    public const string AssignExamInsufficientQuestions = "ASSIGN_EXAM_INSUFFICIENT_QUESTIONS";
+    public const string AssignExamClassNotFound = "ASSIGN_EXAM_CLASS_NOT_FOUND";
+    public const string AssignExamClassNotOwnedByTeacher = "ASSIGN_EXAM_CLASS_NOT_OWNED_BY_TEACHER";
+    public const string AssignExamSubjectMismatch = "ASSIGN_EXAM_SUBJECT_MISMATCH";
+    public const string AssignExamNoQuestionsSelected = "ASSIGN_EXAM_NO_QUESTIONS_SELECTED";
+    public const string AssignExamNotFound = "ASSIGN_EXAM_NOT_FOUND";
+    public const string AssignExamPaperNotFound = "ASSIGN_EXAM_PAPER_NOT_FOUND";
+    public const string AssignExamQuestionNotFound = "ASSIGN_EXAM_QUESTION_NOT_FOUND";
+    public const string AssignExamQuestionNotInPaper = "ASSIGN_EXAM_QUESTION_NOT_IN_PAPER";
+    public const string AssignExamQuestionInactive = "ASSIGN_EXAM_QUESTION_INACTIVE";
+    public const string AssignExamDifficultyMismatch = "ASSIGN_EXAM_DIFFICULTY_MISMATCH";
+    public const string AssignExamChapterMismatch = "ASSIGN_EXAM_CHAPTER_MISMATCH";
+    public const string AssignExamInvalidStatusForCancel = "ASSIGN_EXAM_INVALID_STATUS_FOR_CANCEL";
+    public const string AssignExamAlreadyStarted = "ASSIGN_EXAM_ALREADY_STARTED";
+    public const string AssignExamInvalidStatusForRestore = "ASSIGN_EXAM_INVALID_STATUS_FOR_RESTORE";
+    public const string AssignExamOpenTimePassed = "ASSIGN_EXAM_OPEN_TIME_PASSED";
+    public const string AssignExamDurationMismatch = "ASSIGN_EXAM_DURATION_MISMATCH";
+    public const string AssignExamInvalidStatusForDelete = "ASSIGN_EXAM_INVALID_STATUS_FOR_DELETE";
+    public const string AssignExamInvalidStatusForUpdate = "ASSIGN_EXAM_INVALID_STATUS_FOR_UPDATE";
+    public const string AssignExamInvalidOrInactiveQuestions = "ASSIGN_EXAM_INVALID_OR_INACTIVE_QUESTIONS";
+    public const string AssignExamMultipleSubjects = "ASSIGN_EXAM_MULTIPLE_SUBJECTS";
 }

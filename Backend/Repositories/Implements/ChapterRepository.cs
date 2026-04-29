@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Course;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -42,17 +42,17 @@ namespace Backend.Repositories.Implements
         /// </summary>
         public async Task<ChapterDTO?> GetByIdAsync(int chapterId)
         {
-            var c = await _context.Chapters
+            var chapter = await _context.Chapters
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.ChapterId == chapterId);
 
-            if (c == null) return null;
+            if (chapter == null) return null;
 
             return new ChapterDTO
             {
-                ChapterId = c.ChapterId,
-                SubjectId = c.SubjectId,
-                Name = c.Name
+                ChapterId = chapter.ChapterId,
+                SubjectId = chapter.SubjectId,
+                Name = chapter.Name
             };
         }
         public async Task<List<ChapterDTO>> GetBySubjectIdAsync(int subjectId)

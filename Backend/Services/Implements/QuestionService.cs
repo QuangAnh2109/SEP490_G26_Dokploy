@@ -11,26 +11,19 @@ using System.Text.Json;
 
 namespace Backend.Services.Implements
 {
-    public class QuestionService : IQuestionService
+    public class QuestionService(
+        IQuestionRepository questionRepository, 
+        ILogger<QuestionService> logger,
+        ICurrentUserService currentUserService) : IQuestionService
     {
-        private readonly IQuestionRepository _questionRepository;
-        private readonly ILogger<QuestionService> _logger;
-        private readonly ICurrentUserService _currentUserService;
+        private readonly IQuestionRepository _questionRepository = questionRepository;
+        private readonly ILogger<QuestionService> _logger = logger;
+        private readonly ICurrentUserService _currentUserService = currentUserService;
 
         private static readonly JsonSerializerOptions UnicodeJsonOptions = new()
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
-
-        public QuestionService(
-            IQuestionRepository questionRepository, 
-            ILogger<QuestionService> logger,
-            ICurrentUserService currentUserService)
-        {
-            _questionRepository = questionRepository;
-            _logger = logger;
-            _currentUserService = currentUserService;
-        }
 
         public async Task<Result<QuestionListResultDto>> GetQuestionsAsync(QuestionListQueryDto query)
         {
@@ -95,31 +88,31 @@ namespace Backend.Services.Implements
         public async Task<Result<QuestionDto>> GetQuestionByIdAsync(int questionId)
         {
             var userId = _currentUserService.UserId;
-            var q = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
-            if (q == null || q.CreatedByUserId != userId) return QuestionErrors.NotFound;
+            var question = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
+            if (q == null || question.CreatedByUserId != userId) return QuestionErrors.NotFound;
 
-            var (stem, frame) = ParseContent(q.QuestionContent);
+            var (stem, frame) = ParseContent(question.QuestionContent);
             var dto = new QuestionDto 
             { 
-                QuestionType = q.QuestionType, 
-                ChapterId = q.ChapterId, 
-                Difficulty = q.Difficulty, 
-                Status = q.Status, 
+                QuestionType = question.QuestionType, 
+                ChapterId = question.ChapterId, 
+                Difficulty = question.Difficulty, 
+                Status = question.Status, 
                 Stem = stem ?? string.Empty, 
                 Frame = frame, 
-                QuestionPurpose = q.QuestionPurpose 
+                QuestionPurpose = question.QuestionPurpose 
             };
 
-            dto.Answers = q.QuestionAnswers.Select(a => new AnswerDto {
+            dto.Answers = question.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
                 IsCorrect = a.IsCorrect ?? false, Point = a.Point ?? 0, 
                 InputTypeId = a.BlankInputs.FirstOrDefault()?.InputTypeId,
                 BlankIndex = GetBlankIndex(a.Content)
             }).ToList();
 
-            if (q.QuestionType == QuestionType.FillBlank)
+            if (question.QuestionType == QuestionType.FillBlank)
             {
-                dto.BlankGroups = q.QuestionAnswers
+                dto.BlankGroups = question.QuestionAnswers
                     .Where(a => a.GroupAnswer != null)
                     .GroupBy(a => a.GroupAnswerId!.Value)
                     .Select(g => new GroupAnswerDto {
@@ -139,10 +132,10 @@ namespace Backend.Services.Implements
 
             foreach (var q in questions)
             {
-                if (q.CreatedByUserId == userId)
+                if (question.CreatedByUserId == userId)
                 {
-                    q.Status = status;
-                    q.UpdatedAtUtc = DateTime.UtcNow;
+                    question.Status = status;
+                    question.UpdatedAtUtc = DateTime.UtcNow;
                     updatedCount++;
                 }
             }
@@ -213,25 +206,25 @@ namespace Backend.Services.Implements
 
         private Question MapToQuestionEntity(QuestionDto item, int userId, Question? existing = null)
         {
-            var q = existing ?? new Question { CreatedByUserId = userId };
-            q.QuestionType = item.QuestionType ?? string.Empty;
-            q.ChapterId = item.ChapterId ?? 0;
-            q.Difficulty = item.Difficulty ?? 1;
-            q.QuestionPurpose = item.QuestionPurpose ?? 1;
-            q.Status = item.Status ?? QuestionStatus.Draft;
-            q.UpdatedAtUtc = DateTime.UtcNow;
-            q.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
+            var question = existing ?? new Question { CreatedByUserId = userId };
+            question.QuestionType = item.QuestionType ?? string.Empty;
+            question.ChapterId = item.ChapterId ?? 0;
+            question.Difficulty = item.Difficulty ?? 1;
+            question.QuestionPurpose = item.QuestionPurpose ?? 1;
+            question.Status = item.Status ?? QuestionStatus.Draft;
+            question.UpdatedAtUtc = DateTime.UtcNow;
+            question.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
 
             if (item.Answers != null)
             {
                 foreach (var adto in item.Answers)
                 {
-                    var ans = adto.AnswerId.HasValue ? q.QuestionAnswers.FirstOrDefault(a => a.QuestionAnswerId == adto.AnswerId) : null;
-                    if (ans == null && q.QuestionType == QuestionType.FillBlank && adto.BlankIndex.HasValue)
-                        ans = q.QuestionAnswers.FirstOrDefault(a => a.Content != null && 
+                    var ans = adto.AnswerId.HasValue ? question.QuestionAnswers.FirstOrDefault(a => a.QuestionAnswerId == adto.AnswerId) : null;
+                    if (ans == null && question.QuestionType == QuestionType.FillBlank && adto.BlankIndex.HasValue)
+                        ans = question.QuestionAnswers.FirstOrDefault(a => a.Content != null && 
                               System.Text.RegularExpressions.Regex.IsMatch(a.Content, $@"placeholder\[{adto.BlankIndex}\](\{{|$)"));
 
-                    if (ans == null) q.QuestionAnswers.Add(ans = new QuestionAnswer());
+                    if (ans == null) question.QuestionAnswers.Add(ans = new QuestionAnswer());
 
                     ans.Content = adto.Content;
                     ans.CorrectAnswer = adto.CorrectAnswer;
@@ -259,9 +252,9 @@ namespace Backend.Services.Implements
             if (string.IsNullOrEmpty(json)) return (null, null);
             try
             {
-                var d = JsonSerializer.Deserialize<Dictionary<string, string>>(json, UnicodeJsonOptions);
-                return (d?.GetValueOrDefault("stem") ?? d?.GetValueOrDefault("Stem"), 
-                        d?.GetValueOrDefault("frame") ?? d?.GetValueOrDefault("Frame"));
+                var dictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json, UnicodeJsonOptions);
+                return (dictionary?.GetValueOrDefault("stem") ?? dictionary?.GetValueOrDefault("Stem"), 
+                        dictionary?.GetValueOrDefault("frame") ?? dictionary?.GetValueOrDefault("Frame"));
             }
             catch
             {
@@ -290,7 +283,7 @@ namespace Backend.Services.Implements
 
         private async Task HandleBlankGroupsAsync(Question q, QuestionDto item)
         {
-            var answers = q.QuestionAnswers.ToList();
+            var answers = question.QuestionAnswers.ToList();
             var existingGroups = answers.Where(a => a.GroupAnswer != null).Select(a => a.GroupAnswer!).Distinct().ToList();
             
             if (item.BlankGroups?.Any() != true || item.QuestionType != QuestionType.FillBlank)

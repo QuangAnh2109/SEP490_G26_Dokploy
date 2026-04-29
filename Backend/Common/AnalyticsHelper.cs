@@ -25,11 +25,11 @@ public static class AnalyticsHelper
 
     public static decimal GetMedian(List<decimal> sorted)
     {
-        int n = sorted.Count;
-        if (n == 0) return 0;
-        if (n % 2 == 0)
-            return Math.Round((sorted[n / 2 - 1] + sorted[n / 2]) / 2, 2);
-        return sorted[n / 2];
+        int count = sorted.Count;
+        if (count == 0) return 0;
+        if (count % 2 == 0)
+            return Math.Round((sorted[count / 2 - 1] + sorted[count / 2]) / 2, 2);
+        return sorted[count / 2];
     }
 
     public static Dictionary<string, int> BuildScoreDistribution(List<decimal> scores)
@@ -77,7 +77,7 @@ public static class AnalyticsHelper
         var question = qa.Question;
         if (question == null)
         {
-            if (questionDict.TryGetValue(qa.QuestionId, out var q)) question = q;
+            if (questionDict.TryGetValue(qa.QuestionId, out var dictQuestion)) question = dictQuestion;
         }
 
         if (question == null) return null;
