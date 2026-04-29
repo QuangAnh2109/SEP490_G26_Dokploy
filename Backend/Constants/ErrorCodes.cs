@@ -35,4 +35,10 @@ public static class ErrorCodes
     public const string AuthUserNotFound = "AUTH_USER_NOT_FOUND";
     public const string AuthGoogleAccountNoPassword = "AUTH_GOOGLE_ACCOUNT_NO_PASSWORD";
     public const string AuthInvalidRefreshToken = "AUTH_INVALID_REFRESH_TOKEN";
+
+    // Question
+    public const string QuestionNotFound = "QUESTION_NOT_FOUND";
+    public const string QuestionInUse = "QUESTION_IN_USE";
+    public const string QuestionInvalidDeleteStatus = "QUESTION_INVALID_DELETE_STATUS";
+    public const string QuestionEmptyList = "QUESTION_EMPTY_LIST";
 }

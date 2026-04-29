@@ -1,15 +1,17 @@
+using Backend.Common;
+using Backend.Common.Models;
 using Backend.DTOs.Question;
 
 namespace Backend.Services.Interfaces
 {
     public interface IQuestionService
     {
-        Task<QuestionListResultDto> GetQuestionsAsync(QuestionListQueryDto query, int userId);
-        Task<QuestionDto> GetQuestionByIdAsync(int questionId, int userId);
-        Task<List<QuestionSummaryDto>> CreateQuestionsAsync(int userId, List<QuestionDto> request);
-        Task<QuestionSummaryDto> UpdateQuestionAsync(int questionId, int userId, QuestionDto request);
-        Task<int> UpdateQuestionStatusAsync(List<int> questionIds, int userId, string status);
-        Task DeleteQuestionAsync(int questionId, int userId);
-        Task<QuestionMetadataDto> GetQuestionMetadataAsync();
+        Task<Result<QuestionListResultDto>> GetQuestionsAsync(QuestionListQueryDto query);
+        Task<Result<QuestionDto>> GetQuestionByIdAsync(int questionId);
+        Task<Result<List<QuestionSummaryDto>>> CreateQuestionsAsync(List<QuestionDto> request);
+        Task<Result<QuestionSummaryDto>> UpdateQuestionAsync(int questionId, QuestionDto request);
+        Task<Result<int>> UpdateQuestionStatusAsync(List<int> questionIds, string status);
+        Task<Result> DeleteQuestionAsync(int questionId);
+        Task<Result<QuestionMetadataDto>> GetQuestionMetadataAsync();
     }
 }
