@@ -9,7 +9,6 @@ namespace Backend.Controllers
 {
     [Route("api/practice")]
     [ApiController]
-    [Authorize(Policy = nameof(Roles.Student))]
     public class PracticeExamController : ControllerBase
     {
         private readonly IPracticeExamService _practiceService;
@@ -35,6 +34,7 @@ namespace Backend.Controllers
         /// Lấy danh sách chương của khóa học kèm proficiency và số câu luyện tập có sẵn.
         /// </summary>
         [HttpGet("class/{classId}/chapters")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> GetChaptersForPractice(int classId)
         {
             var studentId = GetStudentId();
@@ -64,6 +64,7 @@ namespace Backend.Controllers
         /// Tạo đề luyện tập tự động dựa trên proficiency sinh viên.
         /// </summary>
         [HttpPost("create")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> CreatePracticeExam([FromBody] CreatePracticeExamRequest request)
         {
             var studentId = GetStudentId();
@@ -101,6 +102,7 @@ namespace Backend.Controllers
         /// Nộp bài luyện tập — không giới hạn thời gian.
         /// </summary>
         [HttpPost("submit")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> SubmitPracticeExam([FromBody] SubmitPracticeExamRequest request)
         {
             var studentId = GetStudentId();
@@ -138,6 +140,7 @@ namespace Backend.Controllers
         /// Lưu câu trả lời giữa chừng — không nộp bài, giữ trạng thái InProgress.
         /// </summary>
         [HttpPost("save")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> SavePracticeAnswers([FromBody] SubmitPracticeExamRequest request)
         {
             var studentId = GetStudentId();
@@ -175,6 +178,7 @@ namespace Backend.Controllers
         /// Resume bài luyện tập đang làm dở — trả lại câu hỏi + câu trả lời đã lưu.
         /// </summary>
         [HttpGet("resume/{submissionId}")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> ResumePracticeExam(int submissionId)
         {
             var studentId = GetStudentId();
@@ -208,6 +212,7 @@ namespace Backend.Controllers
         /// Xem kết quả bài luyện tập — hiển thị đáp án từng câu.
         /// </summary>
         [HttpGet("result/{submissionId}")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> GetPracticeResult(int submissionId)
         {
             var studentId = GetStudentId();
@@ -241,6 +246,7 @@ namespace Backend.Controllers
         /// Lấy lịch sử luyện tập. Có thể lọc theo classId.
         /// </summary>
         [HttpGet("history")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> GetPracticeHistory([FromQuery] int? classId)
         {
             var studentId = GetStudentId();

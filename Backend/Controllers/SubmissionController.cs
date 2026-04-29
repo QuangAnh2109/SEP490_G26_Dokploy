@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 
+using Backend.Common;
 using Backend.DTOs;
 using Backend.Services.Interfaces;
 
@@ -12,7 +13,6 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/submission")]
-[Authorize]
 public class SubmissionController : ControllerBase
 {
     private readonly ISubmissionService _submissionService;
@@ -29,6 +29,7 @@ public class SubmissionController : ControllerBase
     /// Nộp bài kiểm tra. StudentId được lấy từ JWT token.
     /// </summary>
     [HttpPost("submit")]
+    [Authorize(Roles = RoleIds.Student)]
     public async Task<ActionResult<SubmitExamResponse>> SubmitExam(
         [FromBody] SubmitExamRequest request,
         CancellationToken cancellationToken = default)

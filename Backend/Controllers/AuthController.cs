@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Backend.Common;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Services.Interfaces;
@@ -20,7 +21,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("me")]
-        [Authorize]
+        [Authorize(Roles = RoleIds.Any)]
         public IActionResult GetMe()
         {
             var userId = GetCurrentUserId();
@@ -253,7 +254,7 @@ namespace Backend.Controllers
         //}
 
         [HttpPost("logout")]
-        [Authorize]
+        [Authorize(Roles = RoleIds.Any)]
         public async Task<IActionResult> Logout()
         {
             try

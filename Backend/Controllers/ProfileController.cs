@@ -1,5 +1,6 @@
 using System.Security.Claims;
 
+using Backend.Common;
 using Backend.DTOs;
 using Backend.DTOs.Profile;
 using Backend.Services.Interfaces;
@@ -11,7 +12,6 @@ namespace Backend.Controllers
 {
     [Route("api/profile")]
     [ApiController]
-    [Authorize]
     public class ProfileController : ControllerBase
     {
         private readonly IProfileService _service;
@@ -31,6 +31,7 @@ namespace Backend.Controllers
         // xem thông tin profile
         // ===============================
         [HttpGet]
+        [Authorize(Roles = RoleIds.Any)]
         public async Task<IActionResult> GetProfile()
         {
             int userId = GetUserId();
@@ -48,6 +49,7 @@ namespace Backend.Controllers
         // cập nhật profile
         // ===============================
         [HttpPut]
+        [Authorize(Roles = RoleIds.Any)]
         public async Task<IActionResult> UpdateProfile(UpdateProfileDTO dto)
         {
             int userId = GetUserId();
@@ -71,6 +73,7 @@ namespace Backend.Controllers
         // đổi mật khẩu
         // ===============================
         [HttpPut("change-password")]
+        [Authorize(Roles = RoleIds.Any)]
         public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
         {
             int userId = GetUserId();

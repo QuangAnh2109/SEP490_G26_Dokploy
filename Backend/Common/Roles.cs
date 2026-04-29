@@ -1,10 +1,10 @@
 namespace Backend.Common;
 
-// IMPORTANT: enum values MUST match dbo.Roles.RoleId seed data.
-// Teacher = 1, Student = 2. AuthService.GenerateJwtToken issues claim role = user.RoleId,
-// and authorization policies (Program.cs) match against these numeric values.
-public enum Roles
+// RoleIds values MUST match dbo.Roles.RoleId seed data: Teacher=1, Student=2.
+// Use these constants in [Authorize(Roles = ...)] attributes and JWT claim comparisons.
+public static class RoleIds
 {
-    Teacher = 1,
-    Student = 2
+    public const string Teacher = "1";
+    public const string Student = "2";
+    public const string Any = "1,2";
 }

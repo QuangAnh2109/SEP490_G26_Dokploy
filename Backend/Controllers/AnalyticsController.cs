@@ -23,7 +23,7 @@ public class AnalyticsController : ControllerBase
     /// Phân tích chi tiết bài thi — dành cho Giáo viên.
     /// </summary>
     [HttpGet("exam/{examId}/detail")]
-    [Authorize(Policy = nameof(Roles.Teacher))]
+    [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetExamAnalyticsDetail(int examId)
     {
         try
@@ -45,7 +45,7 @@ public class AnalyticsController : ControllerBase
     /// Phân tích bài làm cá nhân — dành cho Học sinh.
     /// </summary>
     [HttpGet("exam/{examId}/student")]
-    [Authorize(Policy = nameof(Roles.Student))]
+    [Authorize(Roles = RoleIds.Student)]
     public async Task<IActionResult> GetStudentSubmissionAnalytics(int examId)
     {
         try
@@ -73,7 +73,7 @@ public class AnalyticsController : ControllerBase
     /// Thống kê nộp bài — danh sách học sinh + lịch sử nộp (dành cho Giáo viên).
     /// </summary>
     [HttpGet("exam/{examId}/submissions")]
-    [Authorize(Policy = nameof(Roles.Teacher))]
+    [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetExamSubmitResults(int examId)
     {
         try
@@ -95,7 +95,7 @@ public class AnalyticsController : ControllerBase
     /// Xem chi tiết bài làm theo submissionId — dành cho Giáo viên.
     /// </summary>
     [HttpGet("submission/{submissionId}")]
-    [Authorize(Policy = nameof(Roles.Teacher))]
+    [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetSubmissionBySubmissionId(int submissionId)
     {
         try

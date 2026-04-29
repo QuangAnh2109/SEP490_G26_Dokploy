@@ -10,7 +10,6 @@ namespace Backend.Controllers
 {
     [Route("api/questions")]
     [ApiController]
-    [Authorize(Policy = nameof(Roles.Teacher))]
     public class QuestionController : BaseController
     {
         private readonly IQuestionService _questionService;
@@ -21,6 +20,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetQuestionsAsync([FromQuery] QuestionListQueryDto query)
         {
             var userId = GetCurrentUserId();
@@ -34,6 +34,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetQuestionByIdAsync(int id)
         {
             var userId = GetCurrentUserId();
@@ -47,6 +48,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> CreateQuestionsAsync([FromBody] List<QuestionDto> request)
         {
             var userId = GetCurrentUserId();
@@ -60,6 +62,7 @@ namespace Backend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> UpdateQuestionAsync(int id, [FromBody] QuestionDto request)
         {
             var userId = GetCurrentUserId();
@@ -73,6 +76,7 @@ namespace Backend.Controllers
         }
 
         [HttpPatch("status")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> UpdateQuestionStatusAsync([FromBody] QuestionStatusUpdateDto request)
         {
             var userId = GetCurrentUserId();
@@ -91,6 +95,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("metadata")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetMetadataAsync()
         {
             var result = await _questionService.GetQuestionMetadataAsync();
@@ -98,6 +103,7 @@ namespace Backend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> DeleteQuestionAsync(int id)
         {
             var userId = GetCurrentUserId();

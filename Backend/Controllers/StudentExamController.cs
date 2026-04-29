@@ -10,7 +10,6 @@ namespace Backend.Controllers
 {
     [Route("api/student/exams")]
     [ApiController]
-    [Authorize]
     public class StudentExamController : ControllerBase
     {
         private readonly IStudentExamService _studentExamService;
@@ -34,6 +33,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("{examId}/take")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> TakeExamInClass(string examId)
         {
             var studentId = GetStudentId();
@@ -67,13 +67,14 @@ namespace Backend.Controllers
             }
         }
         [HttpGet("{examId}/preview")]
+        [Authorize(Roles = RoleIds.Any)]
         public async Task<IActionResult> GetExamPreview(int examId)
         {
             var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
                 return Unauthorized("Invalid token.");
 
-            var isTeacher = User.IsInRole(((int)Roles.Teacher).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            var isTeacher = User.IsInRole(RoleIds.Teacher);
 
             try
             {
@@ -93,6 +94,7 @@ namespace Backend.Controllers
         /// Lấy lịch sử bài nộp tổng hợp (kiểm tra + luyện tập) của sinh viên.
         /// </summary>
         [HttpGet("history")]
+        [Authorize(Roles = RoleIds.Student)]
         public async Task<IActionResult> GetSubmissionHistory([FromQuery] int? classId)
         {
             var studentId = GetStudentId();

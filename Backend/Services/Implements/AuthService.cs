@@ -1,4 +1,3 @@
-using Backend.Common;
 using Backend.Constants;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
@@ -8,7 +7,6 @@ using Backend.Services.Interfaces;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
-using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -568,7 +566,7 @@ namespace Backend.Services.Implements
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.RoleId.ToString(CultureInfo.InvariantCulture)),
+                new Claim(ClaimTypes.Role, user.RoleId.ToString()),
                 new Claim("auth_provider", string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password")
             };
 

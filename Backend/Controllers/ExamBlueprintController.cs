@@ -10,7 +10,6 @@ namespace Backend.Controllers
 {
     [Route("api/exam-blueprints")]
     [ApiController]
-    [Authorize(Policy = nameof(Roles.Teacher))]
     public class ExamBlueprintController : ControllerBase
     {
         private readonly IExamBlueprintService _examBlueprintService;
@@ -21,6 +20,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetBlueprints([FromQuery] BlueprintListQueryDto query)
         {
             try
@@ -38,6 +38,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetBlueprintDetail(int id)
         {
             try
@@ -55,6 +56,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("subjects")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetSubjects()
         {
             try
@@ -69,6 +71,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("subjects/{subjectId:int}/chapters")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> GetChaptersBySubject(int subjectId)
         {
             try
@@ -83,6 +86,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> CreateBlueprint([FromBody] CreateExamBlueprintRequest request)
         {
             try
@@ -100,6 +104,7 @@ namespace Backend.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> UpdateBlueprint(int id, [FromBody] CreateExamBlueprintRequest request)
         {
             try
@@ -117,6 +122,7 @@ namespace Backend.Controllers
         }
 
         [HttpPatch("status")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> UpdateBlueprintStatus([FromBody] BlueprintStatusUpdateDto request)
         {
             try
@@ -139,6 +145,7 @@ namespace Backend.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> DeleteBlueprint(int id)
         {
             try

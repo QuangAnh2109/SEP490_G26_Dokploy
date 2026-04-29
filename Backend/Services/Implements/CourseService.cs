@@ -132,7 +132,7 @@ namespace Backend.Services.Implements
                 throw new Exception("Học sinh chưa có tài khoản trong hệ thống.");
             }
 
-            if (user.Role?.Name != nameof(Roles.Student))
+            if (user.RoleId.ToString() != RoleIds.Student)
             {
                 throw new Exception("Chỉ có thể mời người dùng có vai trò là học sinh tham gia lớp học.");
             }
