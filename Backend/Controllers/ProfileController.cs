@@ -1,119 +1,27 @@
-using System.Security.Claims;
-
 using Backend.Common;
-using Backend.DTOs;
 using Backend.DTOs.Profile;
 using Backend.Services.Interfaces;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Backend.Controllers
+namespace Backend.Controllers;
+
+[Route("api/profile")]
+[ApiController]
+public class ProfileController(IProfileService service, ICurrentUserService currentUser) : ControllerBase
 {
-    [Route("api/profile")]
-    [ApiController]
-    public class ProfileController : ControllerBase
-    {
-        private readonly IProfileService _service;
+    [HttpGet]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetProfile()
+        => (await service.GetProfileAsync(currentUser.UserId)).ToActionResult(this);
 
-        public ProfileController(IProfileService service)
-        {
-            _service = service;
-        }
+    [HttpPut]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> UpdateProfile(UpdateProfileDTO dto)
+        => (await service.UpdateProfileAsync(currentUser.UserId, dto)).ToActionResult(this);
 
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        }
-
-        // ===============================
-        // GET: api/profile
-        // xem thông tin profile
-        // ===============================
-        [HttpGet]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetProfile()
-        {
-            int userId = GetUserId();
-
-            var profile = await _service.GetProfileAsync(userId);
-
-            if (profile == null)
-                return NotFound("User not found");
-
-            return Ok(profile);
-        }
-
-        // ===============================
-        // PUT: api/profile
-        // cập nhật profile
-        // ===============================
-        [HttpPut]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> UpdateProfile(UpdateProfileDTO dto)
-        {
-            int userId = GetUserId();
-
-            try
-            {
-                var result = await _service.UpdateProfileAsync(userId, dto);
-                if (!result)
-                    return BadRequest(new { message = "Update failed" });
-
-                return Ok(new { message = "Profile updated successfully" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        // ===============================
-        // PUT: api/profile/change-password
-        // đổi mật khẩu
-        // ===============================
-        [HttpPut("change-password")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
-        {
-            int userId = GetUserId();
-
-            var profile = await _service.GetProfileAsync(userId);
-
-            if (profile == null)
-                return NotFound("User not found");
-
-            // nếu login bằng Google thì không cho đổi password
-            var user = await _service.GetProfileAsync(userId);
-
-            if (user == null)
-                return NotFound();
-
-            // logic kiểm tra google login
-            // giả sử PasswordHash null = Google account
-            if (await IsGoogleAccount(userId))
-            {
-                return BadRequest("Google account cannot change password");
-            }
-
-            var result = await _service.ChangePasswordAsync(userId, dto);
-
-            if (!result)
-                return BadRequest("Password change failed");
-
-            return Ok(new
-            {
-                message = "Password changed successfully"
-            });
-        }
-
-        // helper check google login
-        private async Task<bool> IsGoogleAccount(int userId)
-        {
-            var profile = await _service.GetProfileAsync(userId);
-
-            // nếu hệ thống bạn dùng PasswordHash null cho Google
-            return profile == null;
-        }
-    }
+    [HttpPut("change-password")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
+        => (await service.ChangePasswordAsync(currentUser.UserId, dto)).ToActionResult(this);
 }

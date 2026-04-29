@@ -1,103 +1,66 @@
-using Backend.DTOs;
+using Backend.Common;
+using Backend.Common.Errors;
+using Backend.Common.Models;
+using Backend.Constants;
 using Backend.DTOs.Profile;
-using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
-using Backend.Constants;
 
-namespace Backend.Services.Implements
+namespace Backend.Services.Implements;
+
+public class ProfileService(IProfileRepository repo) : IProfileService
 {
-    public class ProfileService : IProfileService
+    public async Task<Result<UserProfileDTO>> GetProfileAsync(int userId)
     {
-        private readonly IProfileRepository _repo;
-        public ProfileService(IProfileRepository repo)
+        var user = await repo.GetUserByIdAsync(userId);
+        if (user == null) return ProfileErrors.NotFound;
+
+        return new UserProfileDTO
         {
-            _repo = repo;
-        }
+            UserId = user.UserId,
+            Email = user.Email,
+            FullName = user.FullName,
+            PhoneNumber = user.PhoneNumber,
+            StudentId = user.StudentId,
+            RoleId = user.RoleId,
+            Status = user.Status
+        };
+    }
 
-        public async Task<UserProfileDTO?> GetProfileAsync(int userId)
-        {
-            var user = await _repo.GetUserByIdAsync(userId);
+    public async Task<Result> UpdateProfileAsync(int userId, UpdateProfileDTO dto)
+    {
+        var user = await repo.GetUserByIdAsync(userId);
+        if (user == null) return Result.Failure(ProfileErrors.NotFound);
 
-            if (user == null) return null;
+        // Role-dependent StudentId rule (format already validated by FluentValidator)
+        if (user.RoleId.ToString() == RoleIds.Student && string.IsNullOrWhiteSpace(dto.StudentId))
+            return Result.Failure(new Error(ErrorCodes.Validation, ErrorType.Validation));
 
-            return new UserProfileDTO
-            {
-                UserId = user.UserId,
-                Email = user.Email,
-                FullName = user.FullName,
-                PhoneNumber = user.PhoneNumber,
-                StudentId = user.StudentId,
-                RoleId = user.RoleId,
-                Status = user.Status
-            };
-        }
+        user.FullName = dto.FullName!.Trim();
+        user.PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
+        user.StudentId = string.IsNullOrWhiteSpace(dto.StudentId) ? null : dto.StudentId.Trim();
 
-        public async Task<bool> UpdateProfileAsync(int userId, UpdateProfileDTO dto)
-        {
-            var user = await _repo.GetUserByIdAsync(userId);
+        await repo.UpdateUserAsync(user);
+        await repo.SaveChangesAsync();
+        return Result.Success();
+    }
 
-            if (user == null) return false;
+    public async Task<Result> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
+    {
+        var user = await repo.GetUserByIdAsync(userId);
+        if (user == null) return Result.Failure(ProfileErrors.NotFound);
 
-            var fullName = (dto.FullName ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(fullName))
-                throw new InvalidOperationException(ValidationMessages.FullNameRequired);
-            if (!System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
-                throw new InvalidOperationException(ValidationMessages.FullNameInvalid);
+        if (string.IsNullOrEmpty(user.PasswordHash))
+            return Result.Failure(ProfileErrors.GoogleAccount);
 
-            var phone = (dto.PhoneNumber ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(phone) &&
-                !System.Text.RegularExpressions.Regex.IsMatch(phone, @"^0\d{9}$"))
-                throw new InvalidOperationException(ValidationMessages.PhoneNumberInvalid);
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            return Result.Failure(ProfileErrors.WrongPassword);
 
-            string? studentId = null;
-            if (user.RoleId == 2)
-            {
-                studentId = (dto.StudentId ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(studentId))
-                    throw new InvalidOperationException(ValidationMessages.StudentIdRequiredForStudent);
-                if (!System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
-                    throw new InvalidOperationException(ValidationMessages.StudentIdInvalid);
-            }
-            else
-            {
-                var raw = (dto.StudentId ?? string.Empty).Trim();
-                if (!string.IsNullOrWhiteSpace(raw) &&
-                    !System.Text.RegularExpressions.Regex.IsMatch(raw, @"^[A-Za-z]{2}\d{6}$"))
-                    throw new InvalidOperationException(ValidationMessages.StudentIdInvalid);
-                studentId = string.IsNullOrWhiteSpace(raw) ? null : raw;
-            }
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.SecurityStamp = DateTime.UtcNow;
 
-            user.FullName = fullName;
-            user.PhoneNumber = string.IsNullOrWhiteSpace(phone) ? null : phone;
-            user.StudentId = studentId;
-
-            await _repo.UpdateUserAsync(user);
-            await _repo.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto)
-        {
-            var user = await _repo.GetUserByIdAsync(userId);
-
-            if (user == null) return false;
-
-            if (string.IsNullOrEmpty(user.PasswordHash))
-                return false;
-
-            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
-                return false;
-
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-
-            user.SecurityStamp = DateTime.UtcNow;
-
-            await _repo.UpdateUserAsync(user);
-            await _repo.SaveChangesAsync();
-
-            return true;
-        }
+        await repo.UpdateUserAsync(user);
+        await repo.SaveChangesAsync();
+        return Result.Success();
     }
 }

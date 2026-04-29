@@ -1,14 +1,11 @@
-﻿
+using Backend.Common.Models;
 using Backend.DTOs.Profile;
 
-namespace Backend.Services.Interfaces
+namespace Backend.Services.Interfaces;
+
+public interface IProfileService
 {
-    public interface IProfileService
-    {
-        Task<UserProfileDTO?> GetProfileAsync(int userId);
-
-        Task<bool> UpdateProfileAsync(int userId, UpdateProfileDTO dto);
-
-        Task<bool> ChangePasswordAsync(int userId, ChangePasswordDTO dto);
-    }
+    Task<Result<UserProfileDTO>> GetProfileAsync(int userId);
+    Task<Result> UpdateProfileAsync(int userId, UpdateProfileDTO dto);
+    Task<Result> ChangePasswordAsync(int userId, ChangePasswordDTO dto);
 }
