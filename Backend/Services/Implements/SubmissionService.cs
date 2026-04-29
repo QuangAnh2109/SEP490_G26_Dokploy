@@ -1,3 +1,6 @@
+using Backend.Common;
+using Backend.Common.Errors;
+using Backend.Common.Models;
 using Backend.Constants;
 using Backend.DTOs;
 using Backend.Models;
@@ -6,32 +9,29 @@ using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements;
 
-public class SubmissionService : ISubmissionService
+public class SubmissionService(
+    ISubmissionRepository submissionRepo,
+    ICurrentUserService currentUserService) : ISubmissionService
 {
-    private readonly ISubmissionRepository _submissionRepo;
-
-    public SubmissionService(ISubmissionRepository submissionRepo)
-    {
-        _submissionRepo = submissionRepo;
-    }
-
-    public async Task<SubmitExamResponse> SubmitExamAsync(
-        int studentId,
+    public async Task<Result<SubmitExamResponse>> SubmitExamAsync(
         SubmitExamRequest request,
         CancellationToken ct = default)
     {
+        var studentId = currentUserService.UserId;
+
         // ── 1. Tìm Submission đang InProgress ──────────────────────────
-        var submission = await _submissionRepo.GetActiveSubmissionAsync(
-            request.ExamId, studentId, ct);
+        var submission = await submissionRepo.GetActiveSubmissionAsync(
+            request.ExamId!.Value, studentId, ct);
 
         if (submission == null)
-            throw new KeyNotFoundException(ErrorMessages.SubmissionNotFound);
+            return SubmissionErrors.NotFound;
 
         if (submission.Status != SubmissionStatus.InProgress)
-            throw new InvalidOperationException(ErrorMessages.SubmissionAlreadySubmitted);
+            return SubmissionErrors.AlreadySubmitted;
 
-        var exam = submission.Paper?.Exam
-            ?? throw new InvalidOperationException("Submission has no associated exam.");
+        var exam = submission.Paper?.Exam;
+        if (exam == null)
+            return SubmissionErrors.NotFound;
 
         // ── 2. Kiểm tra thời gian (chỉ dùng DateTime.UtcNow) ──────────
         var now = DateTime.UtcNow;
@@ -41,28 +41,34 @@ public class SubmissionService : ISubmissionService
         bool isLate = now > deadline || (exam.CloseAt.HasValue && now > exam.CloseAt.Value);
 
         if (isLate)
-            throw new InvalidOperationException(ErrorMessages.SubmissionLateNotAllowed);
+            return SubmissionErrors.Late;
 
         // ── 3. Validate QuestionAnswerIds thuộc Paper ────────────────────
-        var validIds = await _submissionRepo.GetValidQuestionAnswerIdsAsync(
+        var validIds = await submissionRepo.GetValidQuestionAnswerIdsAsync(
             submission.PaperId, ct);
 
-        foreach (var sa in request.StudentAnswers)
+        if (request.StudentAnswers != null)
         {
-            if (!validIds.Contains(sa.QuestionAnswerId))
-                throw new ArgumentException(ErrorMessages.InvalidQuestionAnswer);
+            foreach (var sa in request.StudentAnswers)
+            {
+                if (sa.QuestionAnswerId.HasValue && !validIds.Contains(sa.QuestionAnswerId.Value))
+                    return SubmissionErrors.InvalidAnswer;
+            }
         }
 
         // ── 4. Xử lý StudentAnswers ────────────────────────────────────
         var existingAnswers = submission.StudentAnswers.ToList();
+        var incomingAnswers = request.StudentAnswers ?? [];
 
         // Tập hợp QuestionAnswerId mới từ request
         var incomingIds = new HashSet<int>(
-            request.StudentAnswers.Select(sa => sa.QuestionAnswerId));
+            incomingAnswers.Where(sa => sa.QuestionAnswerId.HasValue)
+                           .Select(sa => sa.QuestionAnswerId!.Value));
 
         // Map QuestionAnswerId → dto cho tra cứu nhanh
-        var incomingMap = request.StudentAnswers
-            .ToDictionary(sa => sa.QuestionAnswerId);
+        var incomingMap = incomingAnswers
+            .Where(sa => sa.QuestionAnswerId.HasValue)
+            .ToDictionary(sa => sa.QuestionAnswerId!.Value);
 
         // Map QuestionAnswerId → existing StudentAnswer
         var existingMap = existingAnswers
@@ -77,9 +83,9 @@ public class SubmissionService : ISubmissionService
         var toAdd = new List<StudentAnswer>();
 
         // 4c. Update bản ghi đã tồn tại (FillInBlank: cập nhật Response)
-        foreach (var dto in request.StudentAnswers)
+        foreach (var dto in incomingAnswers.Where(sa => sa.QuestionAnswerId.HasValue))
         {
-            if (existingMap.TryGetValue(dto.QuestionAnswerId, out var existing))
+            if (existingMap.TryGetValue(dto.QuestionAnswerId!.Value, out var existing))
             {
                 // Đã tồn tại → update Response (chủ yếu cho FillInBlank)
                 existing.Response = dto.Response;
@@ -90,23 +96,23 @@ public class SubmissionService : ISubmissionService
                 toAdd.Add(new StudentAnswer
                 {
                     SubmissionId = submission.SubmissionId,
-                    QuestionAnswerId = dto.QuestionAnswerId,
+                    QuestionAnswerId = dto.QuestionAnswerId.Value,
                     Response = dto.Response
                 });
             }
         }
 
         if (toRemove.Count > 0)
-            _submissionRepo.RemoveStudentAnswers(toRemove);
+            submissionRepo.RemoveStudentAnswers(toRemove);
 
         if (toAdd.Count > 0)
-            _submissionRepo.AddStudentAnswers(toAdd);
+            submissionRepo.AddStudentAnswers(toAdd);
 
         // ── 5. Cập nhật Submission ──────────────────────────────────────
-        submission.Status = request.Submit ? 2 : 1;
+        submission.Status = request.Submit == true ? 2 : 1;
         submission.UpdatedAtUtc = now;
 
-        await _submissionRepo.SaveChangesAsync(ct);
+        await submissionRepo.SaveChangesAsync(ct);
 
         // ── 6. Return response ──────────────────────────────────────────
         return new SubmitExamResponse(

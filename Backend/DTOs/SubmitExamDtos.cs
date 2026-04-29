@@ -4,16 +4,16 @@ namespace Backend.DTOs;
 
 public class SubmitExamRequest
 {
-    public int ExamId { get; set; }
-    public List<StudentAnswerDto> StudentAnswers { get; set; } = [];
+    public int? ExamId { get; set; }
+    public List<StudentAnswerDto>? StudentAnswers { get; set; }
 
-    public bool Submit { get; set; }
+    public bool? Submit { get; set; }
 }
 
 public class StudentAnswerDto
 {
     /// <summary>FK → QuestionAnswers – xác định học sinh đang trả lời đáp án / ô trống nào</summary>
-    public int QuestionAnswerId { get; set; }
+    public int? QuestionAnswerId { get; set; }
 
     /// <summary>
     /// Với MultipleChoice: null (chỉ cần QuestionAnswerId để biết học sinh chọn đáp án nào).

@@ -88,4 +88,10 @@ public static class ErrorCodes
     public const string StudentExamMaxAttemptsReached = "STUDENT_EXAM_MAX_ATTEMPTS_REACHED";
     public const string StudentExamNoPapers = "STUDENT_EXAM_NO_PAPERS";
     public const string StudentExamNotAllowed = "STUDENT_EXAM_NOT_ALLOWED";
+
+    // Submission
+    public const string SubmissionNotFound = "SUBMISSION_NOT_FOUND";
+    public const string SubmissionAlreadySubmitted = "SUBMISSION_ALREADY_SUBMITTED";
+    public const string SubmissionLate = "SUBMISSION_LATE";
+    public const string SubmissionInvalidAnswer = "SUBMISSION_INVALID_ANSWER";
 }
