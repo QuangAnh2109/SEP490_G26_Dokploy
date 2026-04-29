@@ -11,7 +11,6 @@ public class ChangePasswordDTOValidator : AbstractValidator<ChangePasswordDTO>
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()
-            .Length(8, 72)
             .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,72}$");
     }
 }

@@ -34,7 +34,7 @@ public class ProfileService(IProfileRepository repo) : IProfileService
 
         // Role-dependent StudentId rule (format already validated by FluentValidator)
         if (user.RoleId.ToString() == RoleIds.Student && string.IsNullOrWhiteSpace(dto.StudentId))
-            return Result.Failure(new Error(ErrorCodes.Validation, ErrorType.Validation));
+            return Result.Failure(ProfileErrors.StudentIdRequired);
 
         user.FullName = dto.FullName!.Trim();
         user.PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
