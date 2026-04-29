@@ -94,4 +94,16 @@ public static class ErrorCodes
     public const string SubmissionAlreadySubmitted = "SUBMISSION_ALREADY_SUBMITTED";
     public const string SubmissionLate = "SUBMISSION_LATE";
     public const string SubmissionInvalidAnswer = "SUBMISSION_INVALID_ANSWER";
+
+    // PracticeExam
+    public const string PracticeExamClassNotFound = "PRACTICE_EXAM_CLASS_NOT_FOUND";
+    public const string PracticeExamChapterRequired = "PRACTICE_EXAM_CHAPTER_REQUIRED";
+    public const string PracticeExamInvalidQuestionCount = "PRACTICE_EXAM_INVALID_QUESTION_COUNT";
+    public const string PracticeExamChapterNotBelongToSubject = "PRACTICE_EXAM_CHAPTER_NOT_BELONG_TO_SUBJECT";
+    public const string PracticeExamNoQuestionsFound = "PRACTICE_EXAM_NO_QUESTIONS_FOUND";
+    public const string PracticeExamSubmissionNotFound = "PRACTICE_EXAM_SUBMISSION_NOT_FOUND";
+    public const string PracticeExamAlreadySubmitted = "PRACTICE_EXAM_ALREADY_SUBMITTED";
+    public const string PracticeExamPaperNotFound = "PRACTICE_EXAM_PAPER_NOT_FOUND";
+    public const string PracticeExamInvalidAnswer = "PRACTICE_EXAM_INVALID_ANSWER";
+    public const string PracticeExamNotSubmitted = "PRACTICE_EXAM_NOT_SUBMITTED";
 }

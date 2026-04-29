@@ -1,16 +1,22 @@
+using Backend.Common.Errors;
 using Backend.Constants;
 using Backend.DTOs.PracticeExam;
 using Backend.Common;
+using Backend.Common.Models;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements
 {
-    public class PracticeExamService : IPracticeExamService
+    public class PracticeExamService(
+        IPracticeExamRepository repo,
+        ICurrentUserService currentUserService,
+        ILogger<PracticeExamService> logger) : IPracticeExamService
     {
-        private readonly IPracticeExamRepository _repo;
-        private readonly ILogger<PracticeExamService> _logger;
+        private readonly IPracticeExamRepository _repo = repo;
+        private readonly ICurrentUserService _currentUserService = currentUserService;
+        private readonly ILogger<PracticeExamService> _logger = logger;
 
         private const int MinQuestions = 5;
         private const int MaxQuestions = 30;
@@ -19,20 +25,15 @@ namespace Backend.Services.Implements
         private const double WeakThreshold = 50.0;
         private const double StrongThreshold = 80.0;
 
-        public PracticeExamService(IPracticeExamRepository repo, ILogger<PracticeExamService> logger)
-        {
-            _repo = repo;
-            _logger = logger;
-        }
-
         // ════════════════════════════════════════════════════════
         //  LẤY DANH SÁCH CHƯƠNG + PROFICIENCY
         // ════════════════════════════════════════════════════════
-        public async Task<List<ChapterProficiencyDto>> GetChaptersForPracticeAsync(int classId, int studentId)
+        public async Task<Result<List<ChapterProficiencyDto>>> GetChaptersForPracticeAsync(int classId)
         {
+            var studentId = _currentUserService.UserId;
             var cls = await _repo.GetClassWithValidationAsync(classId, studentId);
             if (cls == null)
-                throw new KeyNotFoundException("Không tìm thấy khóa học hoặc bạn không thuộc lớp này.");
+                return PracticeExamErrors.ClassNotFound;
 
             var chapters = await _repo.GetChaptersBySubjectIdAsync(cls.SubjectId);
             if (chapters.Count == 0)
@@ -83,18 +84,20 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         //  TẠO ĐỀ LUYỆN TẬP TỰ ĐỘNG
         // ════════════════════════════════════════════════════════
-        public async Task<CreatePracticeExamResponse> CreatePracticeExamAsync(int studentId, CreatePracticeExamRequest request)
+        public async Task<Result<CreatePracticeExamResponse>> CreatePracticeExamAsync(CreatePracticeExamRequest request)
         {
+            var studentId = _currentUserService.UserId;
+            
             // ── 1. Validate ──
-            var cls = await _repo.GetClassWithValidationAsync(request.ClassId, studentId);
+            var cls = await _repo.GetClassWithValidationAsync(request.ClassId!.Value, studentId);
             if (cls == null)
-                throw new KeyNotFoundException("Không tìm thấy khóa học hoặc bạn không thuộc lớp này.");
+                return PracticeExamErrors.ClassNotFound;
 
             if (request.ChapterIds == null || request.ChapterIds.Count == 0)
-                throw new ArgumentException("Phải chọn ít nhất 1 chương.");
+                return PracticeExamErrors.ChapterRequired;
 
             if (request.TotalQuestions < MinQuestions || request.TotalQuestions > MaxQuestions)
-                throw new ArgumentException($"Số câu hỏi phải từ {MinQuestions} đến {MaxQuestions}.");
+                return PracticeExamErrors.InvalidQuestionCount;
 
             // Validate chapters thuộc subject
             var chapters = await _repo.GetChaptersBySubjectIdAsync(cls.SubjectId);
@@ -102,14 +105,14 @@ namespace Backend.Services.Implements
             foreach (var chId in request.ChapterIds)
             {
                 if (!validChapterIds.Contains(chId))
-                    throw new ArgumentException($"Chương {chId} không thuộc môn học của khóa học này.");
+                    return PracticeExamErrors.ChapterNotBelongToSubject;
             }
 
             // ── 2. Lấy proficiency data ──
             var profData = await _repo.GetStudentProficiencyAsync(studentId, request.ChapterIds);
 
             // ── 3. Auto-allocate difficulty based on proficiency ──
-            int totalQuestions = request.TotalQuestions;
+            int totalQuestions = request.TotalQuestions.Value;
             var difficultyQuotas = ComputeDifficultyQuotas(profData, totalQuestions);
 
             // ── 4. Spaced Repetition per difficulty slot ──
@@ -169,14 +172,14 @@ namespace Backend.Services.Implements
             }
 
             if (selectedQuestionIds.Count == 0)
-                throw new InvalidOperationException("Không tìm thấy câu hỏi luyện tập nào cho các chương đã chọn. Giáo viên chưa tạo câu hỏi luyện tập.");
+                return PracticeExamErrors.NoQuestionsFound;
 
             // ── 5. Bù nếu thiếu (do pool từng mức không đủ) ──
-            if (selectedQuestionIds.Count < totalQuestions)
+            if (selectedQuestionIds.Count < request.TotalQuestions!.Value)
             {
                 var allIds = await _repo.GetAllPracticeQuestionIdsAsync(request.ChapterIds, cls.TeacherId, null);
                 var remaining = allIds.Where(id => !selectedQuestionIds.Contains(id)).OrderBy(_ => Guid.NewGuid()).ToList();
-                int deficit = totalQuestions - selectedQuestionIds.Count;
+                int deficit = request.TotalQuestions.Value - selectedQuestionIds.Count;
                 selectedQuestionIds.AddRange(remaining.Take(deficit));
             }
 
@@ -210,18 +213,19 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         //  NỘP BÀI LUYỆN TẬP (không check thời gian)
         // ════════════════════════════════════════════════════════
-        public async Task<SubmitPracticeExamResponse> SubmitPracticeExamAsync(int studentId, SubmitPracticeExamRequest request)
+        public async Task<Result<SubmitPracticeExamResponse>> SubmitPracticeExamAsync(SubmitPracticeExamRequest request)
         {
-            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId, studentId);
+            var studentId = _currentUserService.UserId;
+            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId!.Value, studentId);
             if (submission == null)
-                throw new KeyNotFoundException("Không tìm thấy bài luyện tập hoặc bạn không có quyền.");
+                return PracticeExamErrors.SubmissionNotFound;
 
             if (submission.Status != SubmissionStatus.InProgress)
-                throw new InvalidOperationException("Bài luyện tập này đã được nộp rồi.");
+                return PracticeExamErrors.AlreadySubmitted;
 
             var paper = submission.Paper;
             if (paper == null)
-                throw new InvalidOperationException("Không tìm thấy đề luyện tập.");
+                return PracticeExamErrors.PaperNotFound;
 
             // Validate QuestionAnswerIds thuộc Paper
             var validQAIds = paper.Questions
@@ -229,10 +233,10 @@ namespace Backend.Services.Implements
                 .Select(qa => qa.QuestionAnswerId)
                 .ToHashSet();
 
-            foreach (var sa in request.StudentAnswers)
+            foreach (var sa in request.StudentAnswers!)
             {
-                if (!validQAIds.Contains(sa.QuestionAnswerId))
-                    throw new ArgumentException($"QuestionAnswerId {sa.QuestionAnswerId} không hợp lệ.");
+                if (!validQAIds.Contains(sa.QuestionAnswerId!.Value))
+                    return PracticeExamErrors.InvalidAnswer;
             }
 
             // Xử lý StudentAnswers: xóa cũ + thêm mới
@@ -240,9 +244,9 @@ namespace Backend.Services.Implements
             var incomingMap = request.StudentAnswers.ToDictionary(a => a.QuestionAnswerId);
 
             // Update existing hoặc thêm mới
-            foreach (var dto in request.StudentAnswers)
+            foreach (var dto in request.StudentAnswers!)
             {
-                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId);
+                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId!.Value);
                 if (existing != null)
                 {
                     existing.Response = dto.Response;
@@ -252,14 +256,14 @@ namespace Backend.Services.Implements
                     submission.StudentAnswers.Add(new StudentAnswer
                     {
                         SubmissionId = submission.SubmissionId,
-                        QuestionAnswerId = dto.QuestionAnswerId,
+                        QuestionAnswerId = dto.QuestionAnswerId!.Value,
                         Response = dto.Response
                     });
                 }
             }
 
             // Xóa answers không còn trong request
-            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId).ToHashSet();
+            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId!.Value).ToHashSet();
             var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
             foreach (var sa in toRemove)
                 submission.StudentAnswers.Remove(sa);
@@ -308,18 +312,19 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         //  LƯU CÂU TRẢ LỜI GIỮA CHỪNG (không nộp bài)
         // ════════════════════════════════════════════════════════
-        public async Task SavePracticeAnswersAsync(int studentId, SubmitPracticeExamRequest request)
+        public async Task<Result> SavePracticeAnswersAsync(SubmitPracticeExamRequest request)
         {
-            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId, studentId);
+            var studentId = _currentUserService.UserId;
+            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId!.Value, studentId);
             if (submission == null)
-                throw new KeyNotFoundException("Không tìm thấy bài luyện tập hoặc bạn không có quyền.");
+                return PracticeExamErrors.SubmissionNotFound;
 
             if (submission.Status != SubmissionStatus.InProgress)
-                throw new InvalidOperationException("Bài luyện tập này đã được nộp rồi.");
+                return PracticeExamErrors.AlreadySubmitted;
 
             var paper = submission.Paper;
             if (paper == null)
-                throw new InvalidOperationException("Không tìm thấy đề luyện tập.");
+                return PracticeExamErrors.PaperNotFound;
 
             // Validate QuestionAnswerIds thuộc Paper
             var validQAIds = paper.Questions
@@ -327,18 +332,18 @@ namespace Backend.Services.Implements
                 .Select(qa => qa.QuestionAnswerId)
                 .ToHashSet();
 
-            foreach (var sa in request.StudentAnswers)
+            foreach (var sa in request.StudentAnswers!)
             {
-                if (!validQAIds.Contains(sa.QuestionAnswerId))
-                    throw new ArgumentException($"QuestionAnswerId {sa.QuestionAnswerId} không hợp lệ.");
+                if (!validQAIds.Contains(sa.QuestionAnswerId!.Value))
+                    return PracticeExamErrors.InvalidAnswer;
             }
 
             // Xử lý StudentAnswers: update existing hoặc thêm mới
             var existingAnswers = submission.StudentAnswers.ToList();
 
-            foreach (var dto in request.StudentAnswers)
+            foreach (var dto in request.StudentAnswers!)
             {
-                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId);
+                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId!.Value);
                 if (existing != null)
                 {
                     existing.Response = dto.Response;
@@ -348,14 +353,14 @@ namespace Backend.Services.Implements
                     submission.StudentAnswers.Add(new StudentAnswer
                     {
                         SubmissionId = submission.SubmissionId,
-                        QuestionAnswerId = dto.QuestionAnswerId,
+                        QuestionAnswerId = dto.QuestionAnswerId!.Value,
                         Response = dto.Response
                     });
                 }
             }
 
             // Xóa answers không còn trong request
-            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId).ToHashSet();
+            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId!.Value).ToHashSet();
             var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
             foreach (var sa in toRemove)
                 submission.StudentAnswers.Remove(sa);
@@ -364,19 +369,21 @@ namespace Backend.Services.Implements
             submission.UpdatedAtUtc = DateTime.UtcNow;
 
             await _repo.SaveChangesAsync();
+            return Result.Success();
         }
 
         // ════════════════════════════════════════════════════════
         //  RESUME BÀI LUYỆN TẬP ĐANG LÀM DỎ
         // ════════════════════════════════════════════════════════
-        public async Task<ResumePracticeExamResponse> ResumePracticeExamAsync(int submissionId, int studentId)
+        public async Task<Result<ResumePracticeExamResponse>> ResumePracticeExamAsync(int submissionId)
         {
+            var studentId = _currentUserService.UserId;
             var submission = await _repo.GetPracticeSubmissionFullAsync(submissionId, studentId);
             if (submission == null)
-                throw new KeyNotFoundException("Không tìm thấy bài luyện tập hoặc bạn không có quyền.");
+                return PracticeExamErrors.SubmissionNotFound;
 
             if (submission.Status != SubmissionStatus.InProgress)
-                throw new InvalidOperationException("Bài luyện tập này đã được nộp rồi. Hãy xem kết quả thay vì resume.");
+                return PracticeExamErrors.AlreadySubmitted;
 
             // Load đầy đủ câu hỏi từ paper (qua PaperQuestion)
             var questions = await BuildPracticeQuestionsDto(submission.PaperId);
@@ -404,14 +411,15 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         //  XEM KẾT QUẢ + ĐÁP ÁN TỪNG CÂU
         // ════════════════════════════════════════════════════════
-        public async Task<PracticeExamResultDto> GetPracticeResultAsync(int submissionId, int studentId)
+        public async Task<Result<PracticeExamResultDto>> GetPracticeResultAsync(int submissionId)
         {
+            var studentId = _currentUserService.UserId;
             var submission = await _repo.GetPracticeSubmissionFullAsync(submissionId, studentId);
             if (submission == null)
-                throw new KeyNotFoundException("Không tìm thấy bài luyện tập.");
+                return PracticeExamErrors.SubmissionNotFound;
 
             if (submission.Status != SubmissionStatus.Submitted)
-                throw new InvalidOperationException("Bạn chưa nộp bài luyện tập này. Hãy hoàn thành và nộp bài trước.");
+                return PracticeExamErrors.NotSubmitted;
 
             var paper = submission.Paper;
             var questions = paper?.Questions?.DistinctBy(q => q.QuestionId).ToList() ?? new();
@@ -490,8 +498,9 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         //  LỊCH SỬ LUYỆN TẬP
         // ════════════════════════════════════════════════════════
-        public async Task<List<PracticeHistoryDto>> GetPracticeHistoryAsync(int studentId, int? classId)
+        public async Task<Result<List<PracticeHistoryDto>>> GetPracticeHistoryAsync(int? classId)
         {
+            var studentId = _currentUserService.UserId;
             var rawHistory = await _repo.GetPracticeHistoryAsync(studentId, classId);
 
             return rawHistory.Select(h =>

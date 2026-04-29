@@ -8,13 +8,13 @@ namespace Backend.DTOs.PracticeExam
     public class CreatePracticeExamRequest
     {
         /// <summary>Khóa học (biết luôn môn + giáo viên)</summary>
-        public int ClassId { get; set; }
+        public int? ClassId { get; set; }
 
         /// <summary>Danh sách chương muốn luyện — chọn 1 hoặc nhiều</summary>
-        public List<int> ChapterIds { get; set; } = new();
+        public List<int>? ChapterIds { get; set; }
 
         /// <summary>Số câu hỏi mong muốn (5–30)</summary>
-        public int TotalQuestions { get; set; }
+        public int? TotalQuestions { get; set; }
     }
 
     /// <summary>Kết quả tạo đề luyện tập</summary>
@@ -79,13 +79,13 @@ namespace Backend.DTOs.PracticeExam
     /// <summary>Nộp bài luyện tập</summary>
     public class SubmitPracticeExamRequest
     {
-        public int SubmissionId { get; set; }
-        public List<PracticeStudentAnswerDto> StudentAnswers { get; set; } = new();
+        public int? SubmissionId { get; set; }
+        public List<PracticeStudentAnswerDto>? StudentAnswers { get; set; }
     }
 
     public class PracticeStudentAnswerDto
     {
-        public int QuestionAnswerId { get; set; }
+        public int? QuestionAnswerId { get; set; }
         public string? Response { get; set; }
     }
 
