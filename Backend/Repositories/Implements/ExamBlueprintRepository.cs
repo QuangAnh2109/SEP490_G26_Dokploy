@@ -86,8 +86,10 @@ namespace Backend.Repositories.Implements
 
         public async Task<(List<BlueprintListItemDto> Items, int TotalCount)> GetBlueprintsAsync(BlueprintListQueryDto query, int currentUserId)
         {
-            var page = query.Page < 1 ? 1 : query.Page;
-            var pageSize = query.PageSize <= 0 ? 10 : Math.Min(query.PageSize, 100);
+            var page = query.Page ?? 1;
+            page = page < 1 ? 1 : page;
+            var pageSize = query.PageSize ?? 10;
+            pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
             var blueprints = _context.ExamBlueprints
                 .AsNoTracking()

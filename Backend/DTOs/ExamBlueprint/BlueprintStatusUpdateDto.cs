@@ -1,8 +1,7 @@
-namespace Backend.DTOs.ExamBlueprint
+namespace Backend.DTOs.ExamBlueprint;
+
+public class BlueprintStatusUpdateDto
 {
-    public class BlueprintStatusUpdateDto
-    {
-        public List<int> ExamBlueprintIds { get; set; } = new();
-        public int Status { get; set; }
-    }
+    public List<int>? ExamBlueprintIds { get; set; }
+    public int? Status { get; set; }
 }

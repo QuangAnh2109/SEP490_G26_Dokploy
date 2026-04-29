@@ -41,4 +41,19 @@ public static class ErrorCodes
     public const string QuestionInUse = "QUESTION_IN_USE";
     public const string QuestionInvalidDeleteStatus = "QUESTION_INVALID_DELETE_STATUS";
     public const string QuestionEmptyList = "QUESTION_EMPTY_LIST";
+
+    // ExamBlueprint
+    public const string ExamBlueprintInvalidSubject = "EXAM_BLUEPRINT_INVALID_SUBJECT";
+    public const string ExamBlueprintSubjectNotFound = "EXAM_BLUEPRINT_SUBJECT_NOT_FOUND";
+    public const string ExamBlueprintInvalidBlueprintId = "EXAM_BLUEPRINT_INVALID_BLUEPRINT_ID";
+    public const string ExamBlueprintNotFound = "EXAM_BLUEPRINT_NOT_FOUND";
+    public const string ExamBlueprintInvalidTargetStatus = "EXAM_BLUEPRINT_INVALID_TARGET_STATUS";
+    public const string ExamBlueprintInsufficientQuestionBank = "EXAM_BLUEPRINT_INSUFFICIENT_QUESTION_BANK";
+    public const string ExamBlueprintDuplicateRow = "EXAM_BLUEPRINT_DUPLICATE_ROW";
+    public const string ExamBlueprintTargetTotalMismatch = "EXAM_BLUEPRINT_TARGET_TOTAL_MISMATCH";
+    public const string ExamBlueprintEmptyRows = "EXAM_BLUEPRINT_EMPTY_ROWS";
+    public const string ExamBlueprintInvalidUpdateStatus = "EXAM_BLUEPRINT_INVALID_UPDATE_STATUS";
+    public const string ExamBlueprintCannotDelete = "EXAM_BLUEPRINT_CANNOT_DELETE";
+    public const string ExamBlueprintInUse = "EXAM_BLUEPRINT_IN_USE";
+    public const string ExamBlueprintDuplicateName = "EXAM_BLUEPRINT_DUPLICATE_NAME";
 }

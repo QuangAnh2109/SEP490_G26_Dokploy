@@ -1,16 +1,17 @@
+using Backend.Common.Models;
 using Backend.DTOs.ExamBlueprint;
 
 namespace Backend.Services.Interfaces
 {
     public interface IExamBlueprintService
     {
-        Task<List<SubjectOptionDto>> GetSubjectsAsync();
-        Task<List<ChapterOptionDto>> GetChaptersBySubjectAsync(int subjectId);
-        Task<BlueprintListResponseDto> GetBlueprintsAsync(BlueprintListQueryDto query, int currentUserId);
-        Task<BlueprintDetailDto> GetBlueprintDetailAsync(int id, int currentUserId);
-        Task<CreateExamBlueprintResponse> CreateBlueprintAsync(int currentUserId, CreateExamBlueprintRequest request);
-        Task<CreateExamBlueprintResponse> UpdateBlueprintAsync(int id, int currentUserId, CreateExamBlueprintRequest request);
-        Task<int> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int currentUserId, int status);
-        Task DeleteBlueprintAsync(int id, int currentUserId);
+        Task<Result<List<SubjectOptionDto>>> GetSubjectsAsync();
+        Task<Result<List<ChapterOptionDto>>> GetChaptersBySubjectAsync(int subjectId);
+        Task<Result<BlueprintListResponseDto>> GetBlueprintsAsync(BlueprintListQueryDto query);
+        Task<Result<BlueprintDetailDto>> GetBlueprintDetailAsync(int id);
+        Task<Result<CreateExamBlueprintResponse>> CreateBlueprintAsync(CreateExamBlueprintRequest request);
+        Task<Result<CreateExamBlueprintResponse>> UpdateBlueprintAsync(int id, CreateExamBlueprintRequest request);
+        Task<Result<int>> UpdateBlueprintStatusAsync(IEnumerable<int> examBlueprintIds, int status);
+        Task<Result> DeleteBlueprintAsync(int id);
     }
 }
