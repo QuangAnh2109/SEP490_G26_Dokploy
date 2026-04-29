@@ -1,17 +1,16 @@
+using Backend.Common;
+using Backend.Common.Models;
 using Backend.DTOs.StudentExam;
-using Backend.Models;
-using Backend.Repositories.Interfaces;
 
-namespace Backend.Services.Interfaces
+namespace Backend.Services.Interfaces;
+
+public interface IStudentExamService
 {
-    public interface IStudentExamService
-    {
-        Task<TakeExamDto?> TakeExamInClass(int examId, int studentId);
-        Task<ExamPreviewDto?> GetExamPreviewAsync(int userId, int examId, bool isTeacher = false);
+    Task<Result<TakeExamDto>> TakeExamInClass(int examId);
+    Task<Result<ExamPreviewDto>> GetExamPreviewAsync(int examId);
 
-        /// <summary>
-        /// Lấy lịch sử bài nộp tổng hợp (cả kiểm tra + luyện tập) từ tất cả khóa học.
-        /// </summary>
-        Task<List<StudentSubmissionHistoryDto>> GetAllSubmissionHistoryAsync(int studentId, int? classId = null);
-    }
+    /// <summary>
+    /// Lấy lịch sử bài nộp tổng hợp (cả kiểm tra + luyện tập) từ tất cả khóa học.
+    /// </summary>
+    Task<Result<List<StudentSubmissionHistoryDto>>> GetAllSubmissionHistoryAsync(int? classId = null);
 }

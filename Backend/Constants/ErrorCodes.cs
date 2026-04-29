@@ -81,4 +81,11 @@ public static class ErrorCodes
     public const string AssignExamInvalidStatusForUpdate = "ASSIGN_EXAM_INVALID_STATUS_FOR_UPDATE";
     public const string AssignExamInvalidOrInactiveQuestions = "ASSIGN_EXAM_INVALID_OR_INACTIVE_QUESTIONS";
     public const string AssignExamMultipleSubjects = "ASSIGN_EXAM_MULTIPLE_SUBJECTS";
+
+    // StudentExam
+    public const string StudentExamNotFound = "STUDENT_EXAM_NOT_FOUND";
+    public const string StudentExamAnotherActiveSubmission = "STUDENT_EXAM_ANOTHER_ACTIVE_SUBMISSION";
+    public const string StudentExamMaxAttemptsReached = "STUDENT_EXAM_MAX_ATTEMPTS_REACHED";
+    public const string StudentExamNoPapers = "STUDENT_EXAM_NO_PAPERS";
+    public const string StudentExamNotAllowed = "STUDENT_EXAM_NOT_ALLOWED";
 }

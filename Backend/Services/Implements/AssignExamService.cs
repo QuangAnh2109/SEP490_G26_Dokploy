@@ -254,7 +254,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var exam = await _repo.GetExamReviewDataAsync(id, ct);
         if (exam == null) return AssignExamErrors.ExamNotFound;
 
-        var matrix = (e.ExamBlueprint?.ExamBlueprintChapters ?? [])
+        var matrix = (exam.ExamBlueprint?.ExamBlueprintChapters ?? [])
             .GroupBy(bc => bc.Chapter?.Name ?? "N/A")
             .Select(g => new BlueprintRowDto
             {
@@ -268,7 +268,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
             .ToList();
 
         var papers = exam.Papers.Select(p => new PaperReviewDto(
-            paper.PaperId,
+            p.PaperId,
             p.Code ?? 0,
             p.Questions.Select(q => new QuestionReviewDto(
                 q.QuestionId,
@@ -287,18 +287,18 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
 
         return Result<ExamReviewDto>.Success(new ExamReviewDto(
             exam.ExamId,
-            e.ClassId,
-            e.Title,
-            e.Subject?.Code ?? "N/A",
-            e.Description,
+            exam.ClassId,
+            exam.Title,
+            exam.Subject?.Code ?? "N/A",
+            exam.Description,
             exam.Papers.FirstOrDefault()?.Questions.Count ?? 0,
-            e.Duration,
-            e.VisibleFrom,
-            e.OpenAt,
-            e.CloseAt,
-            e.Teacher?.FullName ?? "N/A",
-            e.UpdatedAtUtc,
-            e.Status,
+            exam.Duration,
+            exam.VisibleFrom,
+            exam.OpenAt,
+            exam.CloseAt,
+            exam.Teacher?.FullName ?? "N/A",
+            exam.UpdatedAtUtc,
+            exam.Status,
             matrix,
             papers
         ));
@@ -312,7 +312,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var old = await _repo.GetQuestionByIdAsync(qid, ct);
         if (old == null) return AssignExamErrors.QuestionNotFound;
 
-        var currentIds = p.Questions.Select(q => q.QuestionId).ToList();
+        var currentIds = paper.Questions.Select(q => q.QuestionId).ToList();
 
         if (paper.Exam == null) return AssignExamErrors.ExamNotFound;
 
@@ -335,7 +335,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var paper = await _repo.GetPaperWithQuestionsAsync(r.PaperId.Value, ct);
         if (paper == null) return AssignExamErrors.PaperNotFound;
 
-        var old = p.Questions.FirstOrDefault(q => q.QuestionId == r.OldQuestionId.Value);
+        var old = paper.Questions.FirstOrDefault(q => q.QuestionId == r.OldQuestionId.Value);
         if (old == null) return AssignExamErrors.QuestionNotInPaper;
 
         var @new = await _repo.GetQuestionByIdAsync(r.NewQuestionId.Value, ct);

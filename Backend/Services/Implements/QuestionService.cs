@@ -89,7 +89,7 @@ namespace Backend.Services.Implements
         {
             var userId = _currentUserService.UserId;
             var question = await _questionRepository.GetQuestionWithAnswersAsync(questionId);
-            if (q == null || question.CreatedByUserId != userId) return QuestionErrors.NotFound;
+            if (question == null || question.CreatedByUserId != userId) return QuestionErrors.NotFound;
 
             var (stem, frame) = ParseContent(question.QuestionContent);
             var dto = new QuestionDto 
@@ -132,10 +132,10 @@ namespace Backend.Services.Implements
 
             foreach (var q in questions)
             {
-                if (question.CreatedByUserId == userId)
+                if (q.CreatedByUserId == userId)
                 {
-                    question.Status = status;
-                    question.UpdatedAtUtc = DateTime.UtcNow;
+                    q.Status = status;
+                    q.UpdatedAtUtc = DateTime.UtcNow;
                     updatedCount++;
                 }
             }
@@ -240,7 +240,7 @@ namespace Backend.Services.Implements
                     else ans.BlankInputs.Clear();
                 }
             }
-            return q;
+            return question;
         }
 
         private static int? GetBlankIndex(string? content) => 
@@ -283,7 +283,7 @@ namespace Backend.Services.Implements
 
         private async Task HandleBlankGroupsAsync(Question q, QuestionDto item)
         {
-            var answers = question.QuestionAnswers.ToList();
+            var answers = q.QuestionAnswers.ToList();
             var existingGroups = answers.Where(a => a.GroupAnswer != null).Select(a => a.GroupAnswer!).Distinct().ToList();
             
             if (item.BlankGroups?.Any() != true || item.QuestionType != QuestionType.FillBlank)
