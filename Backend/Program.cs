@@ -5,15 +5,15 @@ using Backend.Repositories.Implements;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Implements;
 using Backend.Services.Interfaces;
+using FluentValidation;
 using Hangfire;
 using Hangfire.SqlServer;
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
-using System.Globalization;
-using System.Security.Claims;
 using System.Text;
 
 namespace Backend
@@ -163,16 +163,20 @@ namespace Backend
                 };
             });
 
-            builder.Services.AddAuthorizationBuilder()
-                .AddPolicy(nameof(Roles.Teacher), p => p.RequireClaim(
-                    ClaimTypes.Role, ((int)Roles.Teacher).ToString(CultureInfo.InvariantCulture)))
-                .AddPolicy(nameof(Roles.Student), p => p.RequireClaim(
-                    ClaimTypes.Role, ((int)Roles.Student).ToString(CultureInfo.InvariantCulture)));
-
             // =========================
             // OTHER SERVICES
             // =========================
-            builder.Services.AddControllers()
+            builder.Services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Singleton);
+
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
+
+            builder.Services.AddControllers(options =>
+            {
+                options.Filters.Add<Backend.Common.Validation.ValidationFilter>();
+            })
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;

@@ -18,6 +18,12 @@ public sealed class ExceptionMiddleware(
         {
             logger.LogInformation("Request aborted by client at {Path}", ctx.Request.Path);
         }
+        catch (Microsoft.AspNetCore.Http.BadHttpRequestException)
+        {
+            ctx.Response.StatusCode = 400;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsJsonAsync(new { code = ErrorCodes.BadRequest });
+        }
         catch (BaseException be) // TODO: remove in Phase 15
         {
             logger.LogWarning(be, "Domain exception {Type} at {Path}", be.GetType().Name, ctx.Request.Path);

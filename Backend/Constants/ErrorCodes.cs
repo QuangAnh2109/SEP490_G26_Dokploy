@@ -4,4 +4,5 @@ public static class ErrorCodes
 {
     public const string Unexpected = "UNEXPECTED";
     public const string Validation = "VALIDATION";
+    public const string BadRequest = "BAD_REQUEST";
 }
