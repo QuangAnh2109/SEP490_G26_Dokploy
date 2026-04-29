@@ -232,7 +232,7 @@ namespace Backend
             // =========================
             // PIPELINE
             // =========================
-            app.UseMiddleware<Backend.Helper.ExceptionMiddleware>();
+            app.UseMiddleware<Backend.Middleware.ExceptionMiddleware>();
 
             if (app.Environment.IsDevelopment())
             {
