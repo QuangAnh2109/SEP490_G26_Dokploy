@@ -1,297 +1,175 @@
 using Backend.Common;
+using Backend.Constants;
 using Backend.DTOs.Course;
-using Backend.Models;
 using Backend.Services.Interfaces;
-using Backend.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
-namespace Backend.Controllers
+namespace Backend.Controllers;
+
+[ApiController]
+[Route("api/course")]
+public class CourseController(ICourseService service, ICurrentUserService currentUser) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CourseController : ControllerBase
+    [HttpGet("my")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetMyClasses()
     {
-        private readonly ICourseService _service;
+        var courses = await service.GetCoursesForUserAsync(currentUser.UserId);
+        return Ok(courses);
+    }
 
-        public CourseController(ICourseService service)
-        {
-            _service = service;
-        }
+    [HttpGet("{id}/exams")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetExamsForClass(int id)
+    {
+        var myCourses = await service.GetCoursesForUserAsync(currentUser.UserId);
+        var membership = myCourses.FirstOrDefault(c => c.ClassId == id);
+        if (membership == null || membership.Role == "Pending")
+            return Forbid();
 
-        [HttpGet("my")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetMyClasses()
-        {
-            // Keep same behaviour as before; now it will run without auth
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-            {
-                // If no user id available, return all classes for quick verification or return BadRequest.
-                return BadRequest("No user id claim; for debug you can return all or set a default id.");
-            }
+        var isTeacher = membership.Role == "Teacher";
+        var exams = await service.GetExamsByClassAsync(id, isTeacher);
+        return Ok(exams);
+    }
 
-            var result = await _service.GetCoursesForUserAsync(userId);
-            return Ok(result);
-        }
+    [HttpGet("{id}/chapters")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetChaptersForClass(int id)
+    {
+        var myCourses = await service.GetCoursesForUserAsync(currentUser.UserId);
+        if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
+            return Forbid();
 
-        // New: return exams for a class that are visible now
-        [HttpGet("{id}/exams")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetExamsForClass(int id)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-                return Unauthorized();
+        var course = await service.GetByIdAsync(id);
+        if (course == null) return NotFound(new { code = ErrorCodes.CourseNotFound });
 
-            var myCourses = await _service.GetCoursesForUserAsync(userId);
-            var myRole = myCourses.FirstOrDefault(c => c.ClassId == id);
-            if (myRole == null || myRole.Role == "Pending")
-                return Forbid();
+        return Ok(course.Chapters);
+    }
 
-            var isTeacher = myRole.Role == "Teacher";
-            var exams = await _service.GetExamsByClassAsync(id, isTeacher);
-            return Ok(exams);
-        }
+    [HttpPost("{id}/leave")]
+    [Authorize(Roles = RoleIds.Student)]
+    public async Task<IActionResult> LeaveCourse(int id)
+    {
+        var result = await service.LeaveCourseAsync(id, currentUser.UserId);
+        return result.ToActionResult(this);
+    }
 
-        // New: return chapters belonging to the class's subject
-        // Route: GET api/course/{id}/chapters
-        [HttpGet("{id}/chapters")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetChaptersForClass(int id)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-                return Unauthorized();
+    [HttpPost("join")]
+    [Authorize(Roles = RoleIds.Student)]
+    public async Task<IActionResult> JoinCourse([FromBody] JoinCourseRequestDTO request)
+    {
+        var result = await service.JoinCourseAsync(currentUser.UserId, request.InvitationCode);
+        return result.ToActionResult(this);
+    }
 
-            var myCourses = await _service.GetCoursesForUserAsync(userId);
-            if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
-                return Forbid();
+    [HttpPost]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDTO request)
+    {
+        var result = await service.CreateCourseAsync(currentUser.UserId, request);
+        return result.ToActionResult(this);
+    }
 
-            var course = await _service.GetByIdAsync(id);
-            if (course == null) return NotFound();
+    [HttpGet("{id}/students")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetStudentsInClass(int id)
+    {
+        var students = await service.GetStudentsInClassAsync(id);
+        return Ok(students);
+    }
 
-            return Ok(course.Chapters);
-        }
-        [HttpPost("{id}/leave")]
-        [Authorize(Roles = RoleIds.Student)]
-        public async Task<IActionResult> LeaveCourse(int id)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-            {
-                return Unauthorized();
-            }
+    [HttpGet("{id}/settings")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> GetClassSettings(int id)
+    {
+        var course = await service.GetByIdAsync(id);
+        if (course == null) return NotFound(new { code = ErrorCodes.CourseNotFound });
+        return Ok(course);
+    }
 
-            try
-            {
-                await _service.LeaveCourseAsync(id, userId);
-                return Ok(new { message = "Rời lớp thành công." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+    [HttpPut("{id}/settings")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
+    {
+        var result = await service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
+        return result.ToActionResult(this);
+    }
 
-        [HttpPost("join")]
-        [Authorize(Roles = RoleIds.Student)]
-        public async Task<IActionResult> JoinCourse([FromBody] JoinCourseRequestDTO request)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-            {
-                return Unauthorized();
-            }
+    [HttpPost("{id}/invite")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
+    {
+        var result = await service.InviteStudentByEmailAsync(currentUser.UserId, id, request.Email);
+        if (result.IsFailure) return result.ToActionResult(this);
 
-            try
-            {
-                await _service.JoinCourseAsync(userId, request.InvitationCode);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        // Empty token = auto-approved pending student
+        return string.IsNullOrEmpty(result.Value)
+            ? Ok(new { message = "Học sinh đang chờ duyệt và đã được phê duyệt." })
+            : Ok(new { message = "Đã gửi thư mời.", token = result.Value });
+    }
 
-        [HttpPost]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDTO request)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+    [HttpPost("accept-invite")]
+    [Authorize(Roles = RoleIds.Student)]
+    public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequestDTO request)
+    {
+        var result = await service.AcceptInvitationAsync(currentUser.UserId, request.Token);
+        return result.ToActionResult(this);
+    }
 
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var userId))
-            {
-                return Unauthorized();
-            }
+    [HttpGet("{id}/students/pending")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> GetPendingStudents(int id)
+    {
+        var students = await service.GetPendingStudentsAsync(id);
+        return Ok(students);
+    }
 
-            try
-            {
-                var result = await _service.CreateCourseAsync(userId, request);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                // Typically you might use an ApiException filter or specific exceptions,
-                // but for now catching generic exceptions matched in the Service layer is fine.
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+    [HttpPost("{id}/students/{studentId}/approve")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> ApproveStudent(int id, int studentId)
+    {
+        var result = await service.ApproveStudentAsync(id, studentId);
+        return result.ToActionResult(this);
+    }
 
-        [HttpGet("{id}/students")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetStudentsInClass(int id)
-        {
-            var students = await _service.GetStudentsInClassAsync(id);
-            return Ok(students);
-        }
+    [HttpDelete("{id}/students/{studentId}/reject")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> RejectStudent(int id, int studentId)
+    {
+        var result = await service.RejectStudentAsync(id, studentId);
+        return result.ToActionResult(this);
+    }
 
-        [HttpGet("{id}/settings")]
-        [Authorize(Roles = RoleIds.Any)]
-        public async Task<IActionResult> GetClassSettings(int id)
-        {
-            var course = await _service.GetByIdAsync(id);
-            if (course == null) return NotFound();
-            return Ok(course);
-        }
+    [HttpDelete("{id}/students/{studentId}/remove")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> RemoveStudent(int id, int studentId)
+    {
+        var result = await service.RemoveStudentAsync(id, studentId);
+        return result.ToActionResult(this);
+    }
 
-        [HttpPut("{id}/settings")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> UpdateClassSettings(int id, [FromBody] UpdateCourseSettingsRequestDTO request)
-        {
-            try
-            {
-                await _service.UpdateClassSettingsAsync(id, request.ClassName, request.InvitationCodeStatus);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+    [HttpPost("{id}/close")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> CloseClass(int id)
+    {
+        var result = await service.CloseClassAsync(id);
+        return result.ToActionResult(this);
+    }
 
-        [HttpPost("{id}/invite")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var teacherId))
-                return Unauthorized();
+    [HttpPost("{id}/reopen")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> ReopenClass(int id)
+    {
+        var result = await service.ReopenClassAsync(id);
+        return result.ToActionResult(this);
+    }
 
-            try
-            {
-                var token = await _service.InviteStudentByEmailAsync(teacherId, id, request.Email);
-                return Ok(new { message = "Đã gửi thư mời.", token }); // Sending token back for debugging/frontend copy just in case
-            }
-            catch (AutoApprovePendingException ex)
-            {
-                return Ok(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpPost("accept-invite")]
-        [Authorize(Roles = RoleIds.Student)]
-        public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequestDTO request)
-        {
-            var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var studentId))
-                return Unauthorized();
-
-            try
-            {
-                await _service.AcceptInvitationAsync(studentId, request.Token);
-                return Ok(new { message = "Tham gia lớp học thành công." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpGet("{id}/students/pending")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> GetPendingStudents(int id)
-        {
-            var students = await _service.GetPendingStudentsAsync(id);
-            return Ok(students);
-        }
-
-        [HttpPost("{id}/students/{studentId}/approve")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> ApproveStudent(int id, int studentId)
-        {
-            try {
-                await _service.ApproveStudentAsync(id, studentId);
-                return Ok();
-            } catch (Exception ex) {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpDelete("{id}/students/{studentId}/reject")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> RejectStudent(int id, int studentId)
-        {
-            try {
-                await _service.RejectStudentAsync(id, studentId);
-                return Ok();
-            } catch (Exception ex) {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpDelete("{id}/students/{studentId}/remove")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> RemoveStudent(int id, int studentId)
-        {
-            try {
-                await _service.RemoveStudentAsync(id, studentId);
-                return Ok(new { message = "Đã xóa học sinh khỏi lớp." });
-            } catch (Exception ex) {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpPost("{id}/close")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> CloseClass(int id)
-        {
-            try {
-                await _service.CloseClassAsync(id);
-                return Ok(new { message = "Đã đóng lớp học." });
-            } catch (Exception ex) {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpPost("{id}/reopen")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> ReopenClass(int id)
-        {
-            try {
-                await _service.ReopenClassAsync(id);
-                return Ok(new { message = "Đã mở lại lớp học." });
-            } catch (Exception ex) {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet("subjects")]
-        [Authorize(Roles = RoleIds.Teacher)]
-        public async Task<IActionResult> GetSubjects()
-        {
-            var subjects = await _service.GetSubjectsAsync();
-            return Ok(subjects);
-        }
+    [HttpGet("subjects")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> GetSubjects()
+    {
+        var subjects = await service.GetSubjectsAsync();
+        return Ok(subjects);
     }
 }
