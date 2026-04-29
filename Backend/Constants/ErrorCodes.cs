@@ -24,4 +24,15 @@ public static class ErrorCodes
     public const string CourseUserNotStudent = "COURSE_USER_NOT_STUDENT";
     public const string CourseInviteTokenInvalid = "COURSE_INVITE_TOKEN_INVALID";
     public const string CourseConfigError = "COURSE_CONFIG_ERROR";
+
+    // Auth
+    public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";
+    public const string AuthEmailAlreadyRegistered = "AUTH_EMAIL_ALREADY_REGISTERED";
+    public const string AuthOtpExpired = "AUTH_OTP_EXPIRED";
+    public const string AuthOtpInvalid = "AUTH_OTP_INVALID";
+    public const string AuthInvalidGoogleToken = "AUTH_INVALID_GOOGLE_TOKEN";
+    public const string AuthUnknownRole = "AUTH_UNKNOWN_ROLE";
+    public const string AuthUserNotFound = "AUTH_USER_NOT_FOUND";
+    public const string AuthGoogleAccountNoPassword = "AUTH_GOOGLE_ACCOUNT_NO_PASSWORD";
+    public const string AuthInvalidRefreshToken = "AUTH_INVALID_REFRESH_TOKEN";
 }

@@ -1,21 +1,20 @@
+using Backend.Common.Models;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 
-namespace Backend.Services.Interfaces
+namespace Backend.Services.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<LoginResponse> LoginAsync(LoginRequest request);
-        Task<LoginResponse> GoogleLoginAsync(GoogleLoginRequest request);
-        Task<LoginResponse> GoogleRegisterAsync(GoogleRegisterRequest request);
-        Task<LoginResponse> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request);
-        Task SendOtpAsync(RegisterRequest request);
-        Task ResendOtpAsync(string email);
-        Task<LoginResponse> VerifyOtpAndRegisterAsync(VerifyOtpRequest request);
-        Task<TokenModel> RefreshTokenAsync(TokenModel request);
-        Task ForgotPasswordAsync(ForgotPasswordRequest request);
-        Task ResetPasswordAsync(ResetPasswordRequest request);
-        Task ChangePasswordAsync(int userId, ChangePasswordRequest request);
-        Task LogoutAsync(int userId);
-    }
+    Task<Result<LoginResponse>> LoginAsync(LoginRequest request);
+    Task<Result<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest request);
+    Task<Result<LoginResponse>> GoogleRegisterAsync(GoogleRegisterRequest request);
+    Task<Result<LoginResponse>> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request);
+    Task<Result> SendOtpAsync(RegisterRequest request);
+    Task<Result> ResendOtpAsync(string email);
+    Task<Result<LoginResponse>> VerifyOtpAndRegisterAsync(VerifyOtpRequest request);
+    Task<Result<TokenModel>> RefreshTokenAsync(TokenModel request);
+    Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task<Result> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<Result> LogoutAsync(int userId);
 }

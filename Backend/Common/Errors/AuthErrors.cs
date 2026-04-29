@@ -1,0 +1,17 @@
+using Backend.Common.Models;
+using Backend.Constants;
+
+namespace Backend.Common.Errors;
+
+public static class AuthErrors
+{
+    public static readonly Error InvalidCredentials = new(ErrorCodes.AuthInvalidCredentials, ErrorType.NotFound);
+    public static readonly Error EmailAlreadyRegistered = new(ErrorCodes.AuthEmailAlreadyRegistered, ErrorType.Conflict);
+    public static readonly Error OtpExpired = new(ErrorCodes.AuthOtpExpired, ErrorType.Unauthorized);
+    public static readonly Error OtpInvalid = new(ErrorCodes.AuthOtpInvalid, ErrorType.Unauthorized);
+    public static readonly Error InvalidGoogleToken = new(ErrorCodes.AuthInvalidGoogleToken, ErrorType.Unauthorized);
+    public static readonly Error UnknownRole = new(ErrorCodes.AuthUnknownRole, ErrorType.Forbidden);
+    public static readonly Error UserNotFound = new(ErrorCodes.AuthUserNotFound, ErrorType.NotFound);
+    public static readonly Error GoogleAccountNoPassword = new(ErrorCodes.AuthGoogleAccountNoPassword, ErrorType.Forbidden);
+    public static readonly Error InvalidRefreshToken = new(ErrorCodes.AuthInvalidRefreshToken, ErrorType.Unauthorized);
+}
