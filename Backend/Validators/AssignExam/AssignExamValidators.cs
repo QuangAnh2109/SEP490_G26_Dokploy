@@ -8,27 +8,22 @@ public class CreateAssignExamRequestValidator : AbstractValidator<CreateAssignEx
     public CreateAssignExamRequestValidator()
     {
         RuleFor(x => x.Title)
-            .NotEmpty()
-            .WithMessage("Title is required.");
-            
+            .NotEmpty();
+
         RuleFor(x => x.Duration)
-            .NotEmpty()
-            .GreaterThan(0)
-            .WithMessage("Duration must be > 0.");
-            
+            .NotNull()
+            .GreaterThan(0);
+
         RuleFor(x => x.MaxAttempts)
-            .NotEmpty()
-            .GreaterThan(0)
-            .WithMessage("MaxAttempts must be > 0.");
-            
+            .NotNull()
+            .GreaterThan(0);
+
         RuleFor(x => x.PaperCount)
-            .NotEmpty()
-            .GreaterThan(0)
-            .WithMessage("PaperCount must be > 0.");
-            
+            .NotNull()
+            .GreaterThan(0);
+
         RuleFor(x => x.GenerationMode)
-            .NotEmpty()
-            .WithMessage("GenerationMode is required.");
+            .NotEmpty();
     }
 }
 
@@ -37,8 +32,7 @@ public class UpdateExamInfoRequestValidator : AbstractValidator<UpdateExamInfoRe
     public UpdateExamInfoRequestValidator()
     {
         RuleFor(x => x.Title)
-            .NotEmpty()
-            .WithMessage("Title is required.");
+            .NotEmpty();
     }
 }
 
@@ -47,15 +41,15 @@ public class SwapQuestionRequestValidator : AbstractValidator<SwapQuestionReques
     public SwapQuestionRequestValidator()
     {
         RuleFor(x => x.PaperId)
-            .NotEmpty()
-            .WithMessage("PaperId is required.");
-            
+            .NotNull()
+            .GreaterThan(0);
+
         RuleFor(x => x.OldQuestionId)
-            .NotEmpty()
-            .WithMessage("OldQuestionId is required.");
-            
+            .NotNull()
+            .GreaterThan(0);
+
         RuleFor(x => x.NewQuestionId)
-            .NotEmpty()
-            .WithMessage("NewQuestionId is required.");
+            .NotNull()
+            .GreaterThan(0);
     }
 }

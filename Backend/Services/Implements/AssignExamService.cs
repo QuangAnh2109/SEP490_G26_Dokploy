@@ -73,8 +73,8 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var userCheck = await EnsureUserActiveAsync(teacherId, ct);
         if (userCheck.IsFailure) return userCheck.Error!;
 
-        if (r.IsPublic == false && !r.ClassId.HasValue) return new Error(ErrorCodes.Validation, ErrorType.Validation);
-        if (r.IsPublic == true && r.ClassId.HasValue) return new Error(ErrorCodes.Validation, ErrorType.Validation);
+        if (r.IsPublic == false && !r.ClassId.HasValue) return AssignExamErrors.MissingClassId;
+        if (r.IsPublic == true && r.ClassId.HasValue) return AssignExamErrors.PublicWithClassId;
 
         string generationMode = Clean(r.GenerationMode).ToLower();
         var mode = generationMode == "manual" ? "manual" : "blueprint";
@@ -330,7 +330,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
     public async Task<Result> SwapPaperQuestionAsync(SwapQuestionRequestDto r, CancellationToken ct = default)
     {
         if (!r.PaperId.HasValue || !r.OldQuestionId.HasValue || !r.NewQuestionId.HasValue)
-            return new Error(ErrorCodes.Validation, ErrorType.Validation);
+            return AssignExamErrors.SwapMissingFields;
 
         var paper = await _repo.GetPaperWithQuestionsAsync(r.PaperId.Value, ct);
         if (paper == null) return AssignExamErrors.PaperNotFound;
@@ -467,7 +467,7 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
     {
         if (ids == null || ids.Count == 0)
         {
-            return new Error(ErrorCodes.Validation, ErrorType.Validation);
+            return AssignExamErrors.ManualEmptyQuestions;
         }
 
         var sel = await _repo.GetQuestionsWithSubjectByIdsAsync(ids, ActiveStatus, ct);
@@ -492,8 +492,8 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
 
     private static Result ValidateTimeWindow(DateTime? v, DateTime? o, DateTime? c)
     {
-        if (v > o) return new Error(ErrorCodes.Validation, ErrorType.Validation);
-        if (o >= c) return new Error(ErrorCodes.Validation, ErrorType.Validation);
+        if (v > o) return AssignExamErrors.InvalidTimeWindow;
+        if (o >= c) return AssignExamErrors.InvalidTimeWindow;
         return Result.Success();
     }
 }

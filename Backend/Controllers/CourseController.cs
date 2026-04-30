@@ -1,5 +1,4 @@
 using Backend.Common;
-using Backend.Constants;
 using Backend.DTOs.Course;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -23,28 +22,16 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     [Authorize(Roles = RoleIds.Any)]
     public async Task<IActionResult> GetExamsForClass(int id)
     {
-        var myCourses = await service.GetCoursesForUserAsync(currentUser.UserId);
-        var membership = myCourses.FirstOrDefault(c => c.ClassId == id);
-        if (membership == null || membership.Role == "Pending")
-            return Forbid();
-
-        var isTeacher = membership.Role == "Teacher";
-        var exams = await service.GetExamsByClassAsync(id, isTeacher);
-        return Ok(exams);
+        var result = await service.GetExamsForCurrentUserAsync(id);
+        return result.ToActionResult(this);
     }
 
     [HttpGet("{id}/chapters")]
     [Authorize(Roles = RoleIds.Any)]
     public async Task<IActionResult> GetChaptersForClass(int id)
     {
-        var myCourses = await service.GetCoursesForUserAsync(currentUser.UserId);
-        if (!myCourses.Any(c => c.ClassId == id && c.Role != "Pending"))
-            return Forbid();
-
-        var course = await service.GetByIdAsync(id);
-        if (course == null) return NotFound(new { code = ErrorCodes.CourseNotFound });
-
-        return Ok(course.Chapters);
+        var result = await service.GetChaptersForCurrentUserAsync(id);
+        return result.ToActionResult(this);
     }
 
     [HttpPost("{id}/leave")]
@@ -83,9 +70,8 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     [Authorize(Roles = RoleIds.Any)]
     public async Task<IActionResult> GetClassSettings(int id)
     {
-        var course = await service.GetByIdAsync(id);
-        if (course == null) return NotFound(new { code = ErrorCodes.CourseNotFound });
-        return Ok(course);
+        var result = await service.GetClassSettingsAsync(id);
+        return result.ToActionResult(this);
     }
 
     [HttpPut("{id}/settings")]
@@ -101,12 +87,7 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     public async Task<IActionResult> InviteStudent(int id, [FromBody] InviteStudentRequestDTO request)
     {
         var result = await service.InviteStudentByEmailAsync(currentUser.UserId, id, request.Email);
-        if (result.IsFailure) return result.ToActionResult(this);
-
-        // Empty token = auto-approved pending student
-        return string.IsNullOrEmpty(result.Value)
-            ? Ok(new { message = "Học sinh đang chờ duyệt và đã được phê duyệt." })
-            : Ok(new { message = "Đã gửi thư mời.", token = result.Value });
+        return result.ToActionResult(this);
     }
 
     [HttpPost("accept-invite")]

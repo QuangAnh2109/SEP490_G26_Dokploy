@@ -8,15 +8,15 @@ public class CreatePracticeExamRequestValidator : AbstractValidator<CreatePracti
     public CreatePracticeExamRequestValidator()
     {
         RuleFor(x => x.ClassId)
-            .NotNull().WithMessage("ID lớp học không được để trống.")
-            .GreaterThan(0).WithMessage("ID lớp học không hợp lệ.");
+            .NotNull()
+            .GreaterThan(0);
 
         RuleFor(x => x.ChapterIds)
-            .NotNull().WithMessage("Phải chọn ít nhất 1 chương.")
-            .NotEmpty().WithMessage("Phải chọn ít nhất 1 chương.");
+            .NotNull()
+            .NotEmpty();
 
         RuleFor(x => x.TotalQuestions)
-            .NotNull().WithMessage("Số câu hỏi mong muốn không được để trống.")
-            .InclusiveBetween(5, 30).WithMessage("Số câu hỏi phải từ 5 đến 30.");
+            .NotNull()
+            .InclusiveBetween(5, 30);
     }
 }

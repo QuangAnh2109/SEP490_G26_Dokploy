@@ -20,6 +20,7 @@ public static class ErrorCodes
     public const string CourseAlreadyMember = "COURSE_ALREADY_MEMBER";
     public const string CourseAlreadyInvited = "COURSE_ALREADY_INVITED";
     public const string CourseNotMember = "COURSE_NOT_MEMBER";
+    public const string CourseAccessDenied = "COURSE_ACCESS_DENIED";
     public const string CourseStudentNotFound = "COURSE_STUDENT_NOT_FOUND";
     public const string CourseUserNotStudent = "COURSE_USER_NOT_STUDENT";
     public const string CourseInviteTokenInvalid = "COURSE_INVITE_TOKEN_INVALID";
@@ -81,6 +82,11 @@ public static class ErrorCodes
     public const string AssignExamInvalidStatusForUpdate = "ASSIGN_EXAM_INVALID_STATUS_FOR_UPDATE";
     public const string AssignExamInvalidOrInactiveQuestions = "ASSIGN_EXAM_INVALID_OR_INACTIVE_QUESTIONS";
     public const string AssignExamMultipleSubjects = "ASSIGN_EXAM_MULTIPLE_SUBJECTS";
+    public const string AssignExamMissingClassId = "ASSIGN_EXAM_MISSING_CLASS_ID";
+    public const string AssignExamPublicWithClassId = "ASSIGN_EXAM_PUBLIC_WITH_CLASS_ID";
+    public const string AssignExamSwapMissingFields = "ASSIGN_EXAM_SWAP_MISSING_FIELDS";
+    public const string AssignExamManualEmptyQuestions = "ASSIGN_EXAM_MANUAL_EMPTY_QUESTIONS";
+    public const string AssignExamInvalidTimeWindow = "ASSIGN_EXAM_INVALID_TIME_WINDOW";
 
     // StudentExam
     public const string StudentExamNotFound = "STUDENT_EXAM_NOT_FOUND";

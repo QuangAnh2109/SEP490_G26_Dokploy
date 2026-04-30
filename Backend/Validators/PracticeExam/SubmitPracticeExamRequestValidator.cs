@@ -8,17 +8,17 @@ public class SubmitPracticeExamRequestValidator : AbstractValidator<SubmitPracti
     public SubmitPracticeExamRequestValidator()
     {
         RuleFor(x => x.SubmissionId)
-            .NotNull().WithMessage("ID bài luyện tập không được để trống.")
-            .GreaterThan(0).WithMessage("ID bài luyện tập không hợp lệ.");
+            .NotNull()
+            .GreaterThan(0);
 
         RuleFor(x => x.StudentAnswers)
-            .NotNull().WithMessage("Danh sách câu trả lời không được để trống.");
-            
+            .NotNull();
+
         RuleForEach(x => x.StudentAnswers).ChildRules(answer =>
         {
             answer.RuleFor(a => a.QuestionAnswerId)
-                .NotNull().WithMessage("ID câu trả lời không được để trống.")
-                .GreaterThan(0).WithMessage("ID câu trả lời không hợp lệ.");
+                .NotNull()
+                .GreaterThan(0);
         });
     }
 }

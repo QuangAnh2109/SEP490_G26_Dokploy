@@ -9,10 +9,10 @@ public class QuestionStatusUpdateDtoValidator : AbstractValidator<QuestionStatus
     public QuestionStatusUpdateDtoValidator()
     {
         RuleFor(x => x.QuestionIds)
-            .NotEmpty().WithMessage("Question IDs are required.");
+            .NotEmpty();
 
         RuleFor(x => x.Status)
-            .NotEmpty().WithMessage("Status is required.")
-            .Must(s => QuestionStatus.IsValid(s ?? string.Empty)).WithMessage("Trạng thái không hợp lệ.");
+            .NotEmpty()
+            .Must(s => QuestionStatus.IsValid(s ?? string.Empty));
     }
 }

@@ -61,8 +61,8 @@ namespace Backend.DTOs.Question
 
     public class QuestionStatusUpdateDto
     {
-        public List<int> QuestionIds { get; set; } = new();
-        public string Status { get; set; } = string.Empty;
+        public List<int>? QuestionIds { get; set; }
+        public string? Status { get; set; }
     }
 
     public class QuestionListQueryDto

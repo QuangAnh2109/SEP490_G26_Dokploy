@@ -48,7 +48,7 @@ namespace Backend.Controllers
         [Authorize(Roles = RoleIds.Teacher)]
         public async Task<IActionResult> UpdateQuestionStatusAsync([FromBody] QuestionStatusUpdateDto request)
         {
-            var result = await _questionService.UpdateQuestionStatusAsync(request.QuestionIds, request.Status ?? string.Empty);
+            var result = await _questionService.UpdateQuestionStatusAsync(request.QuestionIds!, request.Status!);
             return result.ToActionResult(this);
         }
 

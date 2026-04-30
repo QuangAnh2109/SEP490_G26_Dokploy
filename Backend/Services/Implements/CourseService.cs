@@ -10,17 +10,60 @@ using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements;
 
-public class CourseService(ICourseRepository repo, IEmailService emailService, IConfiguration config) : ICourseService
+public class CourseService(
+    ICourseRepository repo,
+    IEmailService emailService,
+    IConfiguration config,
+    ICurrentUserService currentUser) : ICourseService
 {
+    // CourseDTO.Role values projected by repo (CourseRepository.GetCoursesForUserAsync).
+    private const string RoleTeacher = "Teacher";
+    private const string RolePending = "Pending";
+
     // ── Read (no failure path at service level) ────────────────────────────
 
     public Task<List<CourseDTO>> GetCoursesForUserAsync(int userId) => repo.GetCoursesForUserAsync(userId);
     public Task<List<CourseDTO>> GetAllAsync() => repo.GetAllAsync();
-    public Task<CourseDTO?> GetByIdAsync(int classId) => repo.GetByIdAsync(classId);
-    public Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false) => repo.GetExamsByClassAsync(classId, isTeacher);
     public Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId) => repo.GetStudentsInClassAsync(classId);
     public Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId) => repo.GetPendingStudentsAsync(classId);
     public Task<List<SubjectOptionDto>> GetSubjectsAsync() => repo.GetSubjectsAsync();
+
+    // ── Read with membership check ─────────────────────────────────────────
+
+    public async Task<Result<List<ExamInCourseDTO>>> GetExamsForCurrentUserAsync(int classId)
+    {
+        var membership = await GetActiveMembershipAsync(classId);
+        if (membership.IsFailure) return membership.Error;
+
+        var isTeacher = membership.Value.Role == RoleTeacher;
+        return await repo.GetExamsByClassAsync(classId, isTeacher);
+    }
+
+    public async Task<Result<List<ChapterDTO>>> GetChaptersForCurrentUserAsync(int classId)
+    {
+        var membership = await GetActiveMembershipAsync(classId);
+        if (membership.IsFailure) return membership.Error;
+
+        var course = await repo.GetByIdAsync(classId);
+        if (course == null) return CourseErrors.NotFound;
+        return course.Chapters;
+    }
+
+    public async Task<Result<CourseDTO>> GetClassSettingsAsync(int classId)
+    {
+        var course = await repo.GetByIdAsync(classId);
+        if (course == null) return CourseErrors.NotFound;
+        return course;
+    }
+
+    private async Task<Result<CourseDTO>> GetActiveMembershipAsync(int classId)
+    {
+        var myCourses = await repo.GetCoursesForUserAsync(currentUser.UserId);
+        var membership = myCourses.FirstOrDefault(c => c.ClassId == classId);
+        if (membership == null || membership.Role == RolePending)
+            return CourseErrors.AccessDenied;
+        return membership;
+    }
 
     // ── Mutating ───────────────────────────────────────────────────────────
 
@@ -88,7 +131,7 @@ public class CourseService(ICourseRepository repo, IEmailService emailService, I
         return success ? Result.Success() : CourseErrors.NotFound;
     }
 
-    public async Task<Result<string>> InviteStudentByEmailAsync(int teacherId, int classId, string? studentEmail)
+    public async Task<Result<InviteStudentResultDTO>> InviteStudentByEmailAsync(int teacherId, int classId, string? studentEmail)
     {
         var frontendBase = config["FrontendSettings:BaseUrl"];
         if (string.IsNullOrWhiteSpace(frontendBase))
@@ -120,8 +163,7 @@ public class CourseService(ICourseRepository repo, IEmailService emailService, I
             if (existing.MemberStatus == MemberStatus.Pending)
             {
                 await repo.UpdateClassMemberStatusAsync(classId, user.UserId, MemberStatus.Active);
-                // Auto-approve is a success; return empty token to signal no invite link
-                return Result<string>.Success(string.Empty);
+                return new InviteStudentResultDTO { AutoApproved = true };
             }
         }
 
@@ -135,7 +177,7 @@ public class CourseService(ICourseRepository repo, IEmailService emailService, I
                    $"<p><a href=\"{inviteLink}\">Nhấn vào đây để tham gia</a></p>";
         await emailService.SendEmailAsync(studentEmail!, "Thư mời tham gia lớp học", body);
 
-        return Result<string>.Success(token);
+        return new InviteStudentResultDTO { Token = token, AutoApproved = false };
     }
 
     public async Task<Result> AcceptInvitationAsync(int studentId, string? token)
