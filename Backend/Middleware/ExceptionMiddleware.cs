@@ -1,5 +1,4 @@
 using Backend.Constants;
-using Backend.Exceptions; // TODO: remove in Phase 15
 using System.Net;
 
 namespace Backend.Middleware;
@@ -23,13 +22,6 @@ public sealed class ExceptionMiddleware(
             ctx.Response.StatusCode = 400;
             ctx.Response.ContentType = "application/json";
             await ctx.Response.WriteAsJsonAsync(new { code = ErrorCodes.BadRequest });
-        }
-        catch (BaseException be) // TODO: remove in Phase 15
-        {
-            logger.LogWarning(be, "Domain exception {Type} at {Path}", be.GetType().Name, ctx.Request.Path);
-            ctx.Response.StatusCode = (int)be.StatusCode;
-            ctx.Response.ContentType = "application/json";
-            await ctx.Response.WriteAsJsonAsync(new { code = be.Message });
         }
         catch (Exception ex)
         {
