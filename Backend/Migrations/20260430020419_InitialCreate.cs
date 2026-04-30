@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class ChangeExamRuleColumnsToInt : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,11 +17,17 @@ namespace Backend.Migrations
                 {
                     GroupAnswerId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    DependsOnGroupId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__GroupAns__2DBBC7BF25045DED", x => x.GroupAnswerId);
+                    table.PrimaryKey("PK__GroupAns__2DBBC7BF07E0BCF8", x => x.GroupAnswerId);
+                    table.ForeignKey(
+                        name: "FK_GroupAnswers_DependsOnGroup",
+                        column: x => x.DependsOnGroupId,
+                        principalTable: "GroupAnswers",
+                        principalColumn: "GroupAnswerId");
                 });
 
             migrationBuilder.CreateTable(
@@ -36,7 +42,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__InputTyp__CA63BB5A5A3D1B06", x => x.InputTypeId);
+                    table.PrimaryKey("PK__InputTyp__CA63BB5A702ACA0D", x => x.InputTypeId);
                 });
 
             migrationBuilder.CreateTable(
@@ -49,7 +55,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Roles__8AFACE1AA917D9AA", x => x.RoleId);
+                    table.PrimaryKey("PK__Roles__8AFACE1A13F124CB", x => x.RoleId);
                 });
 
             migrationBuilder.CreateTable(
@@ -63,7 +69,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Subjects__AC1BA3A8420BE6DD", x => x.SubjectId);
+                    table.PrimaryKey("PK__Subjects__AC1BA3A86E08C448", x => x.SubjectId);
                 });
 
             migrationBuilder.CreateTable(
@@ -84,7 +90,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Users__1788CC4CBEE42738", x => x.UserId);
+                    table.PrimaryKey("PK__Users__1788CC4C1B357F2D", x => x.UserId);
                     table.ForeignKey(
                         name: "FK_Users_Roles",
                         column: x => x.RoleId,
@@ -103,7 +109,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Chapters__0893A36AF08A8987", x => x.ChapterId);
+                    table.PrimaryKey("PK__Chapters__0893A36AEE81EE8B", x => x.ChapterId);
                     table.ForeignKey(
                         name: "FK_Chapters_Subjects",
                         column: x => x.SubjectId,
@@ -129,7 +135,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Classes__CB1927C07669784B", x => x.ClassId);
+                    table.PrimaryKey("PK__Classes__CB1927C04A621E7C", x => x.ClassId);
                     table.ForeignKey(
                         name: "FK_Classes_Subjects",
                         column: x => x.SubjectId,
@@ -159,7 +165,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__ExamBlue__C1EF9CEF92D052CA", x => x.ExamBlueprintId);
+                    table.PrimaryKey("PK__ExamBlue__C1EF9CEF974A7B17", x => x.ExamBlueprintId);
                     table.ForeignKey(
                         name: "FK_Blueprints_Subjects",
                         column: x => x.SubjectId,
@@ -185,11 +191,12 @@ namespace Backend.Migrations
                     Difficulty = table.Column<int>(type: "int", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Active"),
-                    ConcurrencyStamp = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                    ConcurrencyStamp = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    QuestionPurpose = table.Column<byte>(type: "tinyint", nullable: false, defaultValue: (byte)1)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Question__0DC06FAC956C32D5", x => x.QuestionId);
+                    table.PrimaryKey("PK__Question__0DC06FACF1A0E339", x => x.QuestionId);
                     table.ForeignKey(
                         name: "FK_Questions_Chapters",
                         column: x => x.ChapterId,
@@ -208,12 +215,12 @@ namespace Backend.Migrations
                 {
                     ClassId = table.Column<int>(type: "int", nullable: false),
                     StudentId = table.Column<int>(type: "int", nullable: false),
-                    MemberStatus = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    MemberStatus = table.Column<int>(type: "int", nullable: false),
                     ConcurrencyStamp = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__ClassMem__4835757963F73B44", x => new { x.ClassId, x.StudentId });
+                    table.PrimaryKey("PK__ClassMem__4835757955CD1CFB", x => new { x.ClassId, x.StudentId });
                     table.ForeignKey(
                         name: "FK_ClassMembers_Classes",
                         column: x => x.ClassId,
@@ -238,7 +245,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__ExamBlue__E9BFA7D02A04BB06", x => new { x.ExamBlueprintId, x.ChapterId, x.Difficulty });
+                    table.PrimaryKey("PK__ExamBlue__E9BFA7D0F0EC64DB", x => new { x.ExamBlueprintId, x.ChapterId, x.Difficulty });
                     table.ForeignKey(
                         name: "FK_EBC_Blueprints",
                         column: x => x.ExamBlueprintId,
@@ -264,21 +271,21 @@ namespace Backend.Migrations
                     SubjectId = table.Column<int>(type: "int", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Duration = table.Column<int>(type: "int", nullable: false),
-                    ShowScore = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    ShowAnswer = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    AllowLateSubmission = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    ShowScore = table.Column<int>(type: "int", nullable: false),
+                    ShowAnswer = table.Column<int>(type: "int", nullable: false),
                     MaxAttempts = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
                     VisibleFrom = table.Column<DateTime>(type: "datetime2", nullable: true),
                     OpenAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CloseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ShuffleQuestion = table.Column<bool>(type: "bit", nullable: false),
+                    AnswerTimingMode = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
                     UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
                     ConcurrencyStamp = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Exams__297521C75322A061", x => x.ExamId);
+                    table.PrimaryKey("PK__Exams__297521C70CDECF29", x => x.ExamId);
                     table.ForeignKey(
                         name: "FK_Exams_Classes",
                         column: x => x.ClassId,
@@ -317,7 +324,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Question__86BEDFCFE732A3F0", x => x.QuestionAnswerId);
+                    table.PrimaryKey("PK__Question__86BEDFCF73CA15C6", x => x.QuestionAnswerId);
                     table.ForeignKey(
                         name: "FK_QuestionAnswers_GroupAnswers",
                         column: x => x.GroupAnswerId,
@@ -336,12 +343,12 @@ namespace Backend.Migrations
                 {
                     PaperId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ExamId = table.Column<int>(type: "int", nullable: false),
-                    Code = table.Column<int>(type: "int", nullable: false)
+                    ExamId = table.Column<int>(type: "int", nullable: true),
+                    Code = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Papers__AB86120B73731CD3", x => x.PaperId);
+                    table.PrimaryKey("PK__Papers__AB86120B71F05C29", x => x.PaperId);
                     table.ForeignKey(
                         name: "FK_Papers_Exams",
                         column: x => x.ExamId,
@@ -359,7 +366,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__BlankInp__3A18E47A2D225336", x => new { x.QuestionAnswerId, x.InputTypeId });
+                    table.PrimaryKey("PK__BlankInp__3A18E47A824B6BDA", x => new { x.QuestionAnswerId, x.InputTypeId });
                     table.ForeignKey(
                         name: "FK_BlankInputs_InputTypes",
                         column: x => x.InputTypeId,
@@ -381,7 +388,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__PaperQue__7B5A14F109670640", x => new { x.PaperId, x.QuestionId });
+                    table.PrimaryKey("PK__PaperQue__7B5A14F1873A63DF", x => new { x.PaperId, x.QuestionId });
                     table.ForeignKey(
                         name: "FK_PQ_Papers",
                         column: x => x.PaperId,
@@ -410,7 +417,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Submissi__449EE12502134050", x => x.SubmissionId);
+                    table.PrimaryKey("PK__Submissi__449EE12553B1053B", x => x.SubmissionId);
                     table.ForeignKey(
                         name: "FK_Submissions_Papers",
                         column: x => x.PaperId,
@@ -436,7 +443,7 @@ namespace Backend.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__StudentA__6E3EA4051BD52DB4", x => x.StudentAnswerId);
+                    table.PrimaryKey("PK__StudentA__6E3EA405089AC96F", x => x.StudentAnswerId);
                     table.ForeignKey(
                         name: "FK_StudentAnswers_QuestionAnswers",
                         column: x => x.QuestionAnswerId,
@@ -470,7 +477,7 @@ namespace Backend.Migrations
                 column: "TeacherId");
 
             migrationBuilder.CreateIndex(
-                name: "UQ__Classes__286690FF36D4A691",
+                name: "UQ__Classes__286690FF0D037D77",
                 table: "Classes",
                 column: "InvitationCode",
                 unique: true);
@@ -514,6 +521,11 @@ namespace Backend.Migrations
                 name: "IX_Exams_TeacherId",
                 table: "Exams",
                 column: "TeacherId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GroupAnswers_DependsOnGroupId",
+                table: "GroupAnswers",
+                column: "DependsOnGroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaperQuestion_QuestionId",
@@ -571,7 +583,7 @@ namespace Backend.Migrations
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "UQ__Users__A9D105349E392894",
+                name: "UQ__Users__A9D10534BF4ED69B",
                 table: "Users",
                 column: "Email",
                 unique: true);

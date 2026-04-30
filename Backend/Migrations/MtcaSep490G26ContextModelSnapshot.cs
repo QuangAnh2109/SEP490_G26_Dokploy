@@ -37,7 +37,7 @@ namespace Backend.Migrations
                         .HasColumnType("rowversion");
 
                     b.HasKey("QuestionAnswerId", "InputTypeId")
-                        .HasName("PK__BlankInp__3A18E47A2D225336");
+                        .HasName("PK__BlankInp__3A18E47A824B6BDA");
 
                     b.HasIndex("InputTypeId");
 
@@ -61,7 +61,7 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ChapterId")
-                        .HasName("PK__Chapters__0893A36AF08A8987");
+                        .HasName("PK__Chapters__0893A36AEE81EE8B");
 
                     b.HasIndex("SubjectId");
 
@@ -122,13 +122,13 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ClassId")
-                        .HasName("PK__Classes__CB1927C07669784B");
+                        .HasName("PK__Classes__CB1927C04A621E7C");
 
                     b.HasIndex("SubjectId");
 
                     b.HasIndex("TeacherId");
 
-                    b.HasIndex(new[] { "InvitationCode" }, "UQ__Classes__286690FF36D4A691")
+                    b.HasIndex(new[] { "InvitationCode" }, "UQ__Classes__286690FF0D037D77")
                         .IsUnique();
 
                     b.ToTable("Classes");
@@ -149,12 +149,10 @@ namespace Backend.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<int>("MemberStatus")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
+                        .HasColumnType("int");
 
                     b.HasKey("ClassId", "StudentId")
-                        .HasName("PK__ClassMem__4835757963F73B44");
+                        .HasName("PK__ClassMem__4835757955CD1CFB");
 
                     b.HasIndex("StudentId");
 
@@ -169,17 +167,8 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ExamId"));
 
-                    b.Property<int>("AnswerDisplayMode")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("ShowAnswer");
-
                     b.Property<int>("AnswerTimingMode")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("AllowLateSubmission");
+                        .HasColumnType("int");
 
                     b.Property<int?>("ClassId")
                         .HasColumnType("int");
@@ -211,11 +200,11 @@ namespace Backend.Migrations
                     b.Property<DateTime?>("OpenAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ScoreDisplayMode")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("ShowScore");
+                    b.Property<int>("ShowAnswer")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ShowScore")
+                        .HasColumnType("int");
 
                     b.Property<bool>("ShuffleQuestion")
                         .HasColumnType("bit");
@@ -244,7 +233,7 @@ namespace Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ExamId")
-                        .HasName("PK__Exams__297521C75322A061");
+                        .HasName("PK__Exams__297521C70CDECF29");
 
                     b.HasIndex("ClassId");
 
@@ -296,7 +285,7 @@ namespace Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ExamBlueprintId")
-                        .HasName("PK__ExamBlue__C1EF9CEF92D052CA");
+                        .HasName("PK__ExamBlue__C1EF9CEF974A7B17");
 
                     b.HasIndex("SubjectId");
 
@@ -326,7 +315,7 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ExamBlueprintId", "ChapterId", "Difficulty")
-                        .HasName("PK__ExamBlue__E9BFA7D02A04BB06");
+                        .HasName("PK__ExamBlue__E9BFA7D0F0EC64DB");
 
                     b.HasIndex("ChapterId");
 
@@ -341,13 +330,18 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupAnswerId"));
 
+                    b.Property<int?>("DependsOnGroupId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("GroupAnswerId")
-                        .HasName("PK__GroupAns__2DBBC7BF25045DED");
+                        .HasName("PK__GroupAns__2DBBC7BF07E0BCF8");
+
+                    b.HasIndex("DependsOnGroupId");
 
                     b.ToTable("GroupAnswers");
                 });
@@ -375,7 +369,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(400)");
 
                     b.HasKey("InputTypeId")
-                        .HasName("PK__InputTyp__CA63BB5A5A3D1B06");
+                        .HasName("PK__InputTyp__CA63BB5A702ACA0D");
 
                     b.ToTable("InputTypes");
                 });
@@ -388,14 +382,14 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaperId"));
 
-                    b.Property<int>("Code")
+                    b.Property<int?>("Code")
                         .HasColumnType("int");
 
-                    b.Property<int>("ExamId")
+                    b.Property<int?>("ExamId")
                         .HasColumnType("int");
 
                     b.HasKey("PaperId")
-                        .HasName("PK__Papers__AB86120B73731CD3");
+                        .HasName("PK__Papers__AB86120B71F05C29");
 
                     b.HasIndex("ExamId");
 
@@ -429,6 +423,11 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte>("QuestionPurpose")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint")
+                        .HasDefaultValue((byte)1);
+
                     b.Property<string>("QuestionType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -447,7 +446,7 @@ namespace Backend.Migrations
                         .HasDefaultValueSql("(getutcdate())");
 
                     b.HasKey("QuestionId")
-                        .HasName("PK__Question__0DC06FAC956C32D5");
+                        .HasName("PK__Question__0DC06FACF1A0E339");
 
                     b.HasIndex("ChapterId");
 
@@ -491,7 +490,7 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("QuestionAnswerId")
-                        .HasName("PK__Question__86BEDFCFE732A3F0");
+                        .HasName("PK__Question__86BEDFCF73CA15C6");
 
                     b.HasIndex("GroupAnswerId");
 
@@ -514,7 +513,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("RoleId")
-                        .HasName("PK__Roles__8AFACE1AA917D9AA");
+                        .HasName("PK__Roles__8AFACE1A13F124CB");
 
                     b.ToTable("Roles");
                 });
@@ -543,7 +542,7 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("StudentAnswerId")
-                        .HasName("PK__StudentA__6E3EA4051BD52DB4");
+                        .HasName("PK__StudentA__6E3EA405089AC96F");
 
                     b.HasIndex("QuestionAnswerId");
 
@@ -571,7 +570,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("SubjectId")
-                        .HasName("PK__Subjects__AC1BA3A8420BE6DD");
+                        .HasName("PK__Subjects__AC1BA3A86E08C448");
 
                     b.ToTable("Subjects");
                 });
@@ -613,7 +612,7 @@ namespace Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("SubmissionId")
-                        .HasName("PK__Submissi__449EE12502134050");
+                        .HasName("PK__Submissi__449EE12553B1053B");
 
                     b.HasIndex("PaperId");
 
@@ -675,11 +674,11 @@ namespace Backend.Migrations
                         .HasColumnType("varchar(20)");
 
                     b.HasKey("UserId")
-                        .HasName("PK__Users__1788CC4CBEE42738");
+                        .HasName("PK__Users__1788CC4C1B357F2D");
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex(new[] { "Email" }, "UQ__Users__A9D105349E392894")
+                    b.HasIndex(new[] { "Email" }, "UQ__Users__A9D10534BF4ED69B")
                         .IsUnique();
 
                     b.ToTable("Users");
@@ -694,7 +693,7 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("PaperId", "QuestionId")
-                        .HasName("PK__PaperQue__7B5A14F109670640");
+                        .HasName("PK__PaperQue__7B5A14F1873A63DF");
 
                     b.HasIndex("QuestionId");
 
@@ -840,12 +839,21 @@ namespace Backend.Migrations
                     b.Navigation("ExamBlueprint");
                 });
 
+            modelBuilder.Entity("Backend.Models.GroupAnswer", b =>
+                {
+                    b.HasOne("Backend.Models.GroupAnswer", "DependsOnGroup")
+                        .WithMany("InverseDependsOnGroup")
+                        .HasForeignKey("DependsOnGroupId")
+                        .HasConstraintName("FK_GroupAnswers_DependsOnGroup");
+
+                    b.Navigation("DependsOnGroup");
+                });
+
             modelBuilder.Entity("Backend.Models.Paper", b =>
                 {
                     b.HasOne("Backend.Models.Exam", "Exam")
                         .WithMany("Papers")
                         .HasForeignKey("ExamId")
-                        .IsRequired()
                         .HasConstraintName("FK_Papers_Exams");
 
                     b.Navigation("Exam");
@@ -980,6 +988,8 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.GroupAnswer", b =>
                 {
+                    b.Navigation("InverseDependsOnGroup");
+
                     b.Navigation("QuestionAnswers");
                 });
 
