@@ -7,11 +7,11 @@ $(document).ready(function () {
     }
 
     // Display human-readable role
-    var roleName = roleId === "1" ? "Giáo viên" : "Học sinh";
+    var roleName = roleId === RoleIds.Teacher ? "Giáo viên" : "Học sinh";
     $('#roleDisplay').text(`Đăng ký tài khoản với vai trò: ${roleName}`);
 
     // Show/Hide StudentId field based on role
-    var isStudent = roleId !== "1"; // current UX only has 1=Teacher, 2=Student
+    var isStudent = roleId === RoleIds.Student;
     if (isStudent) {
         $('#studentIdGroup').removeClass('d-none');
         $('#StudentId').attr('required', true);
@@ -162,7 +162,7 @@ function handleCredentialResponse(response) {
             }
 
             if (data.token) {
-                setToken(data.token);
+                setToken(data.token, data.refreshToken);
                 localStorage.removeItem('tempGoogleToken');
                 localStorage.removeItem('tempGoogleEmail');
                 localStorage.removeItem('tempGoogleNeedsCompletion');

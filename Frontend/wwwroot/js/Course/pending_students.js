@@ -4,13 +4,13 @@ let currentClassStatus = 1;
 
 async function loadPendingStudents() {
     const role = getUserRole();
-    if (role === "Student") {
+    if (role === RoleIds.Student) {
         showToast("Bạn không có quyền truy cập", "error");
         window.location.href = `/Course/ExamListInCourse/${classId}`;
         return;
     }
 
-    if (role === "Teacher") {
+    if (role === RoleIds.Teacher) {
         const practiceMenu = document.getElementById("practiceMenuItem");
         if (practiceMenu) practiceMenu.style.display = 'none';
         const historyMenu = document.getElementById("practiceHistoryMenuItem");

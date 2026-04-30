@@ -23,7 +23,7 @@
             window.location.href = "/Auth/Login";
             return;
         }
-        if (getUserRole() !== "Teacher" && getUserRole() !== "Giáo viên") {
+        if (getUserRole() !== RoleIds.Teacher) {
             showError("Bạn không có quyền truy cập. Chỉ Giáo viên mới được xem thống kê nộp bài.");
             return;
         }

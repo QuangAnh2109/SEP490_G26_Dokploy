@@ -15,7 +15,7 @@ function initRoleUI() {
 
     btnContainer.innerHTML = ""; // clean first
 
-    if (role === "Teacher") {
+    if (role === RoleIds.Teacher) {
         title.textContent = "Danh sách lớp giảng dạy";
         subtitle.textContent = "Tìm kiếm và quản lý các lớp học bạn đang giảng dạy.";
 
@@ -47,7 +47,7 @@ function loadCourses() {
 
 function renderCourses(courses) {
     const role = getUserRole();
-    const isTeacher = role === "Teacher";
+    const isTeacher = role === RoleIds.Teacher;
     const grid = document.getElementById("courseGrid");
     grid.innerHTML = "";
 

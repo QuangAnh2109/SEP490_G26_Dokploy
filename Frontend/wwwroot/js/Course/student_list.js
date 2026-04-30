@@ -26,19 +26,19 @@ async function ensureClassNameAndBreadcrumb() {
 async function loadStudents() {
     try {
         const role = getUserRole();
-        if (role === "Student") {
+        if (role === RoleIds.Student) {
             const settingsMenu = document.getElementById("settingsMenuItem");
             if (settingsMenu) settingsMenu.style.display = 'none';
             const pendingMenu = document.getElementById("pendingMenuItem");
             if (pendingMenu) pendingMenu.style.display = 'none';
         }
-        if (role === "Teacher") {
+        if (role === RoleIds.Teacher) {
             const practiceMenu = document.getElementById("practiceMenuItem");
             if (practiceMenu) practiceMenu.style.display = 'none';
             const historyMenu = document.getElementById("practiceHistoryMenuItem");
             if (historyMenu) historyMenu.style.display = 'none';
         }
-        if (role === "Teacher" && currentClassStatus !== 0) {
+        if (role === RoleIds.Teacher && currentClassStatus !== 0) {
             document.querySelectorAll('.action-col').forEach(el => el.style.display = '');
         }
 
@@ -100,7 +100,7 @@ function renderStudents(students) {
             const actionCol = tr.querySelector(".action-col");
             const removeBtn = tr.querySelector(".btn-remove-student");
 
-            if (role === 'Teacher' && currentClassStatus !== 0) {
+            if (role === RoleIds.Teacher && currentClassStatus !== 0) {
                 if (actionCol) actionCol.style.display = '';
                 if (removeBtn) {
                     removeBtn.addEventListener("click", () => removeStudent(student.studentId, student.fullName || student.email));

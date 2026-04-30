@@ -113,7 +113,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const role = getUserRole();
-            if (role === "Student") {
+            if (role === RoleIds.Student) {
                 const settingsMenu = document.getElementById("settingsMenuItem");
                 if (settingsMenu) settingsMenu.style.display = 'none';
                 const pendingMenu = document.getElementById("pendingMenuItem");

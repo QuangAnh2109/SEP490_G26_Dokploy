@@ -24,8 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Kiểm tra đăng nhập & role ──
     if (!isAuthenticated()) { window.location.href = '/Auth/Login'; return; }
-    var role = getUserRole();
-    if (role !== 'Student' && role !== 'Học sinh') {
+    if (getUserRole() !== RoleIds.Student) {
         showError("Bạn không có quyền truy cập. Chỉ Học sinh mới được xem kết quả bài làm.");
         return;
     }

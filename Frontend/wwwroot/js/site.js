@@ -13,14 +13,17 @@ try {
     }
 } catch (_) { }
 
-function setToken(token) {
+// Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1" = Teacher, "2" = Student),
+// và Authorize attribute dùng RoleIds.Teacher/Student. FE compare trực tiếp với 2 const này.
+const RoleIds = Object.freeze({
+    Teacher: '1',
+    Student: '2'
+});
+
+function setToken(token, refreshToken) {
     localStorage.setItem('jwtToken', token);
-    const decoded = parseJwt(token);
-    if (decoded) {
-        const roleClaim = decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
-        if (roleClaim) {
-            localStorage.setItem('userRole', roleClaim);
-        }
+    if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
     }
 }
 
@@ -28,8 +31,13 @@ function getToken() {
     return localStorage.getItem('jwtToken');
 }
 
+function getRefreshToken() {
+    return localStorage.getItem('refreshToken');
+}
+
 function removeToken() {
     localStorage.removeItem('jwtToken');
+    localStorage.removeItem('refreshToken');
 }
 
 function parseJwt(token) {
@@ -67,6 +75,7 @@ function getUserRole() {
     if (!token) return null;
 
     const decoded = parseJwt(token);
+    if (!decoded) return null;
     return decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null;
 }
 
@@ -101,13 +110,57 @@ function isAuthenticated() {
     return getToken() !== null;
 }
 
+// Logout: gọi BE để bump SecurityStamp (vô hiệu hóa mọi refresh token đã issue),
+// rồi clear local state. Best-effort — nếu BE call fail, vẫn clear + redirect.
 function logout() {
-    removeToken();
-    window.location.href = '/Auth/Login';
+    apiClient.post('/api/auth/logout', {})
+        .catch(function () { /* ignore — vẫn clear + redirect */ })
+        .finally(function () {
+            removeToken();
+            window.location.href = '/Auth/Login';
+        });
+}
+
+// Dedup parallel refresh: nhiều API call song song hết hạn cùng lúc → chỉ gọi /refresh-token 1 lần.
+let _refreshPromise = null;
+function refreshAccessToken() {
+    if (_refreshPromise) return _refreshPromise;
+
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return Promise.reject(new Error('No refresh token'));
+
+    const oldAccessToken = getToken() || '';
+    const url = API_BASE_URL.replace(/\/+$/, '') + '/api/auth/refresh-token';
+
+    _refreshPromise = new Promise(function (resolve, reject) {
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ AccessToken: oldAccessToken, RefreshToken: refreshToken }),
+            success: function (response) {
+                // BE TokenModel: { accessToken, refreshToken }
+                if (response && response.accessToken) {
+                    setToken(response.accessToken, response.refreshToken);
+                    resolve(response.accessToken);
+                } else {
+                    reject(new Error('Invalid refresh response'));
+                }
+            },
+            error: function (xhr) {
+                reject(new Error('Refresh failed: ' + xhr.status));
+            }
+        });
+    }).finally(function () {
+        _refreshPromise = null;
+    });
+
+    return _refreshPromise;
 }
 
 const apiClient = {
-    request: function (method, endpoint, data = null) {
+    request: function (method, endpoint, data = null, isRetry = false) {
+        const self = this;
         return new Promise((resolve, reject) => {
             const ajaxOptions = {
                 url: API_BASE_URL.replace(/\/+$/, '') + (endpoint.startsWith('/') ? endpoint : '/' + endpoint),
@@ -117,6 +170,27 @@ const apiClient = {
                     resolve(response);
                 },
                 error: function (xhr, status, error) {
+                    // 401 → thử refresh access token và retry 1 lần.
+                    // Skip refresh cho chính endpoint /refresh-token (tránh loop) và khi đã retry rồi.
+                    const isRefreshEndpoint = endpoint.indexOf('/api/auth/refresh-token') !== -1;
+                    if (xhr.status === 401 && !isRetry && !isRefreshEndpoint && getRefreshToken()) {
+                        refreshAccessToken()
+                            .then(function () {
+                                self.request(method, endpoint, data, true).then(resolve, reject);
+                            })
+                            .catch(function () {
+                                // Refresh fail → access + refresh đều invalid → force logout.
+                                removeToken();
+                                if (window.location.pathname.indexOf('/Auth/') !== 0) {
+                                    window.location.href = '/Auth/Login';
+                                }
+                                reject({
+                                    xhr: xhr, status: status, error: error,
+                                    message: 'Phiên đăng nhập đã hết hạn.'
+                                });
+                            });
+                        return;
+                    }
                     reject({
                         xhr: xhr,
                         status: status,

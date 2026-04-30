@@ -98,7 +98,7 @@ $(document).ready(function () {
             .then(function (response) {
                 if (response.token) {
                     // Successful registration & login
-                    setToken(response.token);
+                    setToken(response.token, response.refreshToken);
 
                     // Cleanup temporary variables
                     localStorage.removeItem('tempGoogleToken');

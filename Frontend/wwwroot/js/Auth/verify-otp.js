@@ -103,7 +103,7 @@ function verifyOtp() {
         .then(function (data) {
             if (data.token) {
                 // Success! Log the user in
-                localStorage.setItem('jwtToken', data.token);
+                setToken(data.token, data.refreshToken);
                 // Clean up registration data
                 localStorage.removeItem('pendingRegistrationEmail');
                 localStorage.removeItem('pendingRegistrationRole');

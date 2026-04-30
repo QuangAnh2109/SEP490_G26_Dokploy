@@ -21,8 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     if (!isAuthenticated()) { window.location.href = '/Auth/Login'; return; }
-    var role = getUserRole();
-    if (role !== 'Teacher' && role !== 'Giáo viên') {
+    if (getUserRole() !== RoleIds.Teacher) {
         showError("Bạn không có quyền truy cập. Chỉ Giáo viên mới được xem bài làm.");
         return;
     }

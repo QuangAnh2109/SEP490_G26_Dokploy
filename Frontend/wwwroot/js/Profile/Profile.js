@@ -67,7 +67,7 @@ async function loadProfile() {
         $("#phoneNumber").val(data.phoneNumber || "");
         $("#studentId").val(data.studentId || "");
 
-        if (data.roleId === 2) {
+        if (String(data.roleId) === RoleIds.Student) {
             $("#studentIdGroup").removeAttr("hidden");
         } else {
             $("#studentIdGroup").attr("hidden", true);

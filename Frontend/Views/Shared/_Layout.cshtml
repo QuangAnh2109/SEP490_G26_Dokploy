@@ -93,9 +93,9 @@
 				}
 
 				const role = getUserRole();
-				if (role === 'Student' || role === 'Học sinh') {
+				if (role === RoleIds.Student) {
 					$('.role-student').removeClass('d-none');
-				} else if (role === 'Teacher' || role === 'Giáo viên') {
+				} else if (role === RoleIds.Teacher) {
 					$('.role-teacher').removeClass('d-none');
 				}
 			} else {

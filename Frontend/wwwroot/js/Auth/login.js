@@ -30,7 +30,7 @@ $(document).ready(function () {
         apiClient.post("/api/auth/login", requestData)
             .then(function (response) {
                 if (response.token) {
-                    setToken(response.token);
+                    setToken(response.token, response.refreshToken);
                     const returnUrl = $('#returnUrl').val();
                     window.location.href = returnUrl ? returnUrl : '/';
                 }
@@ -59,7 +59,7 @@ function handleCredentialResponse(response) {
                 localStorage.setItem('tempGoogleNeedsCompletion', '1');
                 window.location.href = '/Auth/GoogleRegister';
             } else if (data.token) {
-                setToken(data.token);
+                setToken(data.token, data.refreshToken);
                 const returnUrl = $('#returnUrl').val();
                 window.location.href = returnUrl ? returnUrl : '/';
             } else {
