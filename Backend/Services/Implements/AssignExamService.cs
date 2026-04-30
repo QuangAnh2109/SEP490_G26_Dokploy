@@ -6,16 +6,21 @@ using Backend.Services.Interfaces;
 using Backend.Repositories.Interfaces;
 using Backend.Common.Models;
 using Backend.Common.Errors;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
 namespace Backend.Services.Implements;
 
-public class AssignExamService(IAssignExamRepository repo, ICurrentUserService currentUserService) : IAssignExamService
+public class AssignExamService(
+    IAssignExamRepository repo,
+    ICurrentUserService currentUserService,
+    ExamStatusJob examStatusJob) : IAssignExamService
 {
     private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
     private readonly IAssignExamRepository _repo = repo;
     private readonly ICurrentUserService _currentUserService = currentUserService;
+    private readonly ExamStatusJob _examStatusJob = examStatusJob;
 
     private async Task<Result> EnsureUserActiveAsync(int id, CancellationToken ct)
     {
@@ -362,15 +367,22 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var exam = await _repo.GetExamByIdAsync(id, ct);
         if (exam == null) return AssignExamErrors.ExamNotFound;
 
-        await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+        try
+        {
+            await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
 
-        var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
-        await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
-        
-        await _repo.UpdateBlueprintToInprogressAsync(id, ct);
+            var allQuestionIds = await _repo.GetAllQuestionIdsInExamAsync(id, ct);
+            await _repo.UpdateQuestionsToInprogressAsync(allQuestionIds, ct);
 
-        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
-        return Result.Success();
+            await _repo.UpdateBlueprintToInprogressAsync(id, ct);
+
+            await _examStatusJob.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AssignExamErrors.ConcurrentUpdate;
+        }
     }
 
     public async Task<Result> CancelExamAsync(int id, CancellationToken ct = default)
@@ -384,14 +396,23 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         }
 
         bool hasSubmissions = await _repo.HasSubmissionsForExamAsync(id, ct);
-        if (hasSubmissions)
-        {
-            await _repo.UpdateExamStatusAsync(id, ExamStatus.InProgress, ct);
-            return AssignExamErrors.ExamAlreadyStarted;
-        }
 
-        await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
-        return Result.Success();
+        try
+        {
+            if (hasSubmissions)
+            {
+                await _repo.UpdateExamStatusAsync(id, ExamStatus.InProgress, ct);
+                return AssignExamErrors.ExamAlreadyStarted;
+            }
+
+            await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
+            await _examStatusJob.CancelExamJobsAsync(id, ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AssignExamErrors.ConcurrentUpdate;
+        }
     }
 
     public async Task<Result> RestoreExamAsync(int id, CancellationToken ct = default)
@@ -420,9 +441,16 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
             }
         }
 
-        await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
-        ExamStatusJob.ScheduleExamJobs(id, exam.OpenAt, exam.CloseAt);
-        return Result.Success();
+        try
+        {
+            await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
+            await _examStatusJob.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AssignExamErrors.ConcurrentUpdate;
+        }
     }
 
     public async Task<Result> DeleteExamAsync(int id, CancellationToken ct = default)
@@ -447,20 +475,21 @@ public class AssignExamService(IAssignExamRepository repo, ICurrentUserService c
         var valResult = ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
         if (valResult.IsFailure) return valResult.Error!;
 
-        if (exam.Status == ExamStatus.Cancelled)
-        {
-            await _repo.UpdateExamInfoAsync(id, null, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
-        }
-        else if (exam.Status == ExamStatus.Ready)
-        {
-            await _repo.UpdateExamInfoAsync(id, request.Title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
-        }
-        else
+        if (exam.Status != ExamStatus.Cancelled && exam.Status != ExamStatus.Ready)
         {
             return AssignExamErrors.InvalidStatusForUpdate;
         }
 
-        return Result.Success();
+        try
+        {
+            var title = exam.Status == ExamStatus.Cancelled ? null : request.Title;
+            await _repo.UpdateExamInfoAsync(id, title, request.VisibleFrom, request.OpenAt, request.CloseAt, ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AssignExamErrors.ConcurrentUpdate;
+        }
     }
 
     private async Task<Result<(int SubjId, int? BpId, List<int> QIds)>> BuildFromManualAsync(int? sid, IReadOnlyCollection<int> ids, CancellationToken ct)

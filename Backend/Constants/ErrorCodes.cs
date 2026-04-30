@@ -87,6 +87,7 @@ public static class ErrorCodes
     public const string AssignExamSwapMissingFields = "ASSIGN_EXAM_SWAP_MISSING_FIELDS";
     public const string AssignExamManualEmptyQuestions = "ASSIGN_EXAM_MANUAL_EMPTY_QUESTIONS";
     public const string AssignExamInvalidTimeWindow = "ASSIGN_EXAM_INVALID_TIME_WINDOW";
+    public const string AssignExamConcurrentUpdate = "EXAM_CONCURRENT_UPDATE";
 
     // StudentExam
     public const string StudentExamNotFound = "STUDENT_EXAM_NOT_FOUND";

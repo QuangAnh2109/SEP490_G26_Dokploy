@@ -1,4 +1,5 @@
 using Backend.Common;
+using Backend.Constants;
 using Backend.Jobs;
 using Backend.Models;
 using Backend.Repositories.Implements;
@@ -7,7 +8,8 @@ using Backend.Services.Implements;
 using Backend.Services.Interfaces;
 using FluentValidation;
 using Hangfire;
-using Hangfire.SqlServer;
+using Hangfire.Redis.StackExchange;
+using StackExchange.Redis;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +69,7 @@ namespace Backend
             MapRequiredEnv("EmailSettings:SenderPassword", "EMAIL_PASSWORD");
             MapRequiredEnv("Google:ClientId", "GOOGLE_CLIENT_ID");
             MapRequiredEnv("FrontendSettings:BaseUrl", "FRONTEND_BASE_URL");
+            MapRequiredEnv("Redis:Connection", "REDIS_CONNECTION");
 
             // Kiểm tra tổng quát trước khi nổ app
             if (missingKeys.Count > 0)
@@ -119,24 +122,27 @@ namespace Backend
             builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
             builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
 
-            // Hangfire – Lập lịch tự động chuyển trạng thái đề thi
+            // Hangfire – Lập lịch tự động chuyển trạng thái đề thi (Redis storage)
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+                ConnectionMultiplexer.Connect(
+                    sp.GetRequiredService<IConfiguration>()["Redis:Connection"]!));
             builder.Services.AddSingleton<ExamStatusJob>();
-            builder.Services.AddHangfire(config => config
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseSqlServerStorage(
-                    builder.Configuration.GetConnectionString("MyCnn"),
-                    new SqlServerStorageOptions
+            builder.Services.AddHangfire((sp, config) =>
+            {
+                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                config
+                    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                    .UseSimpleAssemblyNameTypeSerializer()
+                    .UseRecommendedSerializerSettings()
+                    .UseRedisStorage(mux, new RedisStorageOptions
                     {
-                        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                        QueuePollInterval = TimeSpan.FromSeconds(15),
-                        UseRecommendedIsolationLevel = true,
-                        DisableGlobalLocks = true
-                    }));
+                        Prefix = RedisKeys.HangfirePrefix,
+                        Db = RedisKeys.HangfireDb,
+                        InvisibilityTimeout = TimeSpan.FromMinutes(5)
+                    });
+            });
             builder.Services.AddHangfireServer();
-
+            builder.Services.AddHostedService<ExamScheduleRehydrator>();
 
             // =========================
             // JWT AUTHENTICATION
@@ -166,7 +172,7 @@ namespace Backend
             // =========================
             // OTHER SERVICES
             // =========================
-            builder.Services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Singleton);
+            builder.Services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped);
 
             builder.Services.Configure<ApiBehaviorOptions>(options =>
             {

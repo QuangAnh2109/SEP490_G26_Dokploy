@@ -1,122 +1,143 @@
 using Backend.Constants;
 using Backend.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Hangfire;
+using StackExchange.Redis;
 
 namespace Backend.Jobs;
 
-/// <summary>
-/// Hangfire job xử lý chuyển trạng thái đề thi tự động.
-/// Mỗi job được lập lịch tại thời điểm chính xác (OpenAt / CloseAt)
-/// thay vì polling liên tục, giảm tải cho server.
-/// </summary>
-public class ExamStatusJob
+public class ExamStatusJob(
+    IServiceScopeFactory scopeFactory,
+    ILogger<ExamStatusJob> logger,
+    IConnectionMultiplexer mux,
+    IBackgroundJobClient jobClient)
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<ExamStatusJob> _logger;
+    private static readonly TimeSpan JobIdGracePeriod = TimeSpan.FromHours(1);
 
-    public ExamStatusJob(IServiceScopeFactory scopeFactory, ILogger<ExamStatusJob> logger)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
+    private static string OpenKey(int examId) => $"{RedisKeys.ExamJobsPrefix}:{examId}:open";
+    private static string CloseKey(int examId) => $"{RedisKeys.ExamJobsPrefix}:{examId}:close";
 
-    /// <summary>
-    /// Chuyển đề thi từ Published → InProgress khi đến thời điểm OpenAt.
-    /// </summary>
-    public async Task TransitionToInProgress(int examId)
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ILogger<ExamStatusJob> _logger = logger;
+    private readonly IBackgroundJobClient _jobClient = jobClient;
+    private readonly IDatabase _redis = mux.GetDatabase(RedisKeys.HangfireDb);
+
+    public async Task TransitionToInProgress(int examId, IJobCancellationToken jobToken)
     {
+        var ct = jobToken.ShutdownToken;
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MtcaSep490G26Context>();
 
-        var exam = await db.Exams.FindAsync(examId);
+        var exam = await db.Exams.FindAsync(new object[] { examId }, ct);
         if (exam == null)
         {
             _logger.LogWarning("ExamStatusJob: Exam {ExamId} not found, skipping InProgress transition.", examId);
             return;
         }
 
-        // Chỉ chuyển nếu đang ở trạng thái Published
         if (exam.Status != ExamStatus.Published)
         {
-            _logger.LogInformation("ExamStatusJob: Exam {ExamId} is not Published (Status={Status}), skipping InProgress transition.", examId, exam.Status);
+            _logger.LogInformation("ExamStatusJob: Exam {ExamId} is not Published (Status={Status}), skipping.", examId, exam.Status);
             return;
         }
 
         exam.Status = ExamStatus.InProgress;
         exam.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
 
         _logger.LogInformation("ExamStatusJob: Exam {ExamId} transitioned Published → InProgress.", examId);
     }
 
-    /// <summary>
-    /// Chuyển đề thi từ InProgress → Closed khi đến thời điểm CloseAt.
-    /// </summary>
-    public async Task TransitionToClosed(int examId)
+    public async Task TransitionToClosed(int examId, IJobCancellationToken jobToken)
     {
+        var ct = jobToken.ShutdownToken;
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MtcaSep490G26Context>();
 
-        var exam = await db.Exams.FindAsync(examId);
+        var exam = await db.Exams.FindAsync(new object[] { examId }, ct);
         if (exam == null)
         {
             _logger.LogWarning("ExamStatusJob: Exam {ExamId} not found, skipping Closed transition.", examId);
             return;
         }
 
-        // Chỉ chuyển nếu đang ở trạng thái InProgress
         if (exam.Status != ExamStatus.InProgress)
         {
-            _logger.LogInformation("ExamStatusJob: Exam {ExamId} is not InProgress (Status={Status}), skipping Closed transition.", examId, exam.Status);
+            _logger.LogInformation("ExamStatusJob: Exam {ExamId} is not InProgress (Status={Status}), skipping.", examId, exam.Status);
             return;
         }
 
         exam.Status = ExamStatus.Closed;
         exam.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
 
         _logger.LogInformation("ExamStatusJob: Exam {ExamId} transitioned InProgress → Closed.", examId);
     }
 
-    // ── Helper: Lập lịch / Hủy lịch ──
+    // Job ID được track trong Redis db 1 (cùng db với Hangfire) theo key:
+    //   mtca:exam-jobs:{examId}:open   → Hangfire job ID cho TransitionToInProgress
+    //   mtca:exam-jobs:{examId}:close  → Hangfire job ID cho TransitionToClosed
+    // Mỗi lần schedule lại → xóa job cũ trước, tránh tích lũy job trùng khi app restart.
 
-    /// <summary>
-    /// Đặt lịch 2 job cho 1 đề thi: InProgress tại OpenAt, Closed tại CloseAt.
-    /// Nếu đã có job cũ cho examId này, sẽ bị ghi đè (cùng jobId).
-    /// </summary>
-    public static void ScheduleExamJobs(int examId, DateTime? openAtUtc, DateTime? closeAtUtc)
+    public async Task ScheduleExamJobsAsync(int examId, DateTime? openAtUtc, DateTime? closeAtUtc, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         var now = DateTime.UtcNow;
+        var openKey = OpenKey(examId);
+        var closeKey = CloseKey(examId);
+
+        var oldOpen = await _redis.StringGetAsync(openKey);
+        if (!oldOpen.IsNullOrEmpty) _jobClient.Delete(oldOpen!);
+
+        var oldClose = await _redis.StringGetAsync(closeKey);
+        if (!oldClose.IsNullOrEmpty) _jobClient.Delete(oldClose!);
+
+        ct.ThrowIfCancellationRequested();
 
         if (openAtUtc.HasValue && openAtUtc.Value > now)
         {
             var delay = openAtUtc.Value - now;
-            Hangfire.BackgroundJob.Schedule<ExamStatusJob>(
-                job => job.TransitionToInProgress(examId),
-                delay);
+            var jobId = _jobClient.Schedule<ExamStatusJob>(
+                job => job.TransitionToInProgress(examId, JobCancellationToken.Null), delay);
+            await _redis.StringSetAsync(openKey, jobId, delay + JobIdGracePeriod);
+        }
+        else
+        {
+            await _redis.KeyDeleteAsync(openKey);
         }
 
         if (closeAtUtc.HasValue && closeAtUtc.Value > now)
         {
             var delay = closeAtUtc.Value - now;
-            Hangfire.BackgroundJob.Schedule<ExamStatusJob>(
-                job => job.TransitionToClosed(examId),
-                delay);
+            var jobId = _jobClient.Schedule<ExamStatusJob>(
+                job => job.TransitionToClosed(examId, JobCancellationToken.Null), delay);
+            await _redis.StringSetAsync(closeKey, jobId, delay + JobIdGracePeriod);
+        }
+        else
+        {
+            await _redis.KeyDeleteAsync(closeKey);
         }
     }
 
-    /// <summary>
-    /// Hủy các job đã lập lịch cho đề thi (dùng khi Cancel exam).
-    /// Lưu ý: Hangfire Schedule không hỗ trợ custom jobId nên ta dùng
-    /// cách khác — khi job chạy sẽ tự kiểm tra trạng thái hiện tại và skip
-    /// nếu không phù hợp (built-in safety trong TransitionToInProgress/TransitionToClosed).
-    /// </summary>
-    public static void CancelExamJobs(int examId)
+    public async Task CancelExamJobsAsync(int examId, CancellationToken ct = default)
     {
-        // Hangfire BackgroundJob.Schedule không hỗ trợ custom ID.
-        // Thay vào đó, khi job thực thi, nó sẽ kiểm tra status hiện tại
-        // và bỏ qua nếu không đúng (Published/InProgress).
-        // → Không cần hủy thủ công, job sẽ tự "no-op" khi chạy.
+        ct.ThrowIfCancellationRequested();
+
+        var openKey = OpenKey(examId);
+        var closeKey = CloseKey(examId);
+
+        var openId = await _redis.StringGetAsync(openKey);
+        if (!openId.IsNullOrEmpty)
+        {
+            _jobClient.Delete(openId!);
+            await _redis.KeyDeleteAsync(openKey);
+        }
+
+        var closeId = await _redis.StringGetAsync(closeKey);
+        if (!closeId.IsNullOrEmpty)
+        {
+            _jobClient.Delete(closeId!);
+            await _redis.KeyDeleteAsync(closeKey);
+        }
     }
 }

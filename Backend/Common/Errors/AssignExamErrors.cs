@@ -33,4 +33,5 @@ public static class AssignExamErrors
     public static readonly Error SwapMissingFields = new(ErrorCodes.AssignExamSwapMissingFields, ErrorType.Validation);
     public static readonly Error ManualEmptyQuestions = new(ErrorCodes.AssignExamManualEmptyQuestions, ErrorType.Validation);
     public static readonly Error InvalidTimeWindow = new(ErrorCodes.AssignExamInvalidTimeWindow, ErrorType.Validation);
+    public static readonly Error ConcurrentUpdate = new(ErrorCodes.AssignExamConcurrentUpdate, ErrorType.Conflict);
 }
