@@ -192,7 +192,6 @@ namespace Backend
                 {
                     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
                 });
-            builder.Services.AddSignalR();
             builder.Services.AddMemoryCache();
 
             builder.Services.AddCors(options =>
@@ -267,7 +266,6 @@ namespace Backend
             }
 
             app.MapControllers();
-            app.MapHub<Backend.Hubs.ExamHub>("/examHub");
 
             app.Run();
         }
