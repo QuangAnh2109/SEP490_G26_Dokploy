@@ -126,7 +126,12 @@ namespace Backend
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
                 ConnectionMultiplexer.Connect(
                     sp.GetRequiredService<IConfiguration>()["Redis:Connection"]!));
-            builder.Services.AddSingleton<ExamStatusJob>();
+            builder.Services.AddSingleton<IExamStatusScheduler, ExamStatusScheduler>();
+            builder.Services.AddTransient<ExamStatusTransitionJob>();
+            // Hangfire 'invisibility' = thời gian một worker được phép giữ một job
+            // trước khi job được requeue cho worker khác. 5 phút đủ dài cho DB lock + EF retry,
+            // đủ ngắn để phát hiện worker stuck (default Hangfire = 30 phút).
+            var hangfireInvisibilityTimeout = TimeSpan.FromMinutes(5);
             builder.Services.AddHangfire((sp, config) =>
             {
                 var mux = sp.GetRequiredService<IConnectionMultiplexer>();
@@ -138,7 +143,7 @@ namespace Backend
                     {
                         Prefix = RedisKeys.HangfirePrefix,
                         Db = RedisKeys.HangfireDb,
-                        InvisibilityTimeout = TimeSpan.FromMinutes(5)
+                        InvisibilityTimeout = hangfireInvisibilityTimeout
                     });
             });
             builder.Services.AddHangfireServer();

@@ -14,13 +14,13 @@ namespace Backend.Services.Implements;
 public class AssignExamService(
     IAssignExamRepository repo,
     ICurrentUserService currentUserService,
-    ExamStatusJob examStatusJob) : IAssignExamService
+    IExamStatusScheduler examStatusScheduler) : IAssignExamService
 {
     private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
     private readonly IAssignExamRepository _repo = repo;
     private readonly ICurrentUserService _currentUserService = currentUserService;
-    private readonly ExamStatusJob _examStatusJob = examStatusJob;
+    private readonly IExamStatusScheduler _examStatusScheduler = examStatusScheduler;
 
     private async Task<Result> EnsureUserActiveAsync(int id, CancellationToken ct)
     {
@@ -376,7 +376,7 @@ public class AssignExamService(
 
             await _repo.UpdateBlueprintToInprogressAsync(id, ct);
 
-            await _examStatusJob.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
+            await _examStatusScheduler.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
             return Result.Success();
         }
         catch (DbUpdateConcurrencyException)
@@ -406,7 +406,7 @@ public class AssignExamService(
             }
 
             await _repo.UpdateExamStatusAsync(id, ExamStatus.Cancelled, ct);
-            await _examStatusJob.CancelExamJobsAsync(id, ct);
+            await _examStatusScheduler.CancelExamJobsAsync(id, ct);
             return Result.Success();
         }
         catch (DbUpdateConcurrencyException)
@@ -444,7 +444,7 @@ public class AssignExamService(
         try
         {
             await _repo.UpdateExamStatusAsync(id, ExamStatus.Published, ct);
-            await _examStatusJob.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
+            await _examStatusScheduler.ScheduleExamJobsAsync(id, exam.OpenAt, exam.CloseAt, ct);
             return Result.Success();
         }
         catch (DbUpdateConcurrencyException)
