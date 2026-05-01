@@ -8,6 +8,8 @@ const RoleIds = Object.freeze({
 });
 
 // Bootstrap qua /me. Nếu 401 + có refresh cookie → tự refresh + retry /me, tránh logout oan khi reload sau access expiry.
+// Nếu /me trả 403 + code AUTH_PASSWORD_CHANGE_REQUIRED → redirect trang đổi password lần đầu.
+const PASSWORD_CHANGE_PATH = '/Auth/ChangePasswordFirstLogin';
 window.currentUser = null;
 window.userReady = (function () {
     const meUrl = API_BASE_URL.replace(/\/+$/, '') + '/api/auth/me';
@@ -19,7 +21,7 @@ window.userReady = (function () {
                 url: meUrl, type: 'GET',
                 xhrFields: { withCredentials: true },
                 success: function (resp) { resolve(resp || null); },
-                error: function (xhr) { reject(xhr.status || 0); }
+                error: function (xhr) { reject({ status: xhr.status || 0, code: xhr.responseJSON?.code }); }
             });
         });
     }
@@ -35,16 +37,32 @@ window.userReady = (function () {
         });
     }
 
+    function redirectToPasswordChange() {
+        window.currentUser = null;
+        if (window.location.pathname !== PASSWORD_CHANGE_PATH) {
+            window.location.href = PASSWORD_CHANGE_PATH;
+        }
+    }
+
     return (async function () {
         try {
             window.currentUser = await fetchMe();
             return window.currentUser;
-        } catch (status) {
-            if (status === 401 && await tryRefresh()) {
+        } catch (err) {
+            if (err && err.status === 403 && err.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
+                redirectToPasswordChange();
+                return null;
+            }
+            if (err && err.status === 401 && await tryRefresh()) {
                 try {
                     window.currentUser = await fetchMe();
                     return window.currentUser;
-                } catch { /* fall through */ }
+                } catch (err2) {
+                    if (err2 && err2.status === 403 && err2.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
+                        redirectToPasswordChange();
+                        return null;
+                    }
+                }
             }
             window.currentUser = null;
             return null;
@@ -127,6 +145,14 @@ const apiClient = {
                 error: function (xhr, status, error) {
                     const isRefreshEndpoint = endpoint.indexOf('/api/auth/refresh-token') !== -1;
                     const isMeEndpoint = endpoint.indexOf('/api/auth/me') !== -1;
+                    if (xhr.status === 403 && xhr.responseJSON?.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
+                        window.currentUser = null;
+                        if (window.location.pathname !== PASSWORD_CHANGE_PATH) {
+                            window.location.href = PASSWORD_CHANGE_PATH;
+                        }
+                        reject({ xhr: xhr, status: status, error: error, message: 'Yêu cầu đổi mật khẩu trước khi tiếp tục.' });
+                        return;
+                    }
                     if (xhr.status === 401 && !isRetry && !isRefreshEndpoint && !isMeEndpoint) {
                         refreshAccessToken()
                             .then(function () {

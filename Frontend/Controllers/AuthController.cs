@@ -64,5 +64,11 @@ namespace Frontend.Controllers
         {
             return View();
         }
+
+        [HttpGet]
+        public IActionResult ChangePasswordFirstLogin()
+        {
+            return View();
+        }
     }
 }
