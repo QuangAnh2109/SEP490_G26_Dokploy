@@ -303,6 +303,8 @@ namespace Backend
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseMiddleware<Backend.Middleware.FirstLoginPasswordMiddleware>();
+
             // Hangfire Dashboard
             if (app.Environment.IsDevelopment())
             {

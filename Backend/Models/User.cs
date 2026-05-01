@@ -23,6 +23,8 @@ public partial class User
 
     public string? StudentId { get; set; }
 
+    public bool MustChangePassword { get; set; }
+
     public byte[] ConcurrencyStamp { get; set; } = null!;
 
     public virtual ICollection<ClassMember> ClassMembers { get; set; } = new List<ClassMember>();

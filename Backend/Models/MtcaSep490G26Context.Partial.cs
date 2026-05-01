@@ -11,5 +11,11 @@ public partial class MtcaSep490G26Context
             entity.Property(e => e.Status)
                 .ValueGeneratedNever();
         });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property(e => e.MustChangePassword)
+                .HasDefaultValue(false);
+        });
     }
 }

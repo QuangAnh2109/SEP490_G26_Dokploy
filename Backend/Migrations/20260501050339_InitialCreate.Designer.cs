@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(MtcaSep490G26Context))]
-    [Migration("20260430020419_InitialCreate")]
+    [Migration("20260501050339_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -646,6 +646,11 @@ namespace Backend.Migrations
                     b.Property<string>("FullName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("MustChangePassword")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(60)

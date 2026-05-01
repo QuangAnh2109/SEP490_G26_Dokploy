@@ -16,4 +16,7 @@ public static class AuthErrors
     public static readonly Error InvalidRefreshToken = new(ErrorCodes.AuthInvalidRefreshToken, ErrorType.Unauthorized);
     public static readonly Error RefreshTokenNotFound = new(ErrorCodes.AuthRefreshTokenNotFound, ErrorType.Unauthorized);
     public static readonly Error MissingJti = new(ErrorCodes.AuthMissingJti, ErrorType.Unauthorized);
+    public static readonly Error PasswordChangeRequired = new(ErrorCodes.AuthPasswordChangeRequired, ErrorType.Forbidden);
+    public static readonly Error CurrentPasswordWrong = new(ErrorCodes.AuthCurrentPasswordWrong, ErrorType.Unauthorized);
+    public static readonly Error NewPasswordSameAsOld = new(ErrorCodes.AuthNewPasswordSameAsOld, ErrorType.Validation);
 }

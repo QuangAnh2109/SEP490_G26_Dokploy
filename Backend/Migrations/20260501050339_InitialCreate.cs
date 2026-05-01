@@ -86,6 +86,7 @@ namespace Backend.Migrations
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     PhoneNumber = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: true),
                     StudentId = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: true),
+                    MustChangePassword = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     ConcurrencyStamp = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>

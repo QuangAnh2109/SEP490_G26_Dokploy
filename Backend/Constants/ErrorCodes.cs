@@ -38,6 +38,9 @@ public static class ErrorCodes
     public const string AuthInvalidRefreshToken = "AUTH_INVALID_REFRESH_TOKEN";
     public const string AuthRefreshTokenNotFound = "AUTH_REFRESH_TOKEN_NOT_FOUND";
     public const string AuthMissingJti = "AUTH_MISSING_JTI";
+    public const string AuthPasswordChangeRequired = "AUTH_PASSWORD_CHANGE_REQUIRED";
+    public const string AuthCurrentPasswordWrong = "AUTH_CURRENT_PASSWORD_WRONG";
+    public const string AuthNewPasswordSameAsOld = "AUTH_NEW_PASSWORD_SAME_AS_OLD";
 
     // Question
     public const string QuestionNotFound = "QUESTION_NOT_FOUND";

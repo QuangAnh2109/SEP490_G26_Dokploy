@@ -68,6 +68,7 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
 
     [HttpPost("logout")]
     [Authorize(Roles = RoleIds.Any)]
+    [AllowPasswordChange]
     public async Task<IActionResult> Logout()
     {
         var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
@@ -79,6 +80,13 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
 
     [HttpPost("logout-all")]
     [Authorize(Roles = RoleIds.Any)]
+    [AllowPasswordChange]
     public async Task<IActionResult> LogoutAll() =>
         (await authService.LogoutAllAsync(currentUser.UserId)).ToActionResult(this);
+
+    [HttpPost("change-password-first-login")]
+    [Authorize(Roles = RoleIds.Any)]
+    [AllowPasswordChange]
+    public async Task<IActionResult> ChangePasswordFirstLogin([FromBody] ChangePasswordFirstLoginRequest request) =>
+        (await authService.ChangePasswordFirstLoginAsync(currentUser.UserId, request)).ToActionResult(this);
 }

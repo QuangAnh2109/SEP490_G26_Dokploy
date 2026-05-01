@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Backend.Common;
 using Backend.Common.Options;
 using Backend.Services.Interfaces;
 using Microsoft.Extensions.Options;
@@ -28,7 +29,8 @@ public sealed class JwtTokenService : IJwtTokenService
         int userId,
         string email,
         string role,
-        string authProvider)
+        string authProvider,
+        bool mustChangePassword)
     {
         var now = _timeProvider.GetUtcNow();
         var expiresAt = now.AddMinutes(_options.AccessTokenMinutes);
@@ -41,7 +43,8 @@ public sealed class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Role, role),
             new(JwtRegisteredClaimNames.Jti, jti),
             new(JwtRegisteredClaimNames.Iat, now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            new("auth_provider", authProvider)
+            new("auth_provider", authProvider),
+            new(AuthClaims.MustChangePassword, mustChangePassword ? AuthClaims.True : AuthClaims.False)
         };
 
         var token = new JwtSecurityToken(

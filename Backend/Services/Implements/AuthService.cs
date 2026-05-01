@@ -247,6 +247,28 @@ public class AuthService(
         return Result.Success();
     }
 
+    public async Task<Result> ChangePasswordFirstLoginAsync(int userId, ChangePasswordFirstLoginRequest request)
+    {
+        var user = await authRepository.GetUserByIdAsync(userId);
+        if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+            return AuthErrors.UserNotFound;
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            return AuthErrors.CurrentPasswordWrong;
+
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            return AuthErrors.NewPasswordSameAsOld;
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
+        await authRepository.UpdateUserAsync(user);
+
+        await refreshTokenStore.RevokeAllAsync(user.UserId);
+
+        var loginResult = await BuildLoginResponseAsync(user);
+        return loginResult.IsFailure ? loginResult.Error : Result.Success();
+    }
+
     private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user)
     {
         if (user.RoleId != 1 && user.RoleId != 2)
@@ -260,7 +282,8 @@ public class AuthService(
             user.UserId,
             user.Email,
             user.RoleId.ToString(),
-            authProvider);
+            authProvider,
+            user.MustChangePassword);
 
         var ip = GetClientIp(ctx);
         var ua = ctx.Request.Headers.UserAgent.ToString();
