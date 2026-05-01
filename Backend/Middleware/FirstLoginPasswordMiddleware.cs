@@ -10,7 +10,7 @@ public sealed class FirstLoginPasswordMiddleware(RequestDelegate next)
     {
         if (context.User.Identity?.IsAuthenticated == true
             && context.GetEndpoint()?.Metadata.GetMetadata<AllowPasswordChangeAttribute>() is null
-            && string.Equals(context.User.FindFirst(AuthClaims.MustChangePassword)?.Value, AuthClaims.True, StringComparison.Ordinal))
+            && string.Equals(context.User.FindFirst(AuthClaims.MustChangePassword)?.Value, AuthClaims.True))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
