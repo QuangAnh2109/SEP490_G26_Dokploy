@@ -21,7 +21,8 @@ public class AuthService(
     IJwtTokenService jwtTokenService,
     IRefreshTokenStore refreshTokenStore,
     IHttpContextAccessor httpContextAccessor,
-    IOptions<AuthCookieOptions> cookieOptions) : IAuthService
+    IOptions<AuthCookieOptions> cookieOptions,
+    TimeProvider timeProvider) : IAuthService
 {
     private readonly AuthCookieOptions _cookie = cookieOptions.Value;
 
@@ -73,7 +74,7 @@ public class AuthService(
             PasswordHash = null,
             RoleId = request.RoleId ?? 0,
             Email = userEmail,
-            SecurityStamp = DateTime.UtcNow,
+            SecurityStamp = timeProvider.GetUtcNow().UtcDateTime,
             FullName = (request.FullName ?? string.Empty).Trim(),
             PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
             StudentId = string.IsNullOrWhiteSpace(request.StudentId) ? null : request.StudentId.Trim()
@@ -158,7 +159,7 @@ public class AuthService(
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(regRequest.Password),
             RoleId = regRequest.RoleId ?? 0,
             Email = regRequest.Email!,
-            SecurityStamp = DateTime.UtcNow,
+            SecurityStamp = timeProvider.GetUtcNow().UtcDateTime,
             FullName = (regRequest.FullName ?? string.Empty).Trim(),
             PhoneNumber = string.IsNullOrWhiteSpace(regRequest.PhoneNumber) ? null : regRequest.PhoneNumber.Trim(),
             StudentId = string.IsNullOrWhiteSpace(regRequest.StudentId) ? null : regRequest.StudentId.Trim()

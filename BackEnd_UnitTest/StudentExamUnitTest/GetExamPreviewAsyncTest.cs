@@ -19,7 +19,8 @@ public class GetExamPreviewAsync_UTCID_Tests
     {
         _repoMock = new Mock<IStudentExamRepository>(MockBehavior.Strict);
         var loggerMock = new Mock<ILogger<StudentExamService>>();
-        _service = new StudentExamService(_repoMock.Object, loggerMock.Object);
+        var currentUserMock = new Mock<Backend.Services.Interfaces.ICurrentUserService>();
+        _service = new StudentExamService(_repoMock.Object, currentUserMock.Object, loggerMock.Object, TimeProvider.System);
     }
 
     [Fact(DisplayName = "GetExamPreviewAsync - UTCID01 - Student authorized, status=1 -> public")]

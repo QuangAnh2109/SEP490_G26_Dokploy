@@ -6,7 +6,8 @@ namespace Backend.Jobs;
 
 public sealed class ExamStatusScheduler(
     IConnectionMultiplexer mux,
-    IBackgroundJobClient jobClient) : IExamStatusScheduler
+    IBackgroundJobClient jobClient,
+    TimeProvider timeProvider) : IExamStatusScheduler
 {
     // Grace period sau mốc fire để CancelExamJobsAsync vẫn xóa được tracker
     // trong race với job đang fire (job hoàn tất nhưng tracker chưa expire).
@@ -21,7 +22,7 @@ public sealed class ExamStatusScheduler(
     public async Task ScheduleExamJobsAsync(int examId, DateTime? openAtUtc, DateTime? closeAtUtc, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var now = DateTime.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         await ScheduleOrClearAsync(
             OpenKey(examId),

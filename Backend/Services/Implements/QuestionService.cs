@@ -12,13 +12,15 @@ using System.Text.Json;
 namespace Backend.Services.Implements
 {
     public class QuestionService(
-        IQuestionRepository questionRepository, 
+        IQuestionRepository questionRepository,
         ILogger<QuestionService> logger,
-        ICurrentUserService currentUserService) : IQuestionService
+        ICurrentUserService currentUserService,
+        TimeProvider timeProvider) : IQuestionService
     {
         private readonly IQuestionRepository _questionRepository = questionRepository;
         private readonly ILogger<QuestionService> _logger = logger;
         private readonly ICurrentUserService _currentUserService = currentUserService;
+        private readonly TimeProvider _timeProvider = timeProvider;
 
         private static readonly JsonSerializerOptions UnicodeJsonOptions = new()
         {
@@ -129,13 +131,14 @@ namespace Backend.Services.Implements
             var userId = _currentUserService.UserId;
             var questions = await _questionRepository.GetQuestionsByIdsAsync(questionIds);
             var updatedCount = 0;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             foreach (var q in questions)
             {
                 if (q.CreatedByUserId == userId)
                 {
                     q.Status = status;
-                    q.UpdatedAtUtc = DateTime.UtcNow;
+                    q.UpdatedAtUtc = now;
                     updatedCount++;
                 }
             }
@@ -212,7 +215,7 @@ namespace Backend.Services.Implements
             question.Difficulty = item.Difficulty ?? 1;
             question.QuestionPurpose = item.QuestionPurpose ?? 1;
             question.Status = item.Status ?? QuestionStatus.Draft;
-            question.UpdatedAtUtc = DateTime.UtcNow;
+            question.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
             question.QuestionContent = JsonSerializer.Serialize(new { stem = item.Stem, frame = item.Frame }, UnicodeJsonOptions);
 
             if (item.Answers != null)

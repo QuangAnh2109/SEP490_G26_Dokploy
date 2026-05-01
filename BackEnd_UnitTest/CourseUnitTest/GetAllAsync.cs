@@ -23,11 +23,14 @@ namespace Backend_UnitTest
             _mockRepo = new Mock<ICourseRepository>();
             _mockEmail = new Mock<IEmailService>();
             _mockConfig = new Mock<IConfiguration>();
+            var mockCurrentUser = new Mock<ICurrentUserService>();
 
             _courseService = new CourseService(
                 _mockRepo.Object,
                 _mockEmail.Object,
-                _mockConfig.Object
+                _mockConfig.Object,
+                mockCurrentUser.Object,
+                TimeProvider.System
             );
         }
 

@@ -16,7 +16,7 @@ namespace Backend_UnitTest
         public ProfileServiceTests()
         {
             _mockRepo = new Mock<IProfileRepository>();
-            _service = new ProfileService(_mockRepo.Object);
+            _service = new ProfileService(_mockRepo.Object, TimeProvider.System);
         }
 
         // Sheet mapping (ảnh):

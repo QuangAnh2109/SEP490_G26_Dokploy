@@ -14,7 +14,8 @@ public class CourseService(
     ICourseRepository repo,
     IEmailService emailService,
     IConfiguration config,
-    ICurrentUserService currentUser) : ICourseService
+    ICurrentUserService currentUser,
+    TimeProvider timeProvider) : ICourseService
 {
     // CourseDTO.Role values projected by repo (CourseRepository.GetCoursesForUserAsync).
     private const string RoleTeacher = "Teacher";
@@ -84,7 +85,7 @@ public class CourseService(
             TeacherId = teacherId,
             Status = 1,
             InvitationCodeStatus = 1,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = timeProvider.GetUtcNow().UtcDateTime
         };
 
         var created = await repo.CreateCourseAsync(newClass);

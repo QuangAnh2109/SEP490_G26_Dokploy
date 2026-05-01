@@ -14,10 +14,12 @@ namespace Backend.Repositories.Implements
     public class CourseRepository : ICourseRepository
     {
         private readonly MtcaSep490G26Context _context;
+        private readonly TimeProvider _timeProvider;
 
-        public CourseRepository(MtcaSep490G26Context context)
+        public CourseRepository(MtcaSep490G26Context context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<List<CourseDTO>> GetCoursesForUserAsync(int userId)
@@ -102,7 +104,7 @@ namespace Backend.Repositories.Implements
         // - 0 => Closed (otherwise)
         public async Task<List<ExamInCourseDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var upcomingThreshold = now.AddMinutes(30);
 
             IQueryable<Models.Exam> query;
@@ -296,6 +298,7 @@ namespace Backend.Repositories.Implements
 
         public async Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId)
         {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             return await _context.ClassMembers
                 .Where(cm => cm.ClassId == classId && cm.MemberStatus == Backend.Constants.MemberStatus.Pending)
                 .Select(cm => new StudentInClassDTO
@@ -304,7 +307,7 @@ namespace Backend.Repositories.Implements
                     FullName = cm.Student != null ? cm.Student.FullName ?? string.Empty : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
                     StudentCode = cm.Student != null ? cm.Student.StudentId ?? string.Empty : string.Empty,
-                    JoinedAtUtc = DateTime.UtcNow
+                    JoinedAtUtc = now
                 })
                 .ToListAsync();
         }
@@ -353,6 +356,7 @@ namespace Backend.Repositories.Implements
 
         public async Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId)
         {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             return await _context.ClassMembers
                 .Where(cm => cm.ClassId == classId && cm.MemberStatus == Backend.Constants.MemberStatus.Active)
                 .Select(cm => new StudentInClassDTO
@@ -361,7 +365,7 @@ namespace Backend.Repositories.Implements
                     FullName = cm.Student != null ? cm.Student.FullName ?? string.Empty : string.Empty,
                     Email = cm.Student != null ? cm.Student.Email : string.Empty,
                     StudentCode = cm.Student != null ? cm.Student.StudentId ?? string.Empty : string.Empty,
-                    JoinedAtUtc = DateTime.UtcNow // Fallback since the DB doesn't track this
+                    JoinedAtUtc = now // Fallback since the DB doesn't track this
                 })
                 .ToListAsync();
         }

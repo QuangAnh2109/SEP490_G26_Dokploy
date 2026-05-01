@@ -9,10 +9,12 @@ namespace Backend.Repositories.Implements
     public class QuestionRepository : IQuestionRepository
     {
         private readonly MtcaSep490G26Context _dbContext;
+        private readonly TimeProvider _timeProvider;
 
-        public QuestionRepository(MtcaSep490G26Context dbContext)
+        public QuestionRepository(MtcaSep490G26Context dbContext, TimeProvider timeProvider)
         {
             _dbContext = dbContext;
+            _timeProvider = timeProvider;
         }
 
         public async Task<(List<QuestionSummaryDto> Items, int TotalCount)> GetQuestionsAsync(QuestionListQueryDto queryDto, int userId)
@@ -168,7 +170,7 @@ namespace Backend.Repositories.Implements
 
         public async Task<bool> IsQuestionUsedAsync(int questionId)
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             // 1. Any actual student answers? (Highest priority)
             var hasAnswered = await _dbContext.QuestionAnswers

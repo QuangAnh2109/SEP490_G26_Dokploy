@@ -7,7 +7,8 @@ namespace Backend.Jobs;
 
 public sealed class ExamStatusTransitionJob(
     IServiceScopeFactory scopeFactory,
-    ILogger<ExamStatusTransitionJob> logger)
+    ILogger<ExamStatusTransitionJob> logger,
+    TimeProvider timeProvider)
 {
     /// <summary>
     /// Hangfire job: chuyển exam Published → InProgress khi tới mốc OpenAt.
@@ -37,7 +38,7 @@ public sealed class ExamStatusTransitionJob(
         }
 
         exam.Status = ExamStatus.InProgress;
-        exam.UpdatedAtUtc = DateTime.UtcNow;
+        exam.UpdatedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         try
         {
             await db.SaveChangesAsync(ct);
@@ -79,7 +80,7 @@ public sealed class ExamStatusTransitionJob(
         }
 
         exam.Status = ExamStatus.Closed;
-        exam.UpdatedAtUtc = DateTime.UtcNow;
+        exam.UpdatedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         try
         {
             await db.SaveChangesAsync(ct);

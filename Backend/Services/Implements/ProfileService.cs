@@ -8,7 +8,7 @@ using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements;
 
-public class ProfileService(IProfileRepository repo) : IProfileService
+public class ProfileService(IProfileRepository repo, TimeProvider timeProvider) : IProfileService
 {
     public async Task<Result<UserProfileDTO>> GetProfileAsync(int userId)
     {
@@ -57,7 +57,7 @@ public class ProfileService(IProfileRepository repo) : IProfileService
             return Result.Failure(ProfileErrors.WrongPassword);
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        user.SecurityStamp = DateTime.UtcNow;
+        user.SecurityStamp = timeProvider.GetUtcNow().UtcDateTime;
 
         await repo.UpdateUserAsync(user);
         await repo.SaveChangesAsync();

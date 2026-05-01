@@ -12,10 +12,12 @@ namespace Backend.Repositories.Implements;
 public class AssignExamRepository : IAssignExamRepository
 {
     private readonly MtcaSep490G26Context _db;
+    private readonly TimeProvider _timeProvider;
 
-    public AssignExamRepository(MtcaSep490G26Context db)
+    public AssignExamRepository(MtcaSep490G26Context db, TimeProvider timeProvider)
     {
         _db = db;
+        _timeProvider = timeProvider;
     }
 
     public async Task<bool> IsUserActiveAsync(int id, CancellationToken ct)
@@ -369,7 +371,7 @@ public class AssignExamRepository : IAssignExamRepository
         if (exam != null)
         {
             exam.Status = status;
-            exam.UpdatedAtUtc = DateTime.UtcNow;
+            exam.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(ct);
         }
     }
@@ -388,7 +390,7 @@ public class AssignExamRepository : IAssignExamRepository
             if (bp != null)
             {
                 bp.Status = ExamBlueprintStatus.Inprogress;
-                bp.UpdatedAtUtc = DateTime.UtcNow;
+                bp.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _db.SaveChangesAsync(ct);
             }
         }
@@ -460,7 +462,7 @@ public class AssignExamRepository : IAssignExamRepository
         exam.VisibleFrom = visibleFrom;
         exam.OpenAt = openAt;
         exam.CloseAt = closeAt;
-        exam.UpdatedAtUtc = DateTime.UtcNow;
+        exam.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _db.SaveChangesAsync(ct);
     }

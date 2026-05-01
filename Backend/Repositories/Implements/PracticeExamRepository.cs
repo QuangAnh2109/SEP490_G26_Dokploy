@@ -10,10 +10,12 @@ namespace Backend.Repositories.Implements
     public class PracticeExamRepository : IPracticeExamRepository
     {
         private readonly MtcaSep490G26Context _context;
+        private readonly TimeProvider _timeProvider;
 
-        public PracticeExamRepository(MtcaSep490G26Context context)
+        public PracticeExamRepository(MtcaSep490G26Context context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<Class?> GetClassWithValidationAsync(int classId, int studentId)
@@ -180,13 +182,14 @@ namespace Backend.Repositories.Implements
 
         public async Task<Submission> CreatePracticeSubmissionAsync(int studentId, int paperId)
         {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var submission = new Submission
             {
                 StudentId = studentId,
                 PaperId = paperId,
                 Status = SubmissionStatus.InProgress,
-                CreatedAtUtc = DateTime.UtcNow,
-                UpdatedAtUtc = DateTime.UtcNow
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
             };
             _context.Submissions.Add(submission);
             await _context.SaveChangesAsync();

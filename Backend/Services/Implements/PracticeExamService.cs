@@ -12,11 +12,13 @@ namespace Backend.Services.Implements
     public class PracticeExamService(
         IPracticeExamRepository repo,
         ICurrentUserService currentUserService,
-        ILogger<PracticeExamService> logger) : IPracticeExamService
+        ILogger<PracticeExamService> logger,
+        TimeProvider timeProvider) : IPracticeExamService
     {
         private readonly IPracticeExamRepository _repo = repo;
         private readonly ICurrentUserService _currentUserService = currentUserService;
         private readonly ILogger<PracticeExamService> _logger = logger;
+        private readonly TimeProvider _timeProvider = timeProvider;
 
         private const int MinQuestions = 5;
         private const int MaxQuestions = 30;
@@ -291,7 +293,7 @@ namespace Backend.Services.Implements
 
             // Cập nhât submission
             submission.Status = SubmissionStatus.Submitted;
-            submission.UpdatedAtUtc = DateTime.UtcNow;
+            submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
             submission.TotalPoints = totalQuestions > 0
                 ? Math.Round((decimal)correctCount / totalQuestions * 10, 3)
                 : 0;
@@ -366,7 +368,7 @@ namespace Backend.Services.Implements
                 submission.StudentAnswers.Remove(sa);
 
             // Giữ nguyên Status = InProgress, chỉ cập nhật thời gian
-            submission.UpdatedAtUtc = DateTime.UtcNow;
+            submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _repo.SaveChangesAsync();
             return Result.Success();

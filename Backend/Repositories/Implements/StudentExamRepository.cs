@@ -9,10 +9,12 @@ namespace Backend.Repositories.Implements
     public class StudentExamRepository : IStudentExamRepository
     {
         private readonly MtcaSep490G26Context _context;
+        private readonly TimeProvider _timeProvider;
 
-        public StudentExamRepository(MtcaSep490G26Context context)
+        public StudentExamRepository(MtcaSep490G26Context context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         // TODO: DB_UPDATE – PaperQuestions navigation đã bị xóa, giờ dùng many-to-many Paper.Questions
@@ -166,7 +168,7 @@ namespace Backend.Repositories.Implements
                 .Where(s => s.Paper.ExamId == examId && s.Status == 1)
                 .ToListAsync();
 
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             foreach (var sub in activeSubmissions)
             {
                 if (sub.Paper?.Exam == null) continue;
@@ -252,6 +254,7 @@ namespace Backend.Repositories.Implements
 
         public async Task<ExamInfoForStudentDto?> GetExamInfoForStudentAsync(int examId, int studentId)
         {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             return await _context.Exams
                 .Where(exam =>
                     exam.ExamId == examId &&
@@ -259,8 +262,8 @@ namespace Backend.Repositories.Implements
                         classMember.ClassId == exam.ClassId &&
                         classMember.StudentId == studentId
                     ) &&
-                    exam.OpenAt <= DateTime.UtcNow &&
-                    exam.CloseAt > DateTime.UtcNow
+                    exam.OpenAt <= now &&
+                    exam.CloseAt > now
                 )
                 .Select(e => new ExamInfoForStudentDto
                 {

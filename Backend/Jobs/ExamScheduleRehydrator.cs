@@ -9,7 +9,8 @@ public sealed class ExamScheduleRehydrator(
     IServiceScopeFactory scopeFactory,
     ILogger<ExamScheduleRehydrator> logger,
     IExamStatusScheduler scheduler,
-    IConnectionMultiplexer mux) : IHostedService
+    IConnectionMultiplexer mux,
+    TimeProvider timeProvider) : IHostedService
 {
     /// <summary>
     /// Khi app khởi động: rescan exam Published/InProgress với CloseAt &gt; now và reschedule
@@ -36,7 +37,7 @@ public sealed class ExamScheduleRehydrator(
             using var scope = scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MtcaSep490G26Context>();
 
-            var now = DateTime.UtcNow;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
             // Cover cả 2 status có thể bị stuck sau downtime: Published (chưa qua Open) và InProgress (chưa qua Close).
             // CloseAt là milestone cuối — đã qua nghĩa là exam đã xong, không cần rehydrate.
             var exams = await db.Exams

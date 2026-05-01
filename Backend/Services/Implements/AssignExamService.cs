@@ -14,13 +14,15 @@ namespace Backend.Services.Implements;
 public class AssignExamService(
     IAssignExamRepository repo,
     ICurrentUserService currentUserService,
-    IExamStatusScheduler examStatusScheduler) : IAssignExamService
+    IExamStatusScheduler examStatusScheduler,
+    TimeProvider timeProvider) : IAssignExamService
 {
     private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
     private readonly IAssignExamRepository _repo = repo;
     private readonly ICurrentUserService _currentUserService = currentUserService;
     private readonly IExamStatusScheduler _examStatusScheduler = examStatusScheduler;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     private async Task<Result> EnsureUserActiveAsync(int id, CancellationToken ct)
     {
@@ -213,7 +215,7 @@ public class AssignExamService(
                 CloseAt = r.CloseAt,
                 ShuffleQuestion = r.ShuffleQuestion ?? false,
                 Status = ExamStatus.Ready,
-                UpdatedAtUtc = DateTime.UtcNow
+                UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime
             };
 
             await _repo.SaveExamAsync(exam, ct);
@@ -425,7 +427,7 @@ public class AssignExamService(
             return AssignExamErrors.InvalidStatusForRestore;
         }
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (exam.OpenAt.HasValue && exam.OpenAt.Value <= now)
         {

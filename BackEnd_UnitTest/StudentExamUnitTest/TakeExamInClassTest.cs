@@ -21,7 +21,8 @@ public class TakeExamInClass_UTCID_Tests
     {
         _repoMock = new Mock<IStudentExamRepository>(MockBehavior.Strict);
         var loggerMock = new Mock<ILogger<StudentExamService>>();
-        _service = new StudentExamService(_repoMock.Object, loggerMock.Object);
+        var currentUserMock = new Mock<Backend.Services.Interfaces.ICurrentUserService>();
+        _service = new StudentExamService(_repoMock.Object, currentUserMock.Object, loggerMock.Object, TimeProvider.System);
     }
 
     [Fact(DisplayName = "TakeExamInClass - UTCID01 - Có active submission cùng exam -> tiếp tục làm bài")]

@@ -9,10 +9,12 @@ namespace Backend.Repositories.Implements
     public class ExamBlueprintRepository : IExamBlueprintRepository
     {
         private readonly MtcaSep490G26Context _context;
+        private readonly TimeProvider _timeProvider;
 
-        public ExamBlueprintRepository(MtcaSep490G26Context context)
+        public ExamBlueprintRepository(MtcaSep490G26Context context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<List<SubjectOptionDto>> GetSubjectsAsync()
@@ -232,7 +234,7 @@ namespace Backend.Repositories.Implements
             entity.SubjectId = blueprint.SubjectId;
             entity.TotalQuestions = blueprint.TotalQuestions;
             entity.Status = blueprint.Status;
-            entity.UpdatedAtUtc = DateTime.UtcNow;
+            entity.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             _context.ExamBlueprintChapters.RemoveRange(entity.ExamBlueprintChapters);
 
@@ -264,10 +266,11 @@ namespace Backend.Repositories.Implements
                 .Where(b => ids.Contains(b.ExamBlueprintId) && b.TeacherId == currentUserId)
                 .ToListAsync();
 
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             foreach (var e in entities)
             {
                 e.Status = status;
-                e.UpdatedAtUtc = DateTime.UtcNow;
+                e.UpdatedAtUtc = now;
             }
 
             await _context.SaveChangesAsync();

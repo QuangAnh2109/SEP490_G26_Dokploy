@@ -15,7 +15,8 @@ namespace Backend.Services.Implements;
 public class StudentExamService(
     IStudentExamRepository studentExamRepository,
     ICurrentUserService currentUserService,
-    ILogger<StudentExamService> logger) : IStudentExamService
+    ILogger<StudentExamService> logger,
+    TimeProvider timeProvider) : IStudentExamService
 {
     public async Task<Result<TakeExamDto>> TakeExamInClass(int examId)
     {
@@ -68,13 +69,14 @@ public class StudentExamService(
             int randomIndex = random.Next(examInfo.PaperIds.Count);
             int selectedPaperId = examInfo.PaperIds[randomIndex];
 
+            var now = timeProvider.GetUtcNow().UtcDateTime;
             var newSubmission = new Submission
             {
                 StudentId = studentId,
                 PaperId = selectedPaperId,
                 Status = SubmissionStatus.InProgress,
-                CreatedAtUtc = DateTime.UtcNow,
-                UpdatedAtUtc = DateTime.UtcNow
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
             };
 
             activeSubmission = await studentExamRepository.CreateSubmissionAsync(newSubmission);

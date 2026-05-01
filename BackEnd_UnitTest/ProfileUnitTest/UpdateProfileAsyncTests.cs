@@ -18,7 +18,7 @@ namespace Backend_UnitTest
         public UpdateProfileAsyncTests()
         {
             _mockRepo = new Mock<IProfileRepository>(MockBehavior.Strict);
-            _service = new ProfileService(_mockRepo.Object);
+            _service = new ProfileService(_mockRepo.Object, TimeProvider.System);
         }
 
         [Fact]

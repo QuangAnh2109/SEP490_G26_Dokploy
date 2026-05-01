@@ -8,10 +8,11 @@ using Backend.Services.Interfaces;
 
 namespace Backend.Services.Implements
 {
-    public class ExamBlueprintService(IExamBlueprintRepository examBlueprintRepository, ICurrentUserService currentUserService) : IExamBlueprintService
+    public class ExamBlueprintService(IExamBlueprintRepository examBlueprintRepository, ICurrentUserService currentUserService, TimeProvider timeProvider) : IExamBlueprintService
     {
         private readonly IExamBlueprintRepository _examBlueprintRepository = examBlueprintRepository;
         private readonly ICurrentUserService _currentUserService = currentUserService;
+        private readonly TimeProvider _timeProvider = timeProvider;
 
         public async Task<Result<List<SubjectOptionDto>>> GetSubjectsAsync()
         {
@@ -78,7 +79,7 @@ namespace Backend.Services.Implements
 
             var (warnings, rows) = validateResult.Value;
 
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var blueprint = new ExamBlueprint
             {
                 TeacherId = userId,
@@ -154,7 +155,7 @@ namespace Backend.Services.Implements
             {
                 await _examBlueprintRepository.UpdateBlueprintStatusAsync(new List<int> { id }, userId, ExamBlueprintStatus.Archived);
                 blueprint.TeacherId = userId;
-                blueprint.UpdatedAtUtc = DateTime.UtcNow;
+                blueprint.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 updated = await _examBlueprintRepository.CreateBlueprintAsync(blueprint, rowEntities);
             }
             else

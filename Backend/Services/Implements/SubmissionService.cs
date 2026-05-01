@@ -11,7 +11,8 @@ namespace Backend.Services.Implements;
 
 public class SubmissionService(
     ISubmissionRepository submissionRepo,
-    ICurrentUserService currentUserService) : ISubmissionService
+    ICurrentUserService currentUserService,
+    TimeProvider timeProvider) : ISubmissionService
 {
     public async Task<Result<SubmitExamResponse>> SubmitExamAsync(
         SubmitExamRequest request,
@@ -33,8 +34,8 @@ public class SubmissionService(
         if (exam == null)
             return SubmissionErrors.NotFound;
 
-        // ── 2. Kiểm tra thời gian (chỉ dùng DateTime.UtcNow) ──────────
-        var now = DateTime.UtcNow;
+        // ── 2. Kiểm tra thời gian (TimeProvider) ──────────
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var startTime = submission.CreatedAtUtc;             // thời gian bắt đầu làm bài
         var deadline = startTime.AddMinutes(exam.Duration);  // hết giờ theo duration
 

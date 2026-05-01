@@ -14,10 +14,11 @@ using Backend.Common.Errors;
 
 namespace Backend.Services.Implements;
 
-public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRepository studentExamRepo) : IAnalyticsService
+public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRepository studentExamRepo, TimeProvider timeProvider) : IAnalyticsService
 {
     private readonly IAnalyticsRepository _analyticsRepo = analyticsRepo;
     private readonly IStudentExamRepository _studentExamRepo = studentExamRepo;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     // ════════════════════════════════════════════════════════
     //  GIÁO VIÊN — Phân tích chi tiết bài thi
@@ -353,6 +354,7 @@ public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRe
             .GroupBy(s => s.StudentId)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.CreatedAtUtc).ToList());
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var students = new List<StudentSubmitItemDto>();
         foreach (var studentId in studentIdsInClass.OrderBy(x => x))
         {
@@ -378,7 +380,7 @@ public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRe
                 attemptNum++;
                 var duration = sub.Status == SubmissionStatus.Submitted
                     ? (sub.UpdatedAtUtc - sub.CreatedAtUtc)
-                    : (DateTime.UtcNow - sub.CreatedAtUtc);
+                    : (now - sub.CreatedAtUtc);
                 history.Add(new SubmissionHistoryDto
                 {
                     SubmissionId = sub.SubmissionId,
@@ -399,7 +401,7 @@ public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRe
                 DurationFormatted = lastSub != null
                     ? FormatDuration(lastSub.Status == SubmissionStatus.Submitted
                         ? (lastSub.UpdatedAtUtc - lastSub.CreatedAtUtc)
-                        : (DateTime.UtcNow - lastSub.CreatedAtUtc))
+                        : (now - lastSub.CreatedAtUtc))
                     : null,
                 LastScore = lastSub?.TotalPoints,
                 AttemptCount = subs.Count,

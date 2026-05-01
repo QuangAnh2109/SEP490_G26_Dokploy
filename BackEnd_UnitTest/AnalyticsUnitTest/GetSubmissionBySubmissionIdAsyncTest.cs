@@ -20,7 +20,7 @@ namespace Backend_UnitTest.AnalyticsTests
         {
             _analyticsRepoMock = new Mock<IAnalyticsRepository>(MockBehavior.Strict);
             _studentExamRepoMock = new Mock<IStudentExamRepository>(MockBehavior.Strict);
-            _service = new AnalyticsService(_analyticsRepoMock.Object, _studentExamRepoMock.Object);
+            _service = new AnalyticsService(_analyticsRepoMock.Object, _studentExamRepoMock.Object, TimeProvider.System);
         }
 
         [Fact(DisplayName = "GetSubmissionBySubmissionIdAsync - UTCID01 - Submission hợp lệ -> trả DTO với showScore=1, showAnswer=2")]
