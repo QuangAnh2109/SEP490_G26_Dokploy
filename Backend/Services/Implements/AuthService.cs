@@ -112,7 +112,10 @@ public class AuthService(
         var otp = GenerateOtp();
         await otpStore.SetRegistrationOtpAsync(request.Email!, request, otp);
 
-        var html = BuildOtpEmail(otp, isResend: false);
+        var html = BuildOtpEmail(
+            heading: "Xác thực Email đăng ký",
+            intro: "Mã OTP để hoàn tất đăng ký tài khoản của bạn là:",
+            otp: otp);
         await emailService.SendEmailAsync(request.Email!, "Mã Xác Thực OTP - Math Test Creator", html);
         return Result.Success();
     }
@@ -126,7 +129,10 @@ public class AuthService(
         var newOtp = GenerateOtp();
         await otpStore.SetRegistrationOtpAsync(email, entry.Request, newOtp);
 
-        var html = BuildOtpEmail(newOtp, isResend: true);
+        var html = BuildOtpEmail(
+            heading: "Xác thực Email đăng ký",
+            intro: "Mã OTP mới để hoàn tất đăng ký tài khoản của bạn là:",
+            otp: newOtp);
         await emailService.SendEmailAsync(email, "Mã Xác Thực OTP - Math Test Creator", html);
         return Result.Success();
     }
@@ -192,14 +198,11 @@ public class AuthService(
         var otp = GenerateOtp();
         await otpStore.SetResetOtpAsync(request.Email!, otp);
 
-        var html = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Đặt lại mật khẩu</h2>
-                <p>Chào bạn,</p>
-                <p>Mã OTP để đặt lại mật khẩu của bạn là:</p>
-                <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{otp}</h1>
-                <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút. Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
-            </div>";
+        var html = BuildOtpEmail(
+            heading: "Đặt lại mật khẩu",
+            intro: "Mã OTP để đặt lại mật khẩu của bạn là:",
+            otp: otp,
+            extraNote: "Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.");
 
         await emailService.SendEmailAsync(request.Email!, "Mã Xác Thực Đặt Lại Mật Khẩu - Math Test Creator", html);
         return Result.Success();
@@ -343,16 +346,19 @@ public class AuthService(
         return missing;
     }
 
-    private static string BuildOtpEmail(string otp, bool isResend)
+    private static string BuildOtpEmail(string heading, string intro, string otp, string? extraNote = null)
     {
-        var intro = isResend ? "Mã OTP mới để hoàn tất đăng ký tài khoản của bạn là:" : "Mã OTP để hoàn tất đăng ký tài khoản của bạn là:";
+        var note = "Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.";
+        if (!string.IsNullOrEmpty(extraNote))
+            note += " " + extraNote;
+
         return $@"
             <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Xác thực Email đăng ký</h2>
+                <h2>{heading}</h2>
                 <p>Chào bạn,</p>
                 <p>{intro}</p>
                 <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{otp}</h1>
-                <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.</p>
+                <p>{note}</p>
             </div>";
     }
 }
