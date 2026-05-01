@@ -47,7 +47,7 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
         (await authService.ResetPasswordAsync(request)).ToActionResult(this);
 
     [HttpPost("logout")]
-    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
     [AllowPasswordChange]
     public async Task<IActionResult> Logout()
     {
@@ -59,7 +59,7 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
     }
 
     [HttpPost("change-password-first-login")]
-    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
     [AllowPasswordChange]
     public async Task<IActionResult> ChangePasswordFirstLogin([FromBody] ChangePasswordFirstLoginRequest request) =>
         (await authService.ChangePasswordFirstLoginAsync(currentUser.UserId, request)).ToActionResult(this);

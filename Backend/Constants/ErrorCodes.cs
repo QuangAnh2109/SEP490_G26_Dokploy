@@ -42,6 +42,14 @@ public static class ErrorCodes
     public const string AuthNewPasswordSameAsOld = "AUTH_NEW_PASSWORD_SAME_AS_OLD";
     public const string AuthAccountLocked = "AUTH_ACCOUNT_LOCKED";
 
+    // Admin User
+    public const string AdminUserNotFound           = "ADMIN_USER_NOT_FOUND";
+    public const string AdminUserEmailExists        = "ADMIN_USER_EMAIL_EXISTS";
+    public const string AdminUserInvalidRole        = "ADMIN_USER_INVALID_ROLE";
+    public const string AdminUserCannotLockSelf     = "ADMIN_USER_CANNOT_LOCK_SELF";
+    public const string AdminUserCannotModifyAdmin  = "ADMIN_USER_CANNOT_MODIFY_ADMIN";
+    public const string AdminUserEmailSendFailed    = "ADMIN_USER_EMAIL_SEND_FAILED";
+
     // Question
     public const string QuestionNotFound = "QUESTION_NOT_FOUND";
     public const string QuestionInUse = "QUESTION_IN_USE";

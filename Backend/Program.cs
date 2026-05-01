@@ -103,6 +103,7 @@ namespace Backend
             builder.Services.AddHttpContextAccessor();
 
             // Register Repositories
+            builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IExamBlueprintRepository, ExamBlueprintRepository>();
             builder.Services.AddScoped<ICourseRepository, CourseRepository>();
@@ -131,6 +132,7 @@ namespace Backend
             });
 
             // Register Services
+            builder.Services.AddScoped<IAdminUserService, AdminUserService>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
             builder.Services.AddSingleton<IOtpStore, RedisOtpStore>();
