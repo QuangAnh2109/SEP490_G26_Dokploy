@@ -8,6 +8,7 @@ using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 
 namespace Backend.Services.Implements;
 
@@ -39,7 +40,7 @@ public class AdminUserService(
         return MapToListItem(user);
     }
 
-    public async Task<Result<CreateUserResponse>> CreateAsync(CreateUserRequest request, int currentAdminId, CancellationToken ct = default)
+    public async Task<Result<CreateUserResponse>> CreateAsync(CreateUserRequest request, CancellationToken ct = default)
     {
         if (request.RoleId != RoleIds.TeacherInt && request.RoleId != RoleIds.StudentInt)
             return AdminUserErrors.InvalidRole;
@@ -159,14 +160,9 @@ public class AdminUserService(
         for (int i = 4; i < 12; i++)
             sb.Append(all[bytes[i] % all.Length]);
 
-        // Shuffle via Fisher-Yates using cryptographic bytes
-        var shuffleBytes = RandomNumberGenerator.GetBytes(12);
+        // Shuffle using cryptographic bytes (.NET 8 native)
         var chars = sb.ToString().ToCharArray();
-        for (int i = chars.Length - 1; i > 0; i--)
-        {
-            int j = shuffleBytes[i] % (i + 1);
-            (chars[i], chars[j]) = (chars[j], chars[i]);
-        }
+        RandomNumberGenerator.Shuffle(chars.AsSpan());
 
         return new string(chars);
     }
@@ -177,7 +173,7 @@ public class AdminUserService(
             <p>Tài khoản của bạn đã được tạo. Thông tin đăng nhập:</p>
             <ul>
                 <li><strong>Email:</strong> {email}</li>
-                <li><strong>Mật khẩu tạm:</strong> <code style='font-size:1.1em'>{tempPassword}</code></li>
+                <li><strong>Mật khẩu tạm:</strong> <code style='font-size:1.1em'>{HtmlEncoder.Default.Encode(tempPassword)}</code></li>
             </ul>
             <p>Bạn sẽ được yêu cầu đổi mật khẩu ngay sau lần đăng nhập đầu tiên.</p>
         </div>";
@@ -186,7 +182,7 @@ public class AdminUserService(
         <div style='font-family: Arial, sans-serif; padding: 20px;'>
             <h2>Mật khẩu của bạn đã được đặt lại</h2>
             <p>Quản trị viên đã cấp lại mật khẩu cho tài khoản <strong>{email}</strong>.</p>
-            <p><strong>Mật khẩu tạm:</strong> <code style='font-size:1.1em'>{tempPassword}</code></p>
+            <p><strong>Mật khẩu tạm:</strong> <code style='font-size:1.1em'>{HtmlEncoder.Default.Encode(tempPassword)}</code></p>
             <p>Bạn sẽ được yêu cầu đổi mật khẩu ngay sau lần đăng nhập tiếp theo.</p>
         </div>";
 }

@@ -22,7 +22,7 @@ public class AdminUserController(IAdminUserService adminUserService, ICurrentUse
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request) =>
-        (await adminUserService.CreateAsync(request, currentUser.UserId)).ToActionResult(this);
+        (await adminUserService.CreateAsync(request)).ToActionResult(this);
 
     [HttpPatch("{id:int}/lock")]
     public async Task<IActionResult> Lock(int id) =>

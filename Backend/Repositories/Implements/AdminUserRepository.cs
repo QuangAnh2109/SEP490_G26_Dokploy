@@ -13,9 +13,9 @@ public class AdminUserRepository(MtcaSep490G26Context context) : IAdminUserRepos
 
         if (!string.IsNullOrWhiteSpace(query.Q))
         {
-            var term = query.Q.Trim().ToLower();
-            q = q.Where(u => u.Email.ToLower().Contains(term) ||
-                              (u.FullName != null && u.FullName.ToLower().Contains(term)));
+            var term = query.Q.Trim();
+            q = q.Where(u => u.Email.Contains(term) ||
+                              (u.FullName != null && u.FullName.Contains(term)));
         }
 
         if (query.RoleId.HasValue)
