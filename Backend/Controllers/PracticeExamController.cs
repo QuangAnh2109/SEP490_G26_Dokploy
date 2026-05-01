@@ -13,10 +13,6 @@ namespace Backend.Controllers
     {
         private readonly IPracticeExamService _practiceService = practiceService;
 
-        // ════════════════════════════════════════════════════════
-        //  GET /api/practice/class/{classId}/chapters
-        //  Lấy danh sách chương + proficiency + số câu khả dụng
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Lấy danh sách chương của khóa học kèm proficiency và số câu luyện tập có sẵn.
         /// </summary>
@@ -28,10 +24,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  POST /api/practice/create
-        //  Tạo đề luyện tập tự động
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Tạo đề luyện tập tự động dựa trên proficiency sinh viên.
         /// </summary>
@@ -43,10 +35,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  POST /api/practice/submit
-        //  Nộp bài luyện tập (không check thời gian)
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Nộp bài luyện tập — không giới hạn thời gian.
         /// </summary>
@@ -58,10 +46,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  POST /api/practice/save
-        //  Lưu câu trả lời giữa chừng (không nộp bài)
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Lưu câu trả lời giữa chừng — không nộp bài, giữ trạng thái InProgress.
         /// </summary>
@@ -73,10 +57,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  GET /api/practice/resume/{submissionId}
-        //  Quay lại bài luyện tập đang làm dở
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Resume bài luyện tập đang làm dở — trả lại câu hỏi + câu trả lời đã lưu.
         /// </summary>
@@ -88,10 +68,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  GET /api/practice/result/{submissionId}
-        //  Xem kết quả + đáp án từng câu
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Xem kết quả bài luyện tập — hiển thị đáp án từng câu.
         /// </summary>
@@ -103,10 +79,6 @@ namespace Backend.Controllers
             return result.ToActionResult(this);
         }
 
-        // ════════════════════════════════════════════════════════
-        //  GET /api/practice/history?classId=
-        //  Lịch sử luyện tập
-        // ════════════════════════════════════════════════════════
         /// <summary>
         /// Lấy lịch sử luyện tập. Có thể lọc theo classId.
         /// </summary>

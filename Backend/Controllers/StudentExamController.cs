@@ -9,8 +9,7 @@ namespace Backend.Controllers;
 [Route("api/student/exams")]
 [ApiController]
 public class StudentExamController(
-    IStudentExamService studentExamService,
-    ILogger<StudentExamController> logger) : ControllerBase
+    IStudentExamService studentExamService) : ControllerBase
 {
     [HttpPost("{examId}/take")]
     [Authorize(Roles = RoleIds.Student)]

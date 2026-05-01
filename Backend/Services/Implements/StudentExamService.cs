@@ -15,7 +15,6 @@ namespace Backend.Services.Implements;
 public class StudentExamService(
     IStudentExamRepository studentExamRepository,
     ICurrentUserService currentUserService,
-    ILogger<StudentExamService> logger,
     TimeProvider timeProvider) : IStudentExamService
 {
     public async Task<Result<TakeExamDto>> TakeExamInClass(int examId)
