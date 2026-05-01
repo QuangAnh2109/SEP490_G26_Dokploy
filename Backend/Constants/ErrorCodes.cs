@@ -28,7 +28,6 @@ public static class ErrorCodes
 
     // Auth
     public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";
-    public const string AuthEmailAlreadyRegistered = "AUTH_EMAIL_ALREADY_REGISTERED";
     public const string AuthOtpExpired = "AUTH_OTP_EXPIRED";
     public const string AuthOtpInvalid = "AUTH_OTP_INVALID";
     public const string AuthInvalidGoogleToken = "AUTH_INVALID_GOOGLE_TOKEN";

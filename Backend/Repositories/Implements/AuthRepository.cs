@@ -27,13 +27,6 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<Role?> GetDefaultRoleAsync()
-        {
-            // E.g., looking up "User" or "Student"
-            return await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User" || r.Name == "Student")
-                   ?? await _context.Roles.FirstOrDefaultAsync();
-        }
-
         public async Task<User> AddUserAsync(User user)
         {
             _context.Users.Add(user);

@@ -6,7 +6,6 @@ namespace Backend.Common.Errors;
 public static class AuthErrors
 {
     public static readonly Error InvalidCredentials = new(ErrorCodes.AuthInvalidCredentials, ErrorType.NotFound);
-    public static readonly Error EmailAlreadyRegistered = new(ErrorCodes.AuthEmailAlreadyRegistered, ErrorType.Conflict);
     public static readonly Error OtpExpired = new(ErrorCodes.AuthOtpExpired, ErrorType.Unauthorized);
     public static readonly Error OtpInvalid = new(ErrorCodes.AuthOtpInvalid, ErrorType.Unauthorized);
     public static readonly Error InvalidGoogleToken = new(ErrorCodes.AuthInvalidGoogleToken, ErrorType.Unauthorized);

@@ -45,24 +45,19 @@ function handleCredentialResponse(response) {
     };
 
     apiClient.post("/api/auth/google-login", requestData)
-        .then(function (data) {
-            if (data.needsRegistration) {
-                localStorage.setItem('tempGoogleToken', requestData.IdToken);
-                localStorage.setItem('tempGoogleEmail', data.email);
-                window.location.href = '/Auth/GoogleRegister';
-            } else if (data.needsProfileCompletion) {
-                localStorage.setItem('tempGoogleToken', requestData.IdToken);
-                localStorage.setItem('tempGoogleEmail', data.email);
-                localStorage.setItem('tempGoogleNeedsCompletion', '1');
-                window.location.href = '/Auth/GoogleRegister';
-            } else {
-                const returnUrl = $('#returnUrl').val();
-                window.location.href = returnUrl ? returnUrl : '/';
-            }
+        .then(function () {
+            const returnUrl = $('#returnUrl').val();
+            window.location.href = returnUrl ? returnUrl : '/';
         })
         .catch(function (err) {
-            console.error('Error:', err);
-            showToast('Có lỗi xảy ra khi xác thực với Google.', 'error');
+            const code = err && err.xhr && err.xhr.responseJSON ? err.xhr.responseJSON.code : null;
+            if (code === 'AUTH_INVALID_CREDENTIALS') {
+                showToast('Tài khoản Google chưa được đăng ký. Vui lòng liên hệ quản trị viên.', 'error');
+            } else if (code === 'AUTH_ACCOUNT_LOCKED') {
+                showToast('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.', 'error');
+            } else {
+                showToast('Có lỗi xảy ra khi xác thực với Google.', 'error');
+            }
         });
 }
 

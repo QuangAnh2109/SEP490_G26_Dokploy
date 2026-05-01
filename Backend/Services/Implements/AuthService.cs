@@ -22,8 +22,7 @@ public class AuthService(
     IJwtTokenService jwtTokenService,
     IRefreshTokenStore refreshTokenStore,
     IHttpContextAccessor httpContextAccessor,
-    IOptions<AuthCookieOptions> cookieOptions,
-    TimeProvider timeProvider) : IAuthService
+    IOptions<AuthCookieOptions> cookieOptions) : IAuthService
 {
     private readonly AuthCookieOptions _cookie = cookieOptions.Value;
 
@@ -53,126 +52,11 @@ public class AuthService(
         var user = await authRepository.GetUserByEmailAsync(userEmail);
 
         if (user == null)
-            return new LoginResponse { NeedsRegistration = true, Email = userEmail };
+            return AuthErrors.InvalidCredentials;
 
         if (user.Status == UserStatus.Locked)
             return AuthErrors.AccountLocked;
 
-        var missing = GetMissingProfileFields(user);
-        if (missing.Count > 0)
-            return new LoginResponse { NeedsProfileCompletion = true, Email = userEmail, MissingFields = missing };
-
-        return await BuildLoginResponseAsync(user);
-    }
-
-    public async Task<Result<LoginResponse>> GoogleRegisterAsync(GoogleRegisterRequest request)
-    {
-        var payloadResult = await ValidateGoogleTokenAsync(request.IdToken!);
-        if (payloadResult.IsFailure)
-            return payloadResult.Error;
-
-        var userEmail = payloadResult.Value.Email;
-        var existingUser = await authRepository.GetUserByEmailAsync(userEmail);
-        if (existingUser != null)
-            return AuthErrors.EmailAlreadyRegistered;
-
-        var user = new User
-        {
-            PasswordHash = null,
-            RoleId = request.RoleId ?? 0,
-            Email = userEmail,
-            SecurityStamp = timeProvider.GetUtcNow().UtcDateTime,
-            FullName = (request.FullName ?? string.Empty).Trim(),
-            PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
-            StudentId = string.IsNullOrWhiteSpace(request.StudentId) ? null : request.StudentId.Trim()
-        };
-
-        await authRepository.AddUserAsync(user);
-        return await BuildLoginResponseAsync(user);
-    }
-
-    public async Task<Result<LoginResponse>> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request)
-    {
-        var payloadResult = await ValidateGoogleTokenAsync(request.IdToken!);
-        if (payloadResult.IsFailure)
-            return payloadResult.Error;
-
-        var userEmail = payloadResult.Value.Email;
-        var user = await authRepository.GetUserByEmailAsync(userEmail);
-        if (user == null)
-            return AuthErrors.UserNotFound;
-
-        user.FullName = (request.FullName ?? string.Empty).Trim();
-        user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
-        if (user.RoleId == 2 && !string.IsNullOrWhiteSpace(request.StudentId))
-            user.StudentId = request.StudentId.Trim();
-
-        await authRepository.UpdateUserAsync(user);
-        return await BuildLoginResponseAsync(user);
-    }
-
-    public async Task<Result> SendOtpAsync(RegisterRequest request)
-    {
-        var existingUser = await authRepository.GetUserByEmailAsync(request.Email!);
-        if (existingUser != null)
-            return AuthErrors.EmailAlreadyRegistered;
-
-        var otp = GenerateOtp();
-        await otpStore.SetRegistrationOtpAsync(request.Email!, request, otp);
-
-        var html = BuildOtpEmail(
-            heading: "Xác thực Email đăng ký",
-            intro: "Mã OTP để hoàn tất đăng ký tài khoản của bạn là:",
-            otp: otp);
-        await emailService.SendEmailAsync(request.Email!, "Mã Xác Thực OTP - Math Test Creator", html);
-        return Result.Success();
-    }
-
-    public async Task<Result> ResendOtpAsync(string email)
-    {
-        var entry = await otpStore.GetRegistrationOtpAsync(email);
-        if (entry == null)
-            return AuthErrors.OtpExpired;
-
-        var newOtp = GenerateOtp();
-        await otpStore.SetRegistrationOtpAsync(email, entry.Request, newOtp);
-
-        var html = BuildOtpEmail(
-            heading: "Xác thực Email đăng ký",
-            intro: "Mã OTP mới để hoàn tất đăng ký tài khoản của bạn là:",
-            otp: newOtp);
-        await emailService.SendEmailAsync(email, "Mã Xác Thực OTP - Math Test Creator", html);
-        return Result.Success();
-    }
-
-    public async Task<Result<LoginResponse>> VerifyOtpAndRegisterAsync(VerifyOtpRequest request)
-    {
-        var entry = await otpStore.GetRegistrationOtpAsync(request.Email!);
-        if (entry == null)
-            return AuthErrors.OtpExpired;
-
-        if (entry.Otp != request.OtpCode)
-            return AuthErrors.OtpInvalid;
-
-        await otpStore.RemoveRegistrationOtpAsync(request.Email!);
-
-        var regRequest = entry.Request;
-        var existingUser = await authRepository.GetUserByEmailAsync(regRequest.Email!);
-        if (existingUser != null)
-            return AuthErrors.EmailAlreadyRegistered;
-
-        var user = new User
-        {
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(regRequest.Password),
-            RoleId = regRequest.RoleId ?? 0,
-            Email = regRequest.Email!,
-            SecurityStamp = timeProvider.GetUtcNow().UtcDateTime,
-            FullName = (regRequest.FullName ?? string.Empty).Trim(),
-            PhoneNumber = string.IsNullOrWhiteSpace(regRequest.PhoneNumber) ? null : regRequest.PhoneNumber.Trim(),
-            StudentId = string.IsNullOrWhiteSpace(regRequest.StudentId) ? null : regRequest.StudentId.Trim()
-        };
-
-        await authRepository.AddUserAsync(user);
         return await BuildLoginResponseAsync(user);
     }
 
@@ -345,29 +229,6 @@ public class AuthService(
         {
             return AuthErrors.InvalidGoogleToken;
         }
-    }
-
-    private static List<string> GetMissingProfileFields(User user)
-    {
-        var missing = new List<string>();
-        var fullName = (user.FullName ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(fullName) ||
-            !System.Text.RegularExpressions.Regex.IsMatch(fullName, @"^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)*$"))
-        {
-            missing.Add("FullName");
-        }
-
-        if (user.RoleId == 2)
-        {
-            var studentId = (user.StudentId ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(studentId) ||
-                !System.Text.RegularExpressions.Regex.IsMatch(studentId, @"^[A-Za-z]{2}\d{6}$"))
-            {
-                missing.Add("StudentId");
-            }
-        }
-
-        return missing;
     }
 
     private static string BuildOtpEmail(string heading, string intro, string otp, string? extraNote = null)

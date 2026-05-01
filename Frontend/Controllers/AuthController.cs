@@ -21,32 +21,6 @@ namespace Frontend.Controllers
         }
 
         [HttpGet]
-        public IActionResult GoogleRegister()
-        {
-            return View();
-        }
-
-        [HttpGet]
-        public IActionResult SelectRole()
-        {
-            return View();
-        }
-
-        [HttpGet]
-        public IActionResult Register()
-        {
-            var clientId = (_configuration["Google:ClientId"] ?? _configuration["Google:client_id"] ?? "").Trim();
-            ViewData["GoogleClientId"] = clientId;
-            return View();
-        }
-
-        [HttpGet]
-        public IActionResult VerifyOTP()
-        {
-            return View();
-        }
-
-        [HttpGet]
         public IActionResult ForgotPassword()
         {
             return View();

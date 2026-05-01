@@ -34,26 +34,6 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request) =>
         (await authService.GoogleLoginAsync(request)).ToActionResult(this);
 
-    [HttpPost("google-register")]
-    public async Task<IActionResult> GoogleRegister([FromBody] GoogleRegisterRequest request) =>
-        (await authService.GoogleRegisterAsync(request)).ToActionResult(this);
-
-    [HttpPost("google-complete-profile")]
-    public async Task<IActionResult> GoogleCompleteProfile([FromBody] GoogleCompleteProfileRequest request) =>
-        (await authService.GoogleCompleteProfileAsync(request)).ToActionResult(this);
-
-    [HttpPost("send-otp")]
-    public async Task<IActionResult> SendOtp([FromBody] RegisterRequest request) =>
-        (await authService.SendOtpAsync(request)).ToActionResult(this);
-
-    [HttpPost("resend-otp")]
-    public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request) =>
-        (await authService.ResendOtpAsync(request.Email!)).ToActionResult(this);
-
-    [HttpPost("verify-otp")]
-    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request) =>
-        (await authService.VerifyOtpAndRegisterAsync(request)).ToActionResult(this);
-
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken() =>
         (await authService.RefreshTokenAsync()).ToActionResult(this);
