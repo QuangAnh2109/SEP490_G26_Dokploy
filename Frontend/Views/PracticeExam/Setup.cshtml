@@ -128,6 +128,7 @@
 
         // Load sidebar class name
         document.addEventListener('DOMContentLoaded', async () => {
+            await window.userReady;
             const role = getUserRole();
             if (role === RoleIds.Student) {
                 const settingsMenu = document.getElementById("settingsMenuItem");

@@ -32,9 +32,7 @@ async function ensureClassNameAndBreadcrumb() {
 
 async function loadExams() {
 
-    const token = getToken();
-
-    if (!token) {
+    if (!isAuthenticated()) {
         showToast("Bạn chưa đăng nhập", "error");
         window.location.href = "/Auth/Login";
         return;
@@ -71,7 +69,6 @@ async function loadExams() {
         const httpStatus = err.xhr ? err.xhr.status : null;
         if (httpStatus === 401) {
             showToast("Phiên đăng nhập hết hạn", "error");
-            removeToken();
             window.location.href = "/Auth/Login";
             return;
         }
@@ -83,8 +80,7 @@ async function loadExams() {
 
 async function loadChapters() {
 
-    const token = getToken();
-    if (!token) return;
+    if (!isAuthenticated()) return;
 
     let chapters;
     try {
@@ -299,6 +295,7 @@ function bypassContainer() {
 }
 
 document.addEventListener("DOMContentLoaded", async function () {
+    await window.userReady;
     const dataEl = document.getElementById("courseData");
     classId = dataEl ? dataEl.dataset.classId : null;
     classNameFromServer = dataEl ? dataEl.dataset.className : null;

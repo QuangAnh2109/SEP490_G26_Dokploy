@@ -4,7 +4,7 @@ let originalProfile = {};
 // ================= INIT =================
 $(function () {
 
-    $('#profileModal').on('shown.bs.modal', function () {
+    $('#profileModal').on('shown.bs.modal', async function () {
 
         console.log("Profile modal opened");
 
@@ -13,6 +13,8 @@ $(function () {
 
         // disable button password
         $("#changePasswordBtn").prop("disabled", true);
+
+        await window.userReady;
 
         // ẩn tab password nếu login Google
         if (isGoogleUser()) {

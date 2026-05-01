@@ -47,7 +47,6 @@ async function loadStudents() {
     } catch (error) {
         if (error.xhr && error.xhr.status === 401) {
             showToast("Phiên đăng nhập hết hạn", "error");
-            removeToken();
             window.location.href = "/Auth/Login";
             return;
         }
@@ -132,6 +131,7 @@ async function removeStudent(studentId, studentName) {
 }
 
 document.addEventListener("DOMContentLoaded", async function () {
+    await window.userReady;
     const dataEl = document.getElementById("courseData");
     classId = dataEl ? dataEl.dataset.classId : null;
     classNameFromServer = dataEl ? dataEl.dataset.className : null;

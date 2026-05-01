@@ -1,4 +1,6 @@
-$(document).ready(function () {
+$(document).ready(async function () {
+    await window.userReady;
+
     const state = {
         chapterOptions: [],
         editId: typeof window.ExamBlueprintEditId === 'number' && window.ExamBlueprintEditId > 0 ? window.ExamBlueprintEditId : 0,

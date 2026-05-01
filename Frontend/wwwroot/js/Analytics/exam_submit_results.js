@@ -7,7 +7,7 @@
     var currentPage = 1;
     var PAGE_SIZE = 15;
 
-    function init() {
+    async function init() {
         root = document.getElementById("submitResultsRoot");
         if (!root) return;
 
@@ -18,6 +18,8 @@
             showError("Không tìm thấy mã bài thi.");
             return;
         }
+
+        await window.userReady;
 
         if (!isAuthenticated()) {
             window.location.href = "/Auth/Login";

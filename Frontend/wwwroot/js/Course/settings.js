@@ -231,7 +231,8 @@ async function toggleClassStatus() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+    await window.userReady;
     const dataEl = document.getElementById("courseData");
     classId = dataEl ? dataEl.dataset.classId : null;
     classNameFromServer = dataEl ? dataEl.dataset.className : null;

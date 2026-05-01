@@ -1,4 +1,6 @@
 (async () => {
+  await window.userReady;
+
   const get = (id) => document.getElementById(id);
   const toArray = (v) => Array.from(v || []);
   const toApiDateTime = (v) => v ? new Date(v).toISOString() : null;

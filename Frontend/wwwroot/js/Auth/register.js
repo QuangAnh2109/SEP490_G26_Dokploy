@@ -96,18 +96,12 @@ $(document).ready(function () {
 
         apiClient.post(endpoint, requestData)
             .then(function (response) {
-                if (response.token) {
-                    // Successful registration & login
-                    setToken(response.token, response.refreshToken);
+                localStorage.removeItem('tempGoogleToken');
+                localStorage.removeItem('tempGoogleEmail');
+                localStorage.removeItem('tempGoogleNeedsCompletion');
+                localStorage.removeItem('pendingRegistrationRole');
 
-                    // Cleanup temporary variables
-                    localStorage.removeItem('tempGoogleToken');
-                    localStorage.removeItem('tempGoogleEmail');
-                    localStorage.removeItem('tempGoogleNeedsCompletion');
-                    localStorage.removeItem('pendingRegistrationRole');
-
-                    window.location.href = '/';
-                }
+                window.location.href = '/';
             })
             .catch(function (err) {
                 if (err.message) {

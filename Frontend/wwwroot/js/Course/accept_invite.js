@@ -2,11 +2,9 @@ async function acceptInvite() {
     const tokenDataEl = document.getElementById("courseData");
     const tokenQuery = tokenDataEl ? tokenDataEl.dataset.tokenQuery : "";
 
-    // Sử dụng getToken() từ site.js để kiểm tra đăng nhập
-    const currentToken = getToken();
+    await window.userReady;
 
-    if (!currentToken) {
-        // Save redirect URL and go to login
+    if (!isAuthenticated()) {
         sessionStorage.setItem("redirectAfterLogin", window.location.href);
         window.location.href = "/Auth/Login";
         return;

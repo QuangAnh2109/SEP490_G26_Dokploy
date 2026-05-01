@@ -312,7 +312,6 @@ async function createPracticeExam() {
     btn.appendChild(document.createTextNode(' Đang tạo đề...'));
 
     try {
-        var token = getToken();
         var body = {
             classId: practiceClassId,
             chapterIds: Array.from(selectedChapters),

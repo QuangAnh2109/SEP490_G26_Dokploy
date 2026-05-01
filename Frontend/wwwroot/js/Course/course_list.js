@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+    await window.userReady;
     setBreadcrumb([{ text: "Khóa học", url: null }]);
     initRoleUI();
     loadCourses();

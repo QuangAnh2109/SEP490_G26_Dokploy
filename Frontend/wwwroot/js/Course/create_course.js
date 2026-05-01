@@ -1,5 +1,6 @@
-document.addEventListener("DOMContentLoaded", function () {
-    // Sử dụng hàm getUserRole() từ site.js thay vì gọi localStorage trực tiếp
+document.addEventListener("DOMContentLoaded", async function () {
+    await window.userReady;
+
     const role = getUserRole();
     if (role !== RoleIds.Teacher) {
         showToast("Bạn không có quyền truy cập trang này.", "error");

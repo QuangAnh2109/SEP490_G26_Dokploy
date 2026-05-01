@@ -101,18 +101,13 @@ function verifyOtp() {
 
     apiClient.post('/api/auth/verify-otp', requestData)
         .then(function (data) {
-            if (data.token) {
-                // Success! Log the user in
-                setToken(data.token, data.refreshToken);
-                // Clean up registration data
-                localStorage.removeItem('pendingRegistrationEmail');
-                localStorage.removeItem('pendingRegistrationRole');
+            localStorage.removeItem('pendingRegistrationEmail');
+            localStorage.removeItem('pendingRegistrationRole');
 
-                $('#loadingText').text('Đăng ký thành công! Đang chuyển hướng...');
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1000);
-            }
+            $('#loadingText').text('Đăng ký thành công! Đang chuyển hướng...');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
         })
         .catch(function (err) {
             $('#loadingOverlay').hide();

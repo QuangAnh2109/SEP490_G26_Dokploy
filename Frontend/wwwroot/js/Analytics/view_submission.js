@@ -4,7 +4,7 @@
 
 var DOM = {};
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
     DOM = {
         root: document.getElementById("analyticsRoot"),
         loading: document.getElementById("analyticsLoading"),
@@ -19,6 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
         tplQuestion: document.getElementById("tpl-review-question"),
         tplOption: document.getElementById("tpl-review-option")
     };
+
+    await window.userReady;
 
     if (!isAuthenticated()) { window.location.href = '/Auth/Login'; return; }
     if (getUserRole() !== RoleIds.Teacher) {

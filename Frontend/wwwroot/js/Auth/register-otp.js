@@ -161,17 +161,10 @@ function handleCredentialResponse(response) {
                 return;
             }
 
-            if (data.token) {
-                setToken(data.token, data.refreshToken);
-                localStorage.removeItem('tempGoogleToken');
-                localStorage.removeItem('tempGoogleEmail');
-                localStorage.removeItem('tempGoogleNeedsCompletion');
-                window.location.href = '/';
-                return;
-            }
-
-            $('#loadingOverlay').hide();
-            showError("Đăng nhập Google thất bại. Vui lòng thử lại.");
+            localStorage.removeItem('tempGoogleToken');
+            localStorage.removeItem('tempGoogleEmail');
+            localStorage.removeItem('tempGoogleNeedsCompletion');
+            window.location.href = '/';
         })
         .catch(function (err) {
             $('#loadingOverlay').hide();

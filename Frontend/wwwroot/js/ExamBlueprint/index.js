@@ -1,4 +1,6 @@
-$(document).ready(function () {
+$(document).ready(async function () {
+    await window.userReady;
+
     const state = {
         page: 1,
         pageSize: 10,

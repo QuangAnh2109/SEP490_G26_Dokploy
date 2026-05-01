@@ -111,7 +111,8 @@
         const classId = @classId;
         let allHistory = [];
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await window.userReady;
             const role = getUserRole();
             if (role === RoleIds.Student) {
                 const settingsMenu = document.getElementById("settingsMenuItem");

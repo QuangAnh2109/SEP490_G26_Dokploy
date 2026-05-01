@@ -1,18 +1,5 @@
 const API_BASE_URL = window.API_BASE_URL;
 
-try {
-    if (typeof window.$ !== 'undefined' && window.$.ajaxSetup) {
-        window.$.ajaxSetup({
-            beforeSend: function (xhr) {
-                const token = localStorage.getItem('jwtToken');
-                if (token) {
-                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-                }
-            }
-        });
-    }
-} catch (_) { }
-
 // Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1" = Teacher, "2" = Student),
 // và Authorize attribute dùng RoleIds.Teacher/Student. FE compare trực tiếp với 2 const này.
 const RoleIds = Object.freeze({
@@ -20,103 +7,80 @@ const RoleIds = Object.freeze({
     Student: '2'
 });
 
-function setToken(token, refreshToken) {
-    localStorage.setItem('jwtToken', token);
-    if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
+// Bootstrap qua /me. Nếu 401 + có refresh cookie → tự refresh + retry /me, tránh logout oan khi reload sau access expiry.
+window.currentUser = null;
+window.userReady = (function () {
+    const meUrl = API_BASE_URL.replace(/\/+$/, '') + '/api/auth/me';
+    const refreshUrl = API_BASE_URL.replace(/\/+$/, '') + '/api/auth/refresh-token';
+
+    function fetchMe() {
+        return new Promise(function (resolve, reject) {
+            $.ajax({
+                url: meUrl, type: 'GET',
+                xhrFields: { withCredentials: true },
+                success: function (resp) { resolve(resp || null); },
+                error: function (xhr) { reject(xhr.status || 0); }
+            });
+        });
     }
-}
 
-function getToken() {
-    return localStorage.getItem('jwtToken');
-}
-
-function getRefreshToken() {
-    return localStorage.getItem('refreshToken');
-}
-
-function removeToken() {
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('refreshToken');
-}
-
-function parseJwt(token) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        return null;
+    function tryRefresh() {
+        return new Promise(function (resolve) {
+            $.ajax({
+                url: refreshUrl, type: 'POST',
+                xhrFields: { withCredentials: true },
+                success: function () { resolve(true); },
+                error: function () { resolve(false); }
+            });
+        });
     }
-}
+
+    return (async function () {
+        try {
+            window.currentUser = await fetchMe();
+            return window.currentUser;
+        } catch (status) {
+            if (status === 401 && await tryRefresh()) {
+                try {
+                    window.currentUser = await fetchMe();
+                    return window.currentUser;
+                } catch { /* fall through */ }
+            }
+            window.currentUser = null;
+            return null;
+        }
+    })();
+})();
 
 function getUserIdFromToken() {
-    const token = getToken();
-    if (!token) return null;
-
-    const decoded = parseJwt(token);
-    if (!decoded) return null;
-
-    const userId = decoded['sub']
-        || decoded['nameid']
-        || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
-        || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/nameidentifier'];
-    if (!userId) return null;
-
-    return parseInt(userId, 10) || null;
+    return window.currentUser ? window.currentUser.userId : null;
 }
 
 function getUserRole() {
-    const token = getToken();
-    if (!token) return null;
-
-    const decoded = parseJwt(token);
-    if (!decoded) return null;
-    return decoded['role'] || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null;
+    return window.currentUser ? window.currentUser.role : null;
 }
 
 function getUserEmail() {
-    const token = getToken();
-    if (!token) return null;
-
-    const decoded = parseJwt(token);
-    if (!decoded) return null;
-
-    return decoded['email']
-        || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+    return window.currentUser ? window.currentUser.email : null;
 }
 
-// Xác định tài khoản đăng nhập bằng Google hay mật khẩu thường từ JWT
 function getAuthProvider() {
-    const token = getToken();
-    if (!token) return null;
-
-    const decoded = parseJwt(token);
-    if (!decoded) return null;
-
-    return decoded['auth_provider'] || null;
+    return window.currentUser ? window.currentUser.authProvider : null;
 }
 
 function isGoogleUser() {
-    const provider = getAuthProvider();
-    return provider === 'google';
+    return getAuthProvider() === 'google';
 }
 
 function isAuthenticated() {
-    return getToken() !== null;
+    return window.currentUser !== null;
 }
 
-// Logout: gọi BE để bump SecurityStamp (vô hiệu hóa mọi refresh token đã issue),
-// rồi clear local state. Best-effort — nếu BE call fail, vẫn clear + redirect.
 function logout() {
     apiClient.post('/api/auth/logout', {})
-        .catch(function () { /* ignore — vẫn clear + redirect */ })
+        .catch(function () { /* ignore — vẫn redirect */ })
         .finally(function () {
-            removeToken();
+            window.currentUser = null;
             window.location.href = '/Auth/Login';
         });
 }
@@ -126,10 +90,6 @@ let _refreshPromise = null;
 function refreshAccessToken() {
     if (_refreshPromise) return _refreshPromise;
 
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return Promise.reject(new Error('No refresh token'));
-
-    const oldAccessToken = getToken() || '';
     const url = API_BASE_URL.replace(/\/+$/, '') + '/api/auth/refresh-token';
 
     _refreshPromise = new Promise(function (resolve, reject) {
@@ -137,15 +97,9 @@ function refreshAccessToken() {
             url: url,
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ AccessToken: oldAccessToken, RefreshToken: refreshToken }),
-            success: function (response) {
-                // BE TokenModel: { accessToken, refreshToken }
-                if (response && response.accessToken) {
-                    setToken(response.accessToken, response.refreshToken);
-                    resolve(response.accessToken);
-                } else {
-                    reject(new Error('Invalid refresh response'));
-                }
+            xhrFields: { withCredentials: true },
+            success: function () {
+                resolve(true);
             },
             error: function (xhr) {
                 reject(new Error('Refresh failed: ' + xhr.status));
@@ -166,21 +120,20 @@ const apiClient = {
                 url: API_BASE_URL.replace(/\/+$/, '') + (endpoint.startsWith('/') ? endpoint : '/' + endpoint),
                 type: method,
                 contentType: "application/json",
+                xhrFields: { withCredentials: true },
                 success: function (response) {
                     resolve(response);
                 },
                 error: function (xhr, status, error) {
-                    // 401 → thử refresh access token và retry 1 lần.
-                    // Skip refresh cho chính endpoint /refresh-token (tránh loop) và khi đã retry rồi.
                     const isRefreshEndpoint = endpoint.indexOf('/api/auth/refresh-token') !== -1;
-                    if (xhr.status === 401 && !isRetry && !isRefreshEndpoint && getRefreshToken()) {
+                    const isMeEndpoint = endpoint.indexOf('/api/auth/me') !== -1;
+                    if (xhr.status === 401 && !isRetry && !isRefreshEndpoint && !isMeEndpoint) {
                         refreshAccessToken()
                             .then(function () {
                                 self.request(method, endpoint, data, true).then(resolve, reject);
                             })
                             .catch(function () {
-                                // Refresh fail → access + refresh đều invalid → force logout.
-                                removeToken();
+                                window.currentUser = null;
                                 if (window.location.pathname.indexOf('/Auth/') !== 0) {
                                     window.location.href = '/Auth/Login';
                                 }

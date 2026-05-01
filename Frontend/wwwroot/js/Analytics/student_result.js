@@ -4,7 +4,7 @@
 
 var DOM = {};
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
     // ── Cache DOM 1 lần duy nhất ──
     DOM = {
         root:       document.getElementById("analyticsRoot"),
@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", function () {
         tplQuestion:document.getElementById("tpl-review-question"),
         tplOption:  document.getElementById("tpl-review-option")
     };
+
+    await window.userReady;
 
     // ── Kiểm tra đăng nhập & role ──
     if (!isAuthenticated()) { window.location.href = '/Auth/Login'; return; }
