@@ -1,0 +1,64 @@
+<div class="page-header">
+    <div>
+        <h1>Tạo tài khoản</h1>
+        <div class="meta">Thêm giáo viên hoặc học sinh mới vào hệ thống</div>
+    </div>
+</div>
+
+<div class="card" style="max-width: 600px;">
+    <div class="card-section">
+        <form id="createUserForm">
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label>Vai trò <span class="req">*</span></label>
+                <select id="roleId" required>
+                    <option value="1">Giáo viên</option>
+                    <option value="2">Học sinh</option>
+                </select>
+            </div>
+            
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label>Họ và tên <span class="req">*</span></label>
+                <input type="text" id="fullName" required placeholder="Nguyễn Văn A" maxlength="200" />
+                <div class="help" id="fullNameError" style="color:var(--danger)"></div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label>Email <span class="req">*</span></label>
+                <input type="email" id="email" required placeholder="email@domain.com" />
+                <div class="help" id="emailError" style="color:var(--danger)"></div>
+            </div>
+
+            <div class="form-row" id="studentIdRow" style="display: none; margin-bottom: 1rem;">
+                <label>Mã sinh viên <span class="req">*</span></label>
+                <input type="text" id="studentId" placeholder="VD: SE123456" />
+                <div class="help" id="studentIdError" style="color:var(--danger)"></div>
+            </div>
+
+            <div class="form-actions">
+                <a href="/Admin/Users" class="btn btn-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary" id="btnSubmit">Tạo tài khoản</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-stage" id="emailSentModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Tạo tài khoản thành công</div>
+        </div>
+        <div class="modal-body">
+            <p>Tài khoản đã được tạo thành công. Thông tin đăng nhập và mật khẩu tạm thời đã được gửi đến email:</p>
+            <strong id="modalEmailDisplay"></strong>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-primary" onclick="window.location.href='/Admin/Users'">Đóng</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/Admin/user-validation.js" asp-append-version="true"></script>
+    <script src="~/js/Admin/user-create.js" asp-append-version="true"></script>
+}

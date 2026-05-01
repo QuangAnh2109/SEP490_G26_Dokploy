@@ -16,7 +16,7 @@ namespace Backend.Controllers;
 public class AuthController(IAuthService authService, ICurrentUserService currentUser) : ControllerBase
 {
     [HttpGet("me")]
-    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
     public IActionResult GetMe() =>
         Ok(new
         {

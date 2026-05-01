@@ -136,7 +136,9 @@ public class AdminUserService(
         RoleId = u.RoleId,
         RoleName = u.Role?.Name ?? RoleIds.GetName(u.RoleId),
         Status = u.Status,
-        MustChangePassword = u.MustChangePassword
+        MustChangePassword = u.MustChangePassword,
+        PhoneNumber = u.PhoneNumber,
+        StudentId = u.StudentId
     };
 
     private static string GenerateTempPassword()

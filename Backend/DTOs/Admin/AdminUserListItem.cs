@@ -9,4 +9,6 @@ public class AdminUserListItem
     public string RoleName { get; set; } = string.Empty;
     public int Status { get; set; }
     public bool MustChangePassword { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? StudentId { get; set; }
 }
