@@ -240,13 +240,6 @@ public class AuthService(
         return Result.Success();
     }
 
-    public async Task<Result> LogoutAllAsync(int userId)
-    {
-        await refreshTokenStore.RevokeAllAsync(userId);
-        ClearAuthCookies();
-        return Result.Success();
-    }
-
     public async Task<Result> ChangePasswordFirstLoginAsync(int userId, ChangePasswordFirstLoginRequest request)
     {
         var user = await authRepository.GetUserByIdAsync(userId);

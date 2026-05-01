@@ -78,12 +78,6 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
         return (await authService.LogoutAsync(currentUser.UserId, jti)).ToActionResult(this);
     }
 
-    [HttpPost("logout-all")]
-    [Authorize(Roles = RoleIds.Any)]
-    [AllowPasswordChange]
-    public async Task<IActionResult> LogoutAll() =>
-        (await authService.LogoutAllAsync(currentUser.UserId)).ToActionResult(this);
-
     [HttpPost("change-password-first-login")]
     [Authorize(Roles = RoleIds.Any)]
     [AllowPasswordChange]
