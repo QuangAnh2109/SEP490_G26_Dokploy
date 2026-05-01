@@ -19,4 +19,5 @@ public static class AuthErrors
     public static readonly Error PasswordChangeRequired = new(ErrorCodes.AuthPasswordChangeRequired, ErrorType.Forbidden);
     public static readonly Error CurrentPasswordWrong = new(ErrorCodes.AuthCurrentPasswordWrong, ErrorType.Unauthorized);
     public static readonly Error NewPasswordSameAsOld = new(ErrorCodes.AuthNewPasswordSameAsOld, ErrorType.Validation);
+    public static readonly Error AccountLocked = new(ErrorCodes.AuthAccountLocked, ErrorType.Forbidden);
 }

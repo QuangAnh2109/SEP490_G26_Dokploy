@@ -1,10 +1,11 @@
 const API_BASE_URL = window.API_BASE_URL;
 
-// Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1" = Teacher, "2" = Student),
-// và Authorize attribute dùng RoleIds.Teacher/Student. FE compare trực tiếp với 2 const này.
+// Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1"=Teacher, "2"=Student, "3"=Admin),
+// và Authorize attribute dùng RoleIds.Teacher/Student/Admin. FE compare trực tiếp với các const này.
 const RoleIds = Object.freeze({
     Teacher: '1',
-    Student: '2'
+    Student: '2',
+    Admin: '3'
 });
 
 // Bootstrap qua /me. Nếu 401 + có refresh cookie → tự refresh + retry /me, tránh logout oan khi reload sau access expiry.

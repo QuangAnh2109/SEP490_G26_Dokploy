@@ -2,6 +2,7 @@ using Backend.Common;
 using Backend.Common.Errors;
 using Backend.Common.Models;
 using Backend.Common.Options;
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Models;
@@ -36,6 +37,9 @@ public class AuthService(
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return AuthErrors.InvalidCredentials;
 
+        if (user.Status == UserStatus.Locked)
+            return AuthErrors.AccountLocked;
+
         return await BuildLoginResponseAsync(user);
     }
 
@@ -50,6 +54,9 @@ public class AuthService(
 
         if (user == null)
             return new LoginResponse { NeedsRegistration = true, Email = userEmail };
+
+        if (user.Status == UserStatus.Locked)
+            return AuthErrors.AccountLocked;
 
         var missing = GetMissingProfileFields(user);
         if (missing.Count > 0)
@@ -264,7 +271,7 @@ public class AuthService(
 
     private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user)
     {
-        if (user.RoleId != 1 && user.RoleId != 2)
+        if (!RoleIds.IsValid(user.RoleId))
             return AuthErrors.UnknownRole;
 
         var ctx = httpContextAccessor.HttpContext
@@ -285,7 +292,7 @@ public class AuthService(
         CookieHelper.SetAccessCookie(ctx.Response, accessToken, accessExpiresAt, _cookie);
         CookieHelper.SetRefreshCookie(ctx.Response, refreshToken, refreshExpiresAt, _cookie);
 
-        var roleName = user.Role?.Name ?? (user.RoleId == 1 ? "Teacher" : user.RoleId == 2 ? "Student" : "Unknown");
+        var roleName = user.Role?.Name ?? RoleIds.GetName(user.RoleId);
 
         return new LoginResponse
         {

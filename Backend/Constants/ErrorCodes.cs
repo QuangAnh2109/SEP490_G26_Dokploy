@@ -41,6 +41,7 @@ public static class ErrorCodes
     public const string AuthPasswordChangeRequired = "AUTH_PASSWORD_CHANGE_REQUIRED";
     public const string AuthCurrentPasswordWrong = "AUTH_CURRENT_PASSWORD_WRONG";
     public const string AuthNewPasswordSameAsOld = "AUTH_NEW_PASSWORD_SAME_AS_OLD";
+    public const string AuthAccountLocked = "AUTH_ACCOUNT_LOCKED";
 
     // Question
     public const string QuestionNotFound = "QUESTION_NOT_FOUND";
