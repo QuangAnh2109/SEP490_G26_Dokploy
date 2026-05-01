@@ -13,8 +13,9 @@ public interface IAuthService
     Task<Result> SendOtpAsync(RegisterRequest request);
     Task<Result> ResendOtpAsync(string email);
     Task<Result<LoginResponse>> VerifyOtpAndRegisterAsync(VerifyOtpRequest request);
-    Task<Result<TokenModel>> RefreshTokenAsync(TokenModel request);
+    Task<Result> RefreshTokenAsync();
     Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request);
     Task<Result> ResetPasswordAsync(ResetPasswordRequest request);
-    Task<Result> LogoutAsync(int userId);
+    Task<Result> LogoutAsync(int userId, string jti);
+    Task<Result> LogoutAllAsync(int userId);
 }

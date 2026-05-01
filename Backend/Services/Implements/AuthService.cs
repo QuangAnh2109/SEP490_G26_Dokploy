@@ -1,18 +1,15 @@
 using Backend.Common;
 using Backend.Common.Errors;
 using Backend.Common.Models;
-using Backend.Constants;
+using Backend.Common.Options;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using Google.Apis.Auth;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace Backend.Services.Implements;
 
@@ -20,20 +17,25 @@ public class AuthService(
     IAuthRepository authRepository,
     IConfiguration configuration,
     IEmailService emailService,
-    IMemoryCache cache) : IAuthService
+    IOtpStore otpStore,
+    IJwtTokenService jwtTokenService,
+    IRefreshTokenStore refreshTokenStore,
+    IHttpContextAccessor httpContextAccessor,
+    IOptions<AuthCookieOptions> cookieOptions) : IAuthService
 {
+    private readonly AuthCookieOptions _cookie = cookieOptions.Value;
+
     public async Task<Result<LoginResponse>> LoginAsync(LoginRequest request)
     {
         var user = await authRepository.GetUserByEmailAsync(request.Email!);
 
-        // Merge null/google/wrong-password into single code to prevent enumeration
         if (user == null || string.IsNullOrEmpty(user.PasswordHash))
             return AuthErrors.InvalidCredentials;
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return AuthErrors.InvalidCredentials;
 
-        return BuildLoginResponse(user);
+        return await BuildLoginResponseAsync(user);
     }
 
     public async Task<Result<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest request)
@@ -52,7 +54,7 @@ public class AuthService(
         if (missing.Count > 0)
             return new LoginResponse { NeedsProfileCompletion = true, Email = userEmail, MissingFields = missing };
 
-        return BuildLoginResponse(user);
+        return await BuildLoginResponseAsync(user);
     }
 
     public async Task<Result<LoginResponse>> GoogleRegisterAsync(GoogleRegisterRequest request)
@@ -78,7 +80,7 @@ public class AuthService(
         };
 
         await authRepository.AddUserAsync(user);
-        return BuildLoginResponse(user);
+        return await BuildLoginResponseAsync(user);
     }
 
     public async Task<Result<LoginResponse>> GoogleCompleteProfileAsync(GoogleCompleteProfileRequest request)
@@ -98,7 +100,7 @@ public class AuthService(
             user.StudentId = request.StudentId.Trim();
 
         await authRepository.UpdateUserAsync(user);
-        return BuildLoginResponse(user);
+        return await BuildLoginResponseAsync(user);
     }
 
     public async Task<Result> SendOtpAsync(RegisterRequest request)
@@ -107,9 +109,8 @@ public class AuthService(
         if (existingUser != null)
             return AuthErrors.EmailAlreadyRegistered;
 
-        var otp = new Random().Next(100000, 999999).ToString();
-        var cacheKey = $"OTP_{request.Email}";
-        _cache.Set(cacheKey, new { Request = request, Otp = otp }, TimeSpan.FromMinutes(10));
+        var otp = GenerateOtp();
+        await otpStore.SetRegistrationOtpAsync(request.Email!, request, otp);
 
         var html = BuildOtpEmail(otp, isResend: false);
         await emailService.SendEmailAsync(request.Email!, "Mã Xác Thực OTP - Math Test Creator", html);
@@ -118,13 +119,12 @@ public class AuthService(
 
     public async Task<Result> ResendOtpAsync(string email)
     {
-        var cacheKey = $"OTP_{email}";
-        if (!_cache.TryGetValue(cacheKey, out dynamic? cacheData) || cacheData == null)
+        var entry = await otpStore.GetRegistrationOtpAsync(email);
+        if (entry == null)
             return AuthErrors.OtpExpired;
 
-        var regRequest = (RegisterRequest)cacheData!.Request;
-        var newOtp = new Random().Next(100000, 999999).ToString();
-        _cache.Set(cacheKey, new { Request = regRequest, Otp = newOtp }, TimeSpan.FromMinutes(10));
+        var newOtp = GenerateOtp();
+        await otpStore.SetRegistrationOtpAsync(email, entry.Request, newOtp);
 
         var html = BuildOtpEmail(newOtp, isResend: true);
         await emailService.SendEmailAsync(email, "Mã Xác Thực OTP - Math Test Creator", html);
@@ -133,16 +133,16 @@ public class AuthService(
 
     public async Task<Result<LoginResponse>> VerifyOtpAndRegisterAsync(VerifyOtpRequest request)
     {
-        var cacheKey = $"OTP_{request.Email}";
-        if (!_cache.TryGetValue(cacheKey, out dynamic? cacheData) || cacheData == null)
+        var entry = await otpStore.GetRegistrationOtpAsync(request.Email!);
+        if (entry == null)
             return AuthErrors.OtpExpired;
 
-        if (cacheData!.Otp != request.OtpCode)
+        if (entry.Otp != request.OtpCode)
             return AuthErrors.OtpInvalid;
 
-        _cache.Remove(cacheKey);
+        await otpStore.RemoveRegistrationOtpAsync(request.Email!);
 
-        RegisterRequest regRequest = cacheData.Request;
+        var regRequest = entry.Request;
         var existingUser = await authRepository.GetUserByEmailAsync(regRequest.Email!);
         if (existingUser != null)
             return AuthErrors.EmailAlreadyRegistered;
@@ -159,42 +159,38 @@ public class AuthService(
         };
 
         await authRepository.AddUserAsync(user);
-        return BuildLoginResponse(user);
+        return await BuildLoginResponseAsync(user);
     }
 
-    public async Task<Result<TokenModel>> RefreshTokenAsync(TokenModel request)
+    public async Task<Result> RefreshTokenAsync()
     {
-        var principal = CreatePrincipalFromExpiredToken(request.RefreshToken, isRefreshToken: true);
-        if (principal == null)
+        var ctx = httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("RefreshTokenAsync requires HttpContext.");
+
+        var rawToken = ctx.Request.Cookies[AuthCookieDefaults.RefreshName];
+        if (string.IsNullOrEmpty(rawToken))
+            return AuthErrors.RefreshTokenNotFound;
+
+        var validation = await refreshTokenStore.ConsumeAsync(rawToken);
+        if (validation == null)
             return AuthErrors.InvalidRefreshToken;
 
-        var userEmail = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
-        var tokenSecurityStamp = principal.Claims.FirstOrDefault(c => c.Type == "AspNet.Identity.SecurityStamp")?.Value ?? "";
+        var user = await authRepository.GetUserByIdAsync(validation.UserId);
+        if (user == null)
+            return AuthErrors.UserNotFound;
 
-        var user = await authRepository.GetUserByEmailAsync(userEmail);
-        if (user == null || user.SecurityStamp.ToString("o") != tokenSecurityStamp)
-            return AuthErrors.InvalidRefreshToken;
-
-        var tokenResult = GenerateJwtToken(user);
-        if (tokenResult.IsFailure)
-            return tokenResult.Error;
-
-        return new TokenModel
-        {
-            AccessToken = tokenResult.Value,
-            RefreshToken = GenerateRefreshTokenAsJwt(user)
-        };
+        var loginResult = await BuildLoginResponseAsync(user);
+        return loginResult.IsFailure ? loginResult.Error : Result.Success();
     }
 
     public async Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request)
     {
         var user = await authRepository.GetUserByEmailAsync(request.Email!);
         if (user == null)
-            return Result.Success(); // silent — no enumeration
+            return Result.Success();
 
-        var otp = new Random().Next(100000, 999999).ToString();
-        var cacheKey = $"RESET_OTP_{request.Email}";
-        _cache.Set(cacheKey, otp, TimeSpan.FromMinutes(10));
+        var otp = GenerateOtp();
+        await otpStore.SetResetOtpAsync(request.Email!, otp);
 
         var html = $@"
             <div style='font-family: Arial, sans-serif; padding: 20px;'>
@@ -211,102 +207,97 @@ public class AuthService(
 
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request)
     {
-        var cacheKey = $"RESET_OTP_{request.Email}";
-        if (!_cache.TryGetValue(cacheKey, out string? cachedOtp) || string.IsNullOrEmpty(cachedOtp))
+        var cachedOtp = await otpStore.GetResetOtpAsync(request.Email!);
+        if (string.IsNullOrEmpty(cachedOtp))
             return AuthErrors.OtpExpired;
 
         if (cachedOtp != request.OtpCode)
             return AuthErrors.OtpInvalid;
 
-        _cache.Remove(cacheKey);
+        await otpStore.RemoveResetOtpAsync(request.Email!);
 
         var user = await authRepository.GetUserByEmailAsync(request.Email!);
         if (user == null)
             return AuthErrors.UserNotFound;
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        user.SecurityStamp = DateTime.UtcNow;
         await authRepository.UpdateUserAsync(user);
-        return Result.Success();
-    }
 
-    public async Task<Result> LogoutAsync(int userId)
-    {
-        var user = await authRepository.GetUserByIdAsync(userId);
-        if (user != null)
-        {
-            user.SecurityStamp = DateTime.UtcNow;
-            await authRepository.UpdateUserAsync(user);
-        }
+        await refreshTokenStore.RevokeAllAsync(user.UserId);
+        ClearAuthCookies();
 
         return Result.Success();
     }
 
-    // ── private helpers ──────────────────────────────────────────────────────
-
-    private Result<LoginResponse> BuildLoginResponse(User user)
+    public async Task<Result> LogoutAsync(int userId, string jti)
     {
-        var tokenResult = GenerateJwtToken(user);
-        if (tokenResult.IsFailure)
-            return tokenResult.Error;
+        await refreshTokenStore.RevokeAsync(userId, jti);
+        ClearAuthCookies();
+        return Result.Success();
+    }
+
+    public async Task<Result> LogoutAllAsync(int userId)
+    {
+        await refreshTokenStore.RevokeAllAsync(userId);
+        ClearAuthCookies();
+        return Result.Success();
+    }
+
+    private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user)
+    {
+        if (user.RoleId != 1 && user.RoleId != 2)
+            return AuthErrors.UnknownRole;
+
+        var ctx = httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("BuildLoginResponseAsync requires HttpContext.");
+
+        var authProvider = string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password";
+        var (accessToken, jti, accessExpiresAt) = jwtTokenService.Issue(
+            user.UserId,
+            user.Email,
+            user.RoleId.ToString(),
+            authProvider);
+
+        var ip = GetClientIp(ctx);
+        var ua = ctx.Request.Headers.UserAgent.ToString();
+        var (refreshToken, refreshExpiresAt) = await refreshTokenStore.IssueAsync(user.UserId, jti, ip, ua);
+
+        CookieHelper.SetAccessCookie(ctx.Response, accessToken, accessExpiresAt, _cookie);
+        CookieHelper.SetRefreshCookie(ctx.Response, refreshToken, refreshExpiresAt, _cookie);
 
         var roleName = user.Role?.Name ?? (user.RoleId == 1 ? "Teacher" : user.RoleId == 2 ? "Student" : "Unknown");
 
         return new LoginResponse
         {
-            Token = tokenResult.Value,
-            RefreshToken = GenerateRefreshTokenAsJwt(user),
             RoleName = roleName,
             Email = user.Email
         };
     }
 
-    private Result<string> GenerateJwtToken(User user)
+    private void ClearAuthCookies()
     {
-        if (user.RoleId != 1 && user.RoleId != 2)
-            return AuthErrors.UnknownRole;
-
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Role, user.RoleId.ToString()),
-            new("auth_provider", string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password")
-        };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? ""));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"],
-            audience: configuration["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var ctx = httpContextAccessor.HttpContext;
+        if (ctx == null) return;
+        CookieHelper.ClearAuthCookies(ctx.Response, _cookie);
     }
 
-    private string GenerateRefreshTokenAsJwt(User user)
+    private static string? GetClientIp(HttpContext ctx)
     {
-        var claims = new List<Claim>
+        var cf = ctx.Request.Headers["CF-Connecting-IP"].ToString();
+        if (!string.IsNullOrEmpty(cf)) return cf;
+
+        var fwd = ctx.Request.Headers["X-Forwarded-For"].ToString();
+        if (!string.IsNullOrEmpty(fwd))
         {
-            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new(ClaimTypes.Email, user.Email),
-            new("AspNet.Identity.SecurityStamp", user.SecurityStamp.ToString("o"))
-        };
+            var first = fwd.Split(',')[0].Trim();
+            if (!string.IsNullOrEmpty(first)) return first;
+        }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? ""));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var audience = configuration["Jwt:Audience"] + "_Refresh";
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"],
-            audience: audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return ctx.Connection.RemoteIpAddress?.ToString();
     }
+
+    private static string GenerateOtp() =>
+        RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
     private async Task<Result<GoogleJsonWebSignature.Payload>> ValidateGoogleTokenAsync(string idToken)
     {
@@ -326,39 +317,6 @@ public class AuthService(
         catch (InvalidJwtException)
         {
             return AuthErrors.InvalidGoogleToken;
-        }
-    }
-
-    private ClaimsPrincipal? CreatePrincipalFromExpiredToken(string? token, bool isRefreshToken = false)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? ""));
-        var audience = isRefreshToken ? configuration["Jwt:Audience"] + "_Refresh" : configuration["Jwt:Audience"];
-        var parameters = new TokenValidationParameters
-        {
-            ValidateAudience = true,
-            ValidAudience = audience,
-            ValidateIssuer = true,
-            ValidIssuer = configuration["Jwt:Issuer"],
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = key,
-            ValidateLifetime = isRefreshToken
-        };
-
-        try
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var principal = handler.ValidateToken(token, parameters, out var securityToken);
-            if (securityToken is not JwtSecurityToken jwt ||
-                !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-            {
-                return null;
-            }
-
-            return principal;
-        }
-        catch
-        {
-            return null;
         }
     }
 
@@ -397,6 +355,4 @@ public class AuthService(
                 <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.</p>
             </div>";
     }
-
-    private readonly IMemoryCache _cache = cache;
 }

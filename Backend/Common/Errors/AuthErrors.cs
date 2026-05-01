@@ -14,4 +14,6 @@ public static class AuthErrors
     public static readonly Error UserNotFound = new(ErrorCodes.AuthUserNotFound, ErrorType.NotFound);
     public static readonly Error GoogleAccountNoPassword = new(ErrorCodes.AuthGoogleAccountNoPassword, ErrorType.Forbidden);
     public static readonly Error InvalidRefreshToken = new(ErrorCodes.AuthInvalidRefreshToken, ErrorType.Unauthorized);
+    public static readonly Error RefreshTokenNotFound = new(ErrorCodes.AuthRefreshTokenNotFound, ErrorType.Unauthorized);
+    public static readonly Error MissingJti = new(ErrorCodes.AuthMissingJti, ErrorType.Unauthorized);
 }

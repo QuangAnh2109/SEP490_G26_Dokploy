@@ -1,9 +1,13 @@
 using Backend.Common;
+using Backend.Common.Errors;
+using Backend.Common.Models;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Backend.Controllers;
 
@@ -14,7 +18,13 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
     [HttpGet("me")]
     [Authorize(Roles = RoleIds.Any)]
     public IActionResult GetMe() =>
-        Ok(new { userId = currentUser.UserId, email = currentUser.Email, role = currentUser.Role.ToString() });
+        Ok(new
+        {
+            userId = currentUser.UserId,
+            email = currentUser.Email,
+            role = currentUser.Role,
+            authProvider = User.FindFirstValue("auth_provider")
+        });
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request) =>
@@ -45,8 +55,8 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
         (await authService.VerifyOtpAndRegisterAsync(request)).ToActionResult(this);
 
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken([FromBody] TokenModel request) =>
-        (await authService.RefreshTokenAsync(request)).ToActionResult(this);
+    public async Task<IActionResult> RefreshToken() =>
+        (await authService.RefreshTokenAsync()).ToActionResult(this);
 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request) =>
@@ -58,6 +68,17 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
 
     [HttpPost("logout")]
     [Authorize(Roles = RoleIds.Any)]
-    public async Task<IActionResult> Logout() =>
-        (await authService.LogoutAsync(currentUser.UserId)).ToActionResult(this);
+    public async Task<IActionResult> Logout()
+    {
+        var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        if (string.IsNullOrEmpty(jti))
+            return Result.Failure(AuthErrors.MissingJti).ToActionResult(this);
+
+        return (await authService.LogoutAsync(currentUser.UserId, jti)).ToActionResult(this);
+    }
+
+    [HttpPost("logout-all")]
+    [Authorize(Roles = RoleIds.Any)]
+    public async Task<IActionResult> LogoutAll() =>
+        (await authService.LogoutAllAsync(currentUser.UserId)).ToActionResult(this);
 }

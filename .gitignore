@@ -425,3 +425,5 @@ docs
 CLAUDE.md
 
 database/
+.playwright-mcp
+.review

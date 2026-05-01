@@ -36,6 +36,8 @@ public static class ErrorCodes
     public const string AuthUserNotFound = "AUTH_USER_NOT_FOUND";
     public const string AuthGoogleAccountNoPassword = "AUTH_GOOGLE_ACCOUNT_NO_PASSWORD";
     public const string AuthInvalidRefreshToken = "AUTH_INVALID_REFRESH_TOKEN";
+    public const string AuthRefreshTokenNotFound = "AUTH_REFRESH_TOKEN_NOT_FOUND";
+    public const string AuthMissingJti = "AUTH_MISSING_JTI";
 
     // Question
     public const string QuestionNotFound = "QUESTION_NOT_FOUND";
