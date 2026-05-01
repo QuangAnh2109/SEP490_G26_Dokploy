@@ -16,7 +16,7 @@ namespace Backend.Controllers;
 public class AuthController(IAuthService authService, ICurrentUserService currentUser) : ControllerBase
 {
     [HttpGet("me")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public IActionResult GetMe() =>
         Ok(new
         {
@@ -67,7 +67,7 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
         (await authService.ResetPasswordAsync(request)).ToActionResult(this);
 
     [HttpPost("logout")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     [AllowPasswordChange]
     public async Task<IActionResult> Logout()
     {
@@ -79,7 +79,7 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
     }
 
     [HttpPost("change-password-first-login")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     [AllowPasswordChange]
     public async Task<IActionResult> ChangePasswordFirstLogin([FromBody] ChangePasswordFirstLoginRequest request) =>
         (await authService.ChangePasswordFirstLoginAsync(currentUser.UserId, request)).ToActionResult(this);

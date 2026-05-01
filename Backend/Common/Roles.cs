@@ -6,5 +6,4 @@ public static class RoleIds
 {
     public const string Teacher = "1";
     public const string Student = "2";
-    public const string Any = "1,2";
 }

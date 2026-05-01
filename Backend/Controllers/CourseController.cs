@@ -11,7 +11,7 @@ namespace Backend.Controllers;
 public class CourseController(ICourseService service, ICurrentUserService currentUser) : ControllerBase
 {
     [HttpGet("my")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetMyClasses()
     {
         var courses = await service.GetCoursesForUserAsync(currentUser.UserId);
@@ -19,7 +19,7 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     }
 
     [HttpGet("{id}/exams")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetExamsForClass(int id)
     {
         var result = await service.GetExamsForCurrentUserAsync(id);
@@ -27,7 +27,7 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     }
 
     [HttpGet("{id}/chapters")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetChaptersForClass(int id)
     {
         var result = await service.GetChaptersForCurrentUserAsync(id);
@@ -59,7 +59,7 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     }
 
     [HttpGet("{id}/students")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetStudentsInClass(int id)
     {
         var students = await service.GetStudentsInClassAsync(id);
@@ -67,7 +67,7 @@ public class CourseController(ICourseService service, ICurrentUserService curren
     }
 
     [HttpGet("{id}/settings")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetClassSettings(int id)
     {
         var result = await service.GetClassSettingsAsync(id);

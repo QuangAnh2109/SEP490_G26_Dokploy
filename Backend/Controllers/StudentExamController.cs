@@ -21,7 +21,7 @@ public class StudentExamController(
     }
 
     [HttpGet("{examId}/preview")]
-    [Authorize(Roles = RoleIds.Any)]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student)]
     public async Task<IActionResult> GetExamPreview(int examId)
     {
         var result = await studentExamService.GetExamPreviewAsync(examId);
