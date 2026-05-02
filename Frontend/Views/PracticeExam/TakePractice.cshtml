@@ -127,14 +127,27 @@
                 data: practiceData,
                 studentAnswers: answersMap,
                 onNavUpdated: function(qNum, questions, stdAnswers) {
+                    const validation = examEngine.validateAllAnswers();
+                    const invalidQNums = validation.invalidQNums || [];
+
                     document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                        const questionNum = idx + 1;
                         const question = questions[idx];
                         const hasAnswer = question.answers.some(a => stdAnswers.has(String(a.questionAnswerId)));
 
-                        btn.classList.remove('btn-primary', 'btn-success', 'btn-outline-primary');
-                        if (idx + 1 === qNum) btn.classList.add('btn-primary');
-                        else if (hasAnswer) btn.classList.add('btn-success');
-                        else btn.classList.add('btn-outline-primary');
+                        btn.classList.remove('btn-primary', 'btn-success', 'btn-outline-primary', 'btn-danger');
+                        if (questionNum === qNum) {
+                            btn.classList.add('btn-primary');
+                        } else if (invalidQNums.includes(questionNum)) {
+                            btn.classList.add('btn-danger');
+                            btn.title = "Có lỗi định dạng ở câu này";
+                        } else if (hasAnswer) {
+                            btn.classList.add('btn-success');
+                            btn.removeAttribute('title');
+                        } else {
+                            btn.classList.add('btn-outline-primary');
+                            btn.removeAttribute('title');
+                        }
                     });
                 },
                 onProgressUpdated: function(questions, stdAnswers) {

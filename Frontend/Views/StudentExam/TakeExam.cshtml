@@ -103,13 +103,21 @@
                         data: exam,
                         studentAnswers: new Map((exam.savedAnswers || []).map(a => [String(a.questionAnswerId), a.response])),
                         onNavUpdated: function(qNum) {
+                            const validation = examEngine.validateAllAnswers();
+                            const invalidQNums = validation.invalidQNums || [];
+
                             document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
-                                if (idx + 1 === qNum) {
-                                    btn.classList.remove('btn-outline-primary');
+                                const questionNum = idx + 1;
+                                btn.classList.remove('btn-outline-primary', 'btn-primary', 'btn-danger');
+                                
+                                if (questionNum === qNum) {
                                     btn.classList.add('btn-primary');
+                                } else if (invalidQNums.includes(questionNum)) {
+                                    btn.classList.add('btn-danger'); // Báo đỏ nếu sai định dạng
+                                    btn.title = "Có lỗi định dạng ở câu này";
                                 } else {
-                                    btn.classList.remove('btn-primary');
                                     btn.classList.add('btn-outline-primary');
+                                    btn.removeAttribute('title');
                                 }
                             });
                             // Tự động lưu bài lưu nháp khi chuyển câu

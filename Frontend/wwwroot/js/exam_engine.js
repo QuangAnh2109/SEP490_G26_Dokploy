@@ -3,12 +3,12 @@ class ExamEngine {
         this.data = config.data; // object containing .questions
         this.studentAnswers = config.studentAnswers || new Map();
         this.questionNumber = config.initialQuestion || 1;
-        
+
         // Optional callbacks
-        this.onQuestionRendered = config.onQuestionRendered || function() {};
-        this.onNavUpdated = config.onNavUpdated || function() {};
-        this.onProgressUpdated = config.onProgressUpdated || function() {};
-        
+        this.onQuestionRendered = config.onQuestionRendered || function () { };
+        this.onNavUpdated = config.onNavUpdated || function () { };
+        this.onProgressUpdated = config.onProgressUpdated || function () { };
+
         // Constants
         this.regexPlaceholder = /\\?placeholder\[([^\]]+)\](?:\{\})?/;
         this.fillInBlank = "FillInBlank";
@@ -141,7 +141,7 @@ class ExamEngine {
         this.dom.questionLoading.hidden = true;
         this.dom.questionHeader.hidden = false;
         this.dom.questionArea.hidden = false;
-        
+
         this.onQuestionRendered();
     }
 
@@ -175,6 +175,89 @@ class ExamEngine {
         }
     }
 
+    validateAllAnswers() {
+        if (!this.data) return { isValid: true, errors: [], invalidQNums: [] };
+        const errors = [];
+        const invalidQNums = [];
+
+        this.data.questions.forEach((question, index) => {
+            if (question.questionType !== this.fillInBlank) return;
+
+            question.answers.forEach(answer => {
+                if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
+                    const answerId = String(answer.questionAnswerId);
+                    const latex = this.studentAnswers.get(answerId) || "";
+                    if (latex.trim() === "") return;
+
+                    const typeNames = answer.inputTypes.map(it => it.name.toLowerCase());
+                    const questionNum = index + 1;
+
+                    if (typeNames.includes('số tự nhiên') || typeNames.includes('natural number')) {
+                        const naturalRegex = /^\s*\d+\s*$/;
+                        if (!naturalRegex.test(latex)) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số tự nhiên</b> (ví dụ: 5) nhưng bạn đã nhập '${latex}'.`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('số nguyên') || typeNames.includes('integer')) {
+                        const intRegex = /^\s*-?\d+\s*$/;
+                        if (!intRegex.test(latex)) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số nguyên</b> (ví dụ: -5, 5) nhưng bạn đã nhập '${latex}'.`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('số hữu tỉ') || typeNames.includes('rational number')) {
+                        if (latex.includes('\\sqrt') || latex.includes('\\pi') || latex.includes('\\sin') || latex.includes('\\cos') || latex.includes('\\lim')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số hữu tỉ</b> (phân số, số thập phân) nhưng chứa ký hiệu vô tỉ/hàm số.`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('số vô tỉ') || typeNames.includes('irrational number')) {
+                        if (!latex.includes('\\sqrt') && !latex.includes('\\pi') && !latex.includes('e') && !latex.includes('\\phi')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số vô tỉ</b> (chứa căn, π, e...) nhưng bạn đã nhập '${latex}'.`);
+                            invalidQNums.push(questionNum);
+                        } else if (latex.includes('\\sin') || latex.includes('\\cos') || latex.includes('\\tan') || latex.includes('\\log')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số vô tỉ</b> nhưng chứa hàm số lượng giác/logarit '${latex}'.`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('hàm lượng giác/logarit') || typeNames.includes('trigonometry')) {
+                        if (!latex.includes('\\sin') && !latex.includes('\\cos') && !latex.includes('\\tan') && !latex.includes('\\cot') && !latex.includes('\\log') && !latex.includes('\\ln')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Hàm lượng giác/Logarit</b> nhưng không tìm thấy sin, cos, tan, log, ln...`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('hàm lim') || typeNames.includes('limit')) {
+                        if (!latex.includes('\\lim')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Hàm lim</b> nhưng không tìm thấy ký hiệu giới hạn (lim).`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('ma trận') || typeNames.includes('matrix')) {
+                        if (!latex.includes('matrix')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Ma trận</b> nhưng không tìm thấy định dạng ma trận.`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('số phức') || typeNames.includes('complex number')) {
+                        if (!latex.includes('i') && !latex.includes('j')) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Số phức</b> nhưng không tìm thấy phần ảo (i hoặc j).`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                    else if (typeNames.includes('biểu thức so sánh')) {
+                        if (!latex.match(/[<>\=]|\\ge|\\le|\\neq|\\approx|\\equiv/)) {
+                            errors.push(`Câu ${questionNum}: Yêu cầu <b>Biểu thức so sánh</b> nhưng không tìm thấy dấu (>, <, =, ...).`);
+                            invalidQNums.push(questionNum);
+                        }
+                    }
+                }
+            });
+        });
+
+        return { isValid: errors.length === 0, errors: errors, invalidQNums: [...new Set(invalidQNums)] };
+    }
+
     selectPlaceholder(mathField, placeholderId, currentQuestion) {
         const pos = mathField.position;
         let isInsidePlaceholder = false;
@@ -191,7 +274,7 @@ class ExamEngine {
                 if (this.dom.inputTypeContainer && this.dom.inputTypeBody) {
                     this.dom.inputTypeBody.innerHTML = '';
                     const headerTh = this.dom.inputTypeContainer.querySelector('thead th');
-                    
+
                     if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
                         if (headerTh) {
                             const names = answer.inputTypes.map(it => it.name).join(', ');
@@ -199,24 +282,24 @@ class ExamEngine {
                         }
                         answer.inputTypes.forEach(it => {
                             const mappedLatex = typeof inputTypeMathMapping !== 'undefined' ? inputTypeMathMapping[it.name] : null;
-                            
+
                             if (Array.isArray(mappedLatex)) {
                                 if (mappedLatex.length > 0) {
                                     const tr = document.createElement('tr');
                                     const td = document.createElement('td');
                                     td.className = "d-flex flex-wrap gap-2";
-                                    
+
                                     mappedLatex.forEach(latexStr => {
                                         const btn = document.createElement('button');
                                         btn.type = "button";
                                         btn.className = "btn btn-outline-primary btn-sm";
                                         btn.innerHTML = `<math-span>${latexStr}</math-span>`;
-                                        
+
                                         setTimeout(() => {
                                             const ms = btn.querySelector('math-span');
                                             if (ms && ms.render) ms.render();
                                         }, 0);
-                                        
+
                                         btn.onmousedown = e => e.preventDefault();
                                         btn.onclick = () => {
                                             mathField.focus();
@@ -234,9 +317,9 @@ class ExamEngine {
                             } else {
                                 const newRow = this.dom.inputLimitBtnTemplate.content.cloneNode(true);
                                 const btn = newRow.querySelector('button');
-                                
+
                                 const latexToInsert = mappedLatex || ('\\text{' + it.name + '}');
-                                
+
                                 if (mappedLatex) {
                                     btn.innerHTML = `<math-span>${mappedLatex}</math-span>`;
                                     setTimeout(() => {
@@ -246,7 +329,7 @@ class ExamEngine {
                                 } else {
                                     btn.textContent = it.name;
                                 }
-                                
+
                                 btn.onmousedown = e => e.preventDefault();
                                 btn.onclick = () => { mathField.focus(); mathField.insert(latexToInsert); };
                                 this.dom.inputTypeBody.appendChild(newRow);
@@ -265,7 +348,7 @@ class ExamEngine {
             if (this.dom.inputTypeContainer && this.dom.inputTypeBody) {
                 const headerTh = this.dom.inputTypeContainer.querySelector('thead th');
                 if (headerTh) headerTh.textContent = 'Loại dữ liệu';
-                
+
                 this.dom.inputTypeBody.innerHTML = '<tr><td class="text-muted small">Vui lòng click vào một ô trống để xem các ký hiệu hỗ trợ.</td></tr>';
                 this.dom.inputTypeContainer.hidden = false;
             }
