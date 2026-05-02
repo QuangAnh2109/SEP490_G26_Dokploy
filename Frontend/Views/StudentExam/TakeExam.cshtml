@@ -101,6 +101,7 @@
 
                     examEngine = new ExamEngine({
                         data: exam,
+                        studentAnswers: new Map((exam.savedAnswers || []).map(a => [String(a.questionAnswerId), a.response])),
                         onNavUpdated: function(qNum) {
                             document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
                                 if (idx + 1 === qNum) {
@@ -111,13 +112,21 @@
                                     btn.classList.add('btn-outline-primary');
                                 }
                             });
+                            // Tự động lưu bài lưu nháp khi chuyển câu
+                            if (typeof submitExam === 'function') {
+                                submitExam(false);
+                            }
                         }
                     });
                     
                     examEngine.init();
 
                     // ── Khởi tạo bộ đếm thời gian ──
-                    startCountdown(exam.duration);
+                    let createdAtStr = exam.createdAtUtc;
+                    if (!createdAtStr.endsWith('Z') && !createdAtStr.includes('+')) {
+                        createdAtStr += 'Z';
+                    }
+                    startCountdown(exam.duration, createdAtStr);
                 })
                 .catch((error) => {
                     showToast("Lỗi: " + error.message, "error");
@@ -128,15 +137,18 @@
         // ── Bộ đếm thời gian nộp bài ──
         // ══════════════════════════════════════════
 
-        function startCountdown(durationMinutes) {
+        function startCountdown(durationMinutes, createdAtUtcStr) {
             // Dừng timer cũ nếu có
             if (timerInterval) clearInterval(timerInterval);
 
-            remainingSeconds = Math.max(0, Math.floor(durationMinutes * 60));
-            updateTimerDisplay();
+            // Thời gian bắt đầu làm bài (UTC -> chuyển sang local timezone bằng Date object)
+            let createdAt = new Date(createdAtUtcStr);
+            let durationSeconds = durationMinutes * 60;
 
-            timerInterval = setInterval(() => {
-                remainingSeconds--;
+            let updateTime = () => {
+                let now = new Date();
+                let elapsedSeconds = Math.floor((now - createdAt) / 1000);
+                remainingSeconds = durationSeconds - elapsedSeconds;
 
                 if (remainingSeconds <= 0) {
                     remainingSeconds = 0;
@@ -147,9 +159,14 @@
                     submitExam(true);
                     return;
                 }
-
                 updateTimerDisplay();
-            }, 1000);
+            };
+
+            // Chạy ngay lần đầu để set thời gian
+            updateTime();
+
+            // Lặp lại mỗi giây
+            timerInterval = setInterval(updateTime, 1000);
         }
 
         /**
@@ -190,16 +207,7 @@
             }
 
             const examId = parseInt(new URLSearchParams(window.location.search).get('examId'));
-            const studentAnswerDtos = [];
-            
-            if (examEngine && examEngine.studentAnswers) {
-                examEngine.studentAnswers.forEach((response, questionAnswerId) => {
-                    studentAnswerDtos.push({
-                        questionAnswerId: parseInt(questionAnswerId),
-                        response: response === '' ? null : response
-                    });
-                });
-            }
+            const studentAnswerDtos = examEngine ? examEngine.getStudentAnswerDtos() : [];
 
             // Tạo SubmitExamRequest
             const requestBody = {

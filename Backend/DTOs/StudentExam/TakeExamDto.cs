@@ -1,4 +1,4 @@
-﻿namespace Backend.DTOs.StudentExam
+namespace Backend.DTOs.StudentExam
 {
     public class TakeExamDto
     {
@@ -6,7 +6,15 @@
         public string SubmissionId { get; set; } = null!;
         public int Duration { get; set; }
         public int Code { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
         public List<TakeExamQuestionDto> Questions { get; set; } = new();
+        public List<TakeExamSavedAnswerDto> SavedAnswers { get; set; } = new();
+    }
+
+    public class TakeExamSavedAnswerDto
+    {
+        public int QuestionAnswerId { get; set; }
+        public string? Response { get; set; }
     }
 
     public class TakeExamQuestionDto

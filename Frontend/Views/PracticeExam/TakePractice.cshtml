@@ -143,6 +143,11 @@
                         if (q.answers.some(a => stdAnswers.has(String(a.questionAnswerId)))) answered++;
                     });
                     document.getElementById('questionProgress').textContent = `${answered}/${questions.length}`;
+                    
+                    // Tự động lưu nháp
+                    if (typeof submitPracticeDraft === 'function') {
+                        submitPracticeDraft();
+                    }
                 }
             });
             
@@ -162,15 +167,7 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang nộp...';
 
-            const studentAnswerDtos = [];
-            if (examEngine && examEngine.studentAnswers) {
-                examEngine.studentAnswers.forEach((response, questionAnswerId) => {
-                    studentAnswerDtos.push({
-                        questionAnswerId: parseInt(questionAnswerId),
-                        response: response === '' ? null : response
-                    });
-                });
-            }
+            const studentAnswerDtos = examEngine ? examEngine.getStudentAnswerDtos() : [];
 
             try {
                 const result = await apiClient.post('/api/practice/submit', {
@@ -188,6 +185,22 @@
                 showToast(error.message || 'Lỗi nộp bài', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Nộp bài';
+            }
+        }
+
+        async function submitPracticeDraft() {
+            if (!examEngine) return;
+            examEngine.saveCurrentAnswers();
+
+            const studentAnswerDtos = examEngine.getStudentAnswerDtos();
+
+            try {
+                await apiClient.post('/api/practice/save', {
+                    submissionId: practiceData.submissionId,
+                    studentAnswers: studentAnswerDtos
+                });
+            } catch (error) {
+                console.error('Lỗi tự động lưu nháp', error);
             }
         }
     </script>

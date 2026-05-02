@@ -271,4 +271,17 @@ class ExamEngine {
             }
         }
     }
+
+    getStudentAnswerDtos() {
+        const dtos = [];
+        if (this.studentAnswers) {
+            this.studentAnswers.forEach((response, questionAnswerId) => {
+                dtos.push({
+                    questionAnswerId: parseInt(questionAnswerId),
+                    response: response === '' ? null : response
+                });
+            });
+        }
+        return dtos;
+    }
 }

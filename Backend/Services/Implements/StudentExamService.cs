@@ -123,14 +123,24 @@ public class StudentExamService(
             questions.Shuffle();
         }
 
-        // 7. Trả về TakeExamDto
+        // 7. Lấy câu trả lời đã lưu trước đó (nếu có)
+        var savedAnswers = activeSubmission.StudentAnswers?
+            .Select(sa => new TakeExamSavedAnswerDto
+            {
+                QuestionAnswerId = sa.QuestionAnswerId,
+                Response = sa.Response
+            }).ToList() ?? new List<TakeExamSavedAnswerDto>();
+
+        // 8. Trả về TakeExamDto
         return new TakeExamDto
         {
             ExamId = paper.Exam.ExamId.ToString(),
             SubmissionId = activeSubmission.SubmissionId.ToString(),
             Duration = paper.Exam.Duration,
             Code = paper.Code ?? 0,
-            Questions = questions
+            CreatedAtUtc = activeSubmission.CreatedAtUtc,
+            Questions = questions,
+            SavedAnswers = savedAnswers
         };
     }
 
