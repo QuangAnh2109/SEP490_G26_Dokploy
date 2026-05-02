@@ -108,7 +108,7 @@ namespace Backend.Services.Implements
             dto.Answers = question.QuestionAnswers.Select(a => new AnswerDto {
                 AnswerId = a.QuestionAnswerId, Content = a.Content, CorrectAnswer = a.CorrectAnswer, 
                 IsCorrect = a.IsCorrect ?? false, Point = a.Point ?? 0, 
-                InputTypeId = a.BlankInputs.FirstOrDefault()?.InputTypeId,
+                InputTypeIds = a.BlankInputs.Select(bi => bi.InputTypeId).ToList(),
                 BlankIndex = GetBlankIndex(a.Content)
             }).ToList();
 
@@ -191,6 +191,7 @@ namespace Backend.Services.Implements
                 {
                     InputTypeId = it.InputTypeId,
                     Name = it.Name,
+                    Regex = it.Regex,
                     GroupType = it.GroupType
                 }).ToList(),
                 Subjects = subjects.Select(s => new SubjectWithChaptersDto
@@ -234,11 +235,20 @@ namespace Backend.Services.Implements
                     ans.IsCorrect = adto.IsCorrect;
                     ans.Point = adto.Point;
 
-                    if (adto.InputTypeId.HasValue && adto.InputTypeId > 0)
+                    if (adto.InputTypeIds != null && adto.InputTypeIds.Count > 0)
                     {
-                        var inp = ans.BlankInputs.FirstOrDefault();
-                        if (inp == null) ans.BlankInputs.Add(inp = new BlankInput());
-                        inp.InputTypeId = adto.InputTypeId.Value;
+                        // Remove BlankInputs no longer in the list
+                        var toRemoveInputs = ans.BlankInputs
+                            .Where(bi => !adto.InputTypeIds.Contains(bi.InputTypeId)).ToList();
+                        foreach (var bi in toRemoveInputs) ans.BlankInputs.Remove(bi);
+
+                        // Add new BlankInputs
+                        var existingTypeIds = ans.BlankInputs.Select(bi => bi.InputTypeId).ToHashSet();
+                        foreach (var typeId in adto.InputTypeIds)
+                        {
+                            if (!existingTypeIds.Contains(typeId))
+                                ans.BlankInputs.Add(new BlankInput { InputTypeId = typeId });
+                        }
                     }
                     else ans.BlankInputs.Clear();
                 }
