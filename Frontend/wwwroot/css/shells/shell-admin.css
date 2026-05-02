@@ -217,6 +217,11 @@ button { font-family: inherit; }
   box-shadow: 0 0 0 3px rgba(28,44,79,.1);
 }
 .form-row .help { font-size: 11px; color: var(--ink-500); }
+.form-row .help.help-error { color: var(--danger); }
+.form-row + .form-row { margin-top: var(--s-4); }
+.card.card-narrow { max-width: 600px; }
+.is-hidden { display: none; }
+.uppercase { text-transform: uppercase; }
 .form-actions {
   display: flex; gap: var(--s-2); justify-content: flex-end;
   padding: var(--s-4) var(--s-6);

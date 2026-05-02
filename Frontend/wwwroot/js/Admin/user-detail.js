@@ -5,8 +5,6 @@ $(function () {
         return;
     }
 
-    let currentUserData = null;
-
     function renderRole(roleId) {
         if (roleId === 1) return 'Giáo viên';
         if (roleId === 2) return 'Học sinh';
@@ -17,8 +15,6 @@ $(function () {
     function loadUserDetail() {
         apiClient.get('/api/admin/users/' + userId)
             .then(function (user) {
-                currentUserData = user;
-                
                 const initials = user.fullName ? user.fullName.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase();
                 
                 let actionsHtml = '';
@@ -26,7 +22,7 @@ $(function () {
                     if (user.status === 1) {
                         actionsHtml += `<button class="btn btn-secondary btn-sm" onclick="openModal('lockModal')">Khóa tài khoản</button>`;
                     } else {
-                        actionsHtml += `<button class="btn btn-secondary btn-sm" onclick="handleUnlock()">Mở khóa</button>`;
+                        actionsHtml += `<button class="btn btn-primary btn-sm" onclick="openModal('unlockModal')">Mở khóa</button>`;
                     }
                     actionsHtml += `<button class="btn btn-primary btn-sm" onclick="openModal('resetModal')">Cấp lại mật khẩu</button>`;
                 }
@@ -51,14 +47,11 @@ $(function () {
                     <li><div class="k">Email</div><div class="v">${escapeHtml(user.email)}</div></li>
                     <li><div class="k">Họ tên</div><div class="v">${escapeHtml(user.fullName || '-')}</div></li>
                     <li><div class="k">Vai trò</div><div class="v">${renderRole(user.roleId)}</div></li>
+                    <li><div class="k">Số điện thoại</div><div class="v">${escapeHtml(user.phoneNumber || '-')}</div></li>
                 `;
-                
-                if (user.studentId) {
-                    kvHtml += `<li><div class="k">Mã sinh viên</div><div class="v">${escapeHtml(user.studentId)}</div></li>`;
-                }
-                
-                if (user.phoneNumber) {
-                    kvHtml += `<li><div class="k">Số điện thoại</div><div class="v">${escapeHtml(user.phoneNumber)}</div></li>`;
+
+                if (user.roleId === 2) {
+                    kvHtml += `<li><div class="k">Mã sinh viên</div><div class="v">${escapeHtml(user.studentId || '-')}</div></li>`;
                 }
 
                 kvHtml += `
@@ -69,35 +62,32 @@ $(function () {
                 $('#userKvList').html(kvHtml);
             })
             .catch(function (err) {
-                let msg = 'Lỗi khi tải chi tiết.';
-                if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_NOT_FOUND') {
-                    msg = 'Không tìm thấy tài khoản.';
-                }
-                showToast(msg, 'error');
+                showApiError(err, 'Lỗi khi tải chi tiết.');
             });
     }
 
-    window.handleUnlock = function() {
-        showConfirm('Bạn có chắc chắn muốn mở khóa tài khoản này?', 'Xác nhận mở khóa', function() {
-            apiClient.patch('/api/admin/users/' + userId + '/unlock', {})
-                .then(function() {
-                    showToast('Đã mở khóa tài khoản.');
-                    loadUserDetail();
-                })
-                .catch(function(err) {
-                    let msg = err.message || 'Lỗi khi mở khóa.';
-                    if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_CANNOT_MODIFY_ADMIN') {
-                        msg = 'Không thể thao tác trên tài khoản admin khác.';
-                    }
-                    showToast(msg, 'error');
-                });
-        });
-    };
+    $('#btnConfirmUnlock').on('click', function() {
+        const $btn = $(this);
+        $btn.prop('disabled', true).text('Đang mở khóa...');
+
+        apiClient.patch('/api/admin/users/' + userId + '/unlock', {})
+            .then(function() {
+                closeModal('unlockModal');
+                showToast('Đã mở khóa tài khoản.');
+                loadUserDetail();
+            })
+            .catch(function(err) {
+                showApiError(err, 'Lỗi khi mở khóa.');
+            })
+            .finally(function() {
+                $btn.prop('disabled', false).text('Mở khóa');
+            });
+    });
 
     $('#btnConfirmLock').on('click', function() {
         const $btn = $(this);
         $btn.prop('disabled', true).text('Đang khóa...');
-        
+
         apiClient.patch('/api/admin/users/' + userId + '/lock', {})
             .then(function() {
                 closeModal('lockModal');
@@ -105,13 +95,7 @@ $(function () {
                 loadUserDetail();
             })
             .catch(function(err) {
-                let msg = err.message || 'Lỗi khi khóa.';
-                if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_CANNOT_LOCK_SELF') {
-                    msg = 'Không thể khóa chính tài khoản của bạn.';
-                } else if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_CANNOT_MODIFY_ADMIN') {
-                    msg = 'Không thể thao tác trên tài khoản admin khác.';
-                }
-                showToast(msg, 'error');
+                showApiError(err, 'Lỗi khi khóa.');
             })
             .finally(function() {
                 $btn.prop('disabled', false).text('Khóa tài khoản');
@@ -121,7 +105,7 @@ $(function () {
     $('#btnConfirmReset').on('click', function() {
         const $btn = $(this);
         $btn.prop('disabled', true).text('Đang cấp lại...');
-        
+
         apiClient.post('/api/admin/users/' + userId + '/reset-password', {})
             .then(function() {
                 closeModal('resetModal');
@@ -129,13 +113,7 @@ $(function () {
                 loadUserDetail();
             })
             .catch(function(err) {
-                let msg = err.message || 'Lỗi khi cấp lại mật khẩu.';
-                if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_CANNOT_MODIFY_ADMIN') {
-                    msg = 'Không thể thao tác trên tài khoản admin khác.';
-                } else if (err.xhr && err.xhr.responseJSON?.code === 'ADMIN_USER_EMAIL_SEND_FAILED') {
-                    msg = 'Không gửi được email mật khẩu — kiểm tra cấu hình SMTP và thử lại.';
-                }
-                showToast(msg, 'error');
+                showApiError(err, 'Lỗi khi cấp lại mật khẩu.');
             })
             .finally(function() {
                 $btn.prop('disabled', false).text('Cấp lại mật khẩu');

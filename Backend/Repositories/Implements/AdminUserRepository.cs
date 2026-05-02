@@ -48,7 +48,6 @@ public class AdminUserRepository(MtcaSep490G26Context context) : IAdminUserRepos
     {
         context.Users.Add(user);
         await context.SaveChangesAsync(ct);
-        await context.Entry(user).Reference(u => u.Role).LoadAsync(ct);
         return user;
     }
 

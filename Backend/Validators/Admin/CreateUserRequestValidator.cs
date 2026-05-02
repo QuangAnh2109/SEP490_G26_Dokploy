@@ -1,3 +1,4 @@
+using Backend.Common;
 using Backend.DTOs.Admin;
 using FluentValidation;
 
@@ -14,15 +15,29 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 
         RuleFor(x => x.FullName)
             .NotEmpty()
+            .MinimumLength(2)
             .MaximumLength(200);
 
         RuleFor(x => x.RoleId)
             .NotNull()
-            .Must(r => r == 1 || r == 2)
-            .WithMessage("RoleId must be 1 (Teacher) or 2 (Student).");
+            .Must(r => r == RoleIds.TeacherInt || r == RoleIds.StudentInt);
 
-        RuleFor(x => x.StudentId)
-            .Matches(@"^[A-Za-z]{2}\d{6}$")
-            .When(x => x.RoleId == 2 && !string.IsNullOrWhiteSpace(x.StudentId));
+        RuleFor(x => x.PhoneNumber)
+            .MaximumLength(20)
+            .Matches(@"^0\d{9}$")
+            .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber));
+
+        When(x => x.RoleId == RoleIds.StudentInt, () =>
+        {
+            RuleFor(x => x.StudentId)
+                .NotEmpty()
+                .MaximumLength(20)
+                .Matches(@"^[A-Za-z]{2}\d{6}$");
+        });
+
+        When(x => x.RoleId == RoleIds.TeacherInt, () =>
+        {
+            RuleFor(x => x.StudentId).Empty();
+        });
     }
 }

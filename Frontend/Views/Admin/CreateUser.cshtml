@@ -5,33 +5,39 @@
     </div>
 </div>
 
-<div class="card" style="max-width: 600px;">
+<div class="card card-narrow">
     <div class="card-section">
         <form id="createUserForm">
-            <div class="form-row" style="margin-bottom: 1rem;">
-                <label>Vai trò <span class="req">*</span></label>
+            <div class="form-row">
+                <label for="roleId">Vai trò <span class="req">*</span></label>
                 <select id="roleId" required>
                     <option value="1">Giáo viên</option>
                     <option value="2">Học sinh</option>
                 </select>
             </div>
-            
-            <div class="form-row" style="margin-bottom: 1rem;">
-                <label>Họ và tên <span class="req">*</span></label>
+
+            <div class="form-row">
+                <label for="fullName">Họ và tên <span class="req">*</span></label>
                 <input type="text" id="fullName" required placeholder="Nguyễn Văn A" maxlength="200" />
-                <div class="help" id="fullNameError" style="color:var(--danger)"></div>
+                <div class="help help-error" id="fullNameError"></div>
             </div>
 
-            <div class="form-row" style="margin-bottom: 1rem;">
-                <label>Email <span class="req">*</span></label>
-                <input type="email" id="email" required placeholder="email@domain.com" />
-                <div class="help" id="emailError" style="color:var(--danger)"></div>
+            <div class="form-row">
+                <label for="email">Email <span class="req">*</span></label>
+                <input type="email" id="email" required placeholder="email@domain.com" maxlength="320" />
+                <div class="help help-error" id="emailError"></div>
             </div>
 
-            <div class="form-row" id="studentIdRow" style="display: none; margin-bottom: 1rem;">
-                <label>Mã sinh viên <span class="req">*</span></label>
-                <input type="text" id="studentId" placeholder="VD: SE123456" />
-                <div class="help" id="studentIdError" style="color:var(--danger)"></div>
+            <div class="form-row">
+                <label for="phoneNumber">Số điện thoại</label>
+                <input type="tel" id="phoneNumber" placeholder="0xxxxxxxxx" maxlength="10" />
+                <div class="help help-error" id="phoneNumberError"></div>
+            </div>
+
+            <div class="form-row is-hidden" id="studentIdRow">
+                <label for="studentId">Mã sinh viên <span class="req">*</span></label>
+                <input type="text" id="studentId" class="uppercase" placeholder="VD: SE123456" maxlength="8" />
+                <div class="help help-error" id="studentIdError"></div>
             </div>
 
             <div class="form-actions">

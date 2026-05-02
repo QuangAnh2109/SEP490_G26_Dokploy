@@ -16,7 +16,8 @@ public class AdminUserService(
     IAdminUserRepository adminUserRepository,
     IRefreshTokenStore refreshTokenStore,
     IEmailService emailService,
-    TimeProvider timeProvider) : IAdminUserService
+    TimeProvider timeProvider,
+    ILogger<AdminUserService> logger) : IAdminUserService
 {
     public async Task<Result<AdminUserListResponse>> ListAsync(AdminUserListQuery query, CancellationToken ct = default)
     {
@@ -45,13 +46,15 @@ public class AdminUserService(
         if (request.RoleId != RoleIds.TeacherInt && request.RoleId != RoleIds.StudentInt)
             return AdminUserErrors.InvalidRole;
 
-        if (await adminUserRepository.EmailExistsAsync(request.Email!, ct))
+        var email = request.Email!.Trim().ToLowerInvariant();
+
+        if (await adminUserRepository.EmailExistsAsync(email, ct))
             return AdminUserErrors.EmailExists;
 
         var tempPassword = GenerateTempPassword();
         var user = new User
         {
-            Email = request.Email!,
+            Email = email,
             FullName = (request.FullName ?? string.Empty).Trim(),
             RoleId = request.RoleId!.Value,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword),
@@ -59,18 +62,21 @@ public class AdminUserService(
             Status = UserStatus.Active,
             SecurityStamp = timeProvider.GetUtcNow().UtcDateTime,
             PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
-            StudentId = string.IsNullOrWhiteSpace(request.StudentId) ? null : request.StudentId.Trim()
+            StudentId = string.IsNullOrWhiteSpace(request.StudentId) ? null : request.StudentId.Trim().ToUpperInvariant()
         };
 
+        // Send welcome email BEFORE persisting so a transient SMTP failure leaves no orphan user.
+        // Trade-off: a successful email + DB insert failure leaks an unusable temp password to the user.
         try
         {
             await emailService.SendEmailAsync(
-                request.Email!,
+                email,
                 "Tài khoản MTCA của bạn",
-                BuildWelcomeEmail(request.Email!, tempPassword));
+                BuildWelcomeEmail(email, tempPassword));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to send welcome email to {Email}", email);
             return AdminUserErrors.EmailSendFailed;
         }
 
@@ -116,8 +122,9 @@ public class AdminUserService(
                 "Mật khẩu mới MTCA của bạn",
                 BuildResetPasswordEmail(user.Email, tempPassword));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to send reset-password email to {Email}", user.Email);
             return AdminUserErrors.EmailSendFailed;
         }
 
