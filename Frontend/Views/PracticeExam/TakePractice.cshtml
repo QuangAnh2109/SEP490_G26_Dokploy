@@ -200,6 +200,7 @@
             if (question.questionType == fillInBlank) {
                 var questionContent = JSON.parse(question.questionContent);
                 questionStem.textContent = questionContent.stem;
+                questionStem.render?.();
                 questionTitle.textContent = "Câu " + questionNumber;
                 document.getElementById('question-block-fib-field').value = questionContent.frame;
                 questionBlockFib.hidden = false;
@@ -249,7 +250,10 @@
                         else studentAnswers.delete(answerId);
                     });
 
-                    li.querySelector("math-span").textContent = answer.content;
+                    var mathSpan = li.querySelector("math-span");
+                    mathSpan.textContent = answer.content;
+                    mathSpan.render?.();
+
                     questionMcq.appendChild(newOption);
                 });
             }
