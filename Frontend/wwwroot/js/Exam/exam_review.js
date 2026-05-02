@@ -692,9 +692,12 @@ function setButtonContent(btn, iconClass, label) {
 
 function formatDateTime(iso) {
     if (!iso) return "---";
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let s = String(iso).trim();
+    if (s && !s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "---";
+    const opts = { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" };
+    return d.toLocaleString("vi-VN", opts);
 }
 
 function getDifficultyText(d) {
