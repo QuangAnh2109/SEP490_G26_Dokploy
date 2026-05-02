@@ -524,16 +524,29 @@ window.QuestionEditorFITB = (() => {
         const scoring = !!scoringToggle?.checked;
 
         const answerRows = item.querySelectorAll('[data-blank-answer-item]');
+        if (answerRows.length === 0) {
+            throw new Error("Câu hỏi điền khuyết phải có ít nhất 1 ô trống.");
+        }
+
         UTILS.toArray(answerRows).forEach(row => {
             const bNum = parseInt(row.getAttribute('data-blank-num'));
             const chip = row.querySelector('.constraint-chip.active');
             const scoreInp = row.querySelector('[data-blank-score]');
             const ansInp = row.querySelector('[data-blank-answer]');
 
+            if (!chip) {
+                throw new Error(`Ô trống số ${bNum} chưa chọn Giới hạn nhập liệu.`);
+            }
+
+            const correctAns = UTILS.getMathValue(ansInp);
+            if (!correctAns || !String(correctAns).trim()) {
+                throw new Error(`Ô trống số ${bNum} chưa có giá trị nhập liệu (đáp án).`);
+            }
+
             answers.push({
                 answerId: parseInt(row.getAttribute('data-answer-id')) || null,
                 content: `\\placeholder[${bNum}]{}`,
-                correctAnswer: UTILS.getMathValue(ansInp),
+                correctAnswer: correctAns,
                 isCorrect: true,
                 blankIndex: bNum,
                 inputTypeId: chip ? parseInt(chip.getAttribute('data-input-type-id')) : null,

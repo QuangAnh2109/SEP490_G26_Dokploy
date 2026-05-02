@@ -333,12 +333,16 @@
         try {
             const items = questionList.querySelectorAll('[data-question-item]');
             const payload = toArray(items).map((item, idx) => {
-                const p = QE.collectPayload(item);
-                if (!p) throw new Error("Không thể thu thập dữ liệu câu hỏi.");
-                p.status = status;
-                p.questionPurpose = purposeVal;
-                if (!p.chapterId) throw new Error(`Câu hỏi #${idx + 1}: Vui lòng chọn Chương.`);
-                return p;
+                try {
+                    const p = QE.collectPayload(item);
+                    if (!p) throw new Error("Không thể thu thập dữ liệu câu hỏi.");
+                    p.status = status;
+                    p.questionPurpose = purposeVal;
+                    if (!p.chapterId) throw new Error("Vui lòng chọn Chương.");
+                    return p;
+                } catch (e) {
+                    throw new Error(`Câu hỏi #${idx + 1}: ${e.message}`);
+                }
             });
 
             const res = await apiClient.post('/api/questions', payload);
