@@ -388,32 +388,28 @@ $(document).ready(async function () {
     }
 
     function showError(messages) {
-        const errorContainer = document.getElementById('createError');
-        if (!errorContainer) return;
-
-        errorContainer.innerHTML = '';
-        const listTemplate = document.getElementById('errorListTemplate');
-        const itemTemplate = document.getElementById('errorItemTemplate');
-        if (!listTemplate || !itemTemplate) return;
-
-        const list = listTemplate.content.cloneNode(true).firstElementChild;
-        const listBody = list.hasAttribute('data-error-list') ? list : list.querySelector('[data-error-list]');
-        
-        messages.forEach(m => {
-            const item = itemTemplate.content.cloneNode(true).firstElementChild;
-            const msgNode = item.hasAttribute('data-error-message') ? item : item.querySelector('[data-error-message]');
-            if (msgNode) msgNode.textContent = m;
-            listBody.appendChild(item);
-        });
-
-        errorContainer.appendChild(list);
-        errorContainer.classList.remove('d-none');
         $('#createWarnings').addClass('d-none').empty();
+
+        if (!messages || messages.length === 0) return;
+
+        if (typeof showToast === 'function') {
+            const extra = messages.length > 1 ? ` (và ${messages.length - 1} lỗi khác)` : '';
+            showToast('Lỗi: ' + messages[0] + extra, 'error');
+        } else {
+            alert('Lỗi: ' + messages[0]);
+        }
     }
 
     function hideMessages() {
-        $('#createError, #createWarnings, #createSuccess').addClass('d-none').empty();
+        $('#createError, #createWarnings, #createSuccess').addClass('d-none');
+        $('#createSuccess').empty();
         $('#createWarnings #warningList').empty();
+        
+        // Remove only the generated ul in createError
+        const errorList = document.querySelector('#createError ul');
+        if (errorList) {
+            errorList.remove();
+        }
     }
 
     function resolveApiError(error) {

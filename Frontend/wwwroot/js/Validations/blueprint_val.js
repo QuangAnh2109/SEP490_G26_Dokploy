@@ -43,13 +43,13 @@ window.BlueprintValidator = (() => {
             }
         });
 
+        if (payload.Rows.length === 0) {
+            errors.push('Vui lòng chọn ít nhất 1 chương trong môn học để tạo cấu trúc ma trận.');
+        }
+
         // Quy tắc bổ sung khi xuất bản
         if (payload.TargetStatus === 1) {
             const rowSum = payload.Rows.reduce((sum, r) => sum + r.TotalQuestions, 0);
-
-            if (payload.Rows.length === 0) {
-                errors.push('Xuất bản yêu cầu ít nhất một dòng ma trận.');
-            }
 
             if (payload.TargetTotalQuestions <= 0) {
                 errors.push('Xuất bản yêu cầu tổng số câu mục tiêu > 0.');
@@ -57,10 +57,6 @@ window.BlueprintValidator = (() => {
 
             if (payload.TargetTotalQuestions !== rowSum) {
                 errors.push('Tổng số câu mục tiêu phải bằng tổng số câu từ các dòng ma trận.');
-            }
-
-            if (payload.Rows.some(r => r.TotalQuestions <= 0)) {
-                errors.push('Xuất bản yêu cầu mỗi dòng có số câu > 0.');
             }
 
             payload.Rows.forEach((row, idx) => {
@@ -89,8 +85,8 @@ window.BlueprintValidator = (() => {
             if (!Number.isInteger(row.Difficulty) || row.Difficulty < 1 || row.Difficulty > 4) {
                 errors.push(`Dòng ${rowNo}: mức độ không hợp lệ.`);
             }
-            if (!Number.isInteger(row.TotalQuestions) || row.TotalQuestions < 0) {
-                errors.push(`Dòng ${rowNo}: số câu phải là số nguyên >= 0.`);
+            if (!Number.isInteger(row.TotalQuestions) || row.TotalQuestions <= 0) {
+                errors.push(`Dòng ${rowNo}: số câu trong chương phải lớn hơn 0.`);
             }
         });
         return errors;
