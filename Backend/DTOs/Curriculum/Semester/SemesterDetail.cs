@@ -8,5 +8,4 @@ public class SemesterDetail : SemesterListItem
     public DateTime CreatedAtUtc { get; set; }
     public string? UpdatedByName { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
-    public string ConcurrencyStamp { get; set; } = "";
 }

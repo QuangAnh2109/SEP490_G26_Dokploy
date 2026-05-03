@@ -48,7 +48,8 @@ public class SemesterService : ISemesterService
             Status = s.Status,
             ClassCount = s.Classes.Count,
             ActiveClassCount = s.Classes.Count(c => c.Status == ClassStatus.Active),
-            ActiveExamCount = s.Classes.SelectMany(c => c.Exams).Count(e => e.Status == ExamStatus.Published || e.Status == ExamStatus.InProgress)
+            ActiveExamCount = s.Classes.SelectMany(c => c.Exams).Count(e => e.Status == ExamStatus.Published || e.Status == ExamStatus.InProgress),
+            ConcurrencyStamp = Convert.ToBase64String(s.ConcurrencyStamp)
         }).ToList();
     }
 

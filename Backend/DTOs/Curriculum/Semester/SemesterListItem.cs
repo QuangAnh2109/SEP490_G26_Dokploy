@@ -13,4 +13,5 @@ public class SemesterListItem
     public int ClassCount { get; set; }
     public int ActiveClassCount { get; set; }
     public int ActiveExamCount { get; set; }
+    public string ConcurrencyStamp { get; set; } = "";
 }
