@@ -5,16 +5,7 @@ function safeReturnUrl(raw) {
 }
 
 $(document).ready(function () {
-    $('#togglePassword').on('click', function () {
-        const $input = $('#Password');
-        const $icon = $('#togglePasswordIcon');
-        const $btn = $(this);
-        const willShow = $input.attr('type') === 'password';
-        $input.attr('type', willShow ? 'text' : 'password');
-        $icon.toggleClass('fa-eye fa-eye-slash');
-        $btn.attr('aria-label', willShow ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
-        $btn.attr('aria-pressed', willShow ? 'true' : 'false');
-    });
+    // Password show/hide is handled by Shared/passwordToggle.js (delegated).
 
     // 1. Handle traditional login form submission
     $('#loginForm').on('submit', function (e) {

@@ -1,14 +1,15 @@
 // Trang đổi password lần đầu — KHÔNG await window.userReady (bootstrap /me sẽ trả 403 và redirect lại trang này).
 // Form submit → BE đổi password + revoke all + clear cookies → hiện alert + countdown trên nút "Đăng nhập lại"; click chủ động hoặc hết 3s tự redirect '/Auth/Login'.
 
-const ERROR_MESSAGES = {
-    AUTH_CURRENT_PASSWORD_WRONG: 'Mật khẩu hiện tại không đúng.',
-    AUTH_NEW_PASSWORD_SAME_AS_OLD: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
-    AUTH_USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị xóa.',
-    VALIDATION: 'Mật khẩu mới phải có 8-72 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
-};
-
 $(document).ready(function () {
+    const ERROR_MESSAGES = {
+        AUTH_CURRENT_PASSWORD_WRONG: 'Mật khẩu hiện tại không đúng.',
+        AUTH_NEW_PASSWORD_SAME_AS_OLD: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
+        AUTH_USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị xóa.',
+        VALIDATION: 'Mật khẩu mới phải có 8-72 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
+    };
+    const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,72}$/;
+
     const $form = $('#changePasswordFirstLoginForm');
     const $msg = $('#formMessage');
     const $btn = $('#btnSubmit');
@@ -17,9 +18,17 @@ $(document).ready(function () {
         $msg.removeClass('text-success').addClass('text-danger').text(text);
     }
 
+    // Password show/hide is handled by Shared/passwordToggle.js (delegated).
+
+    $('#NewPassword').on('blur', function () {
+        const val = $(this).val();
+        $('#NewPasswordError').text(val && !PASSWORD_PATTERN.test(val) ? ERROR_MESSAGES.VALIDATION : '');
+    });
+
     $form.on('submit', function (e) {
         e.preventDefault();
         $msg.text('');
+        $('#NewPasswordError').text('');
 
         const currentPassword = $('#CurrentPassword').val();
         const newPassword = $('#NewPassword').val();
@@ -30,8 +39,7 @@ $(document).ready(function () {
             return;
         }
 
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,72}$/;
-        if (!passwordPattern.test(newPassword)) {
+        if (!PASSWORD_PATTERN.test(newPassword)) {
             showError(ERROR_MESSAGES.VALIDATION);
             return;
         }

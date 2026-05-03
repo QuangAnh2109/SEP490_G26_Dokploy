@@ -10,6 +10,16 @@ body {
     color: #0f172a;
 }
 
+/* Suppress the global app-shell grid overlay so the auth gradient is uniform across the viewport. */
+.app-shell::before { display: none; }
+
+/* Inline field error span. min-height reserves a row so toggling visibility doesn't shift layout. */
+.field-error {
+    display: block;
+    min-height: 1.2em;
+    font-size: 0.875rem;
+}
+
 .login-page {
     display: flex;
     flex-direction: column;
