@@ -33,30 +33,10 @@ public static class AnalyticsHelper
         var paper = submission.Paper;
         if (paper == null || paper.Questions == null) return (0, 0, 0);
 
-        int correctCount = 0;
-        int totalQuestions = 0;
-
-        foreach (var question in paper.Questions.DistinctBy(q => q.QuestionId))
-        {
-            totalQuestions++;
-            bool questionCorrect = true;
-
-            foreach (var qa in question.QuestionAnswers)
-            {
-                var sa = submission.StudentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
-                if (sa != null)
-                {
-                    if (!CheckIsCorrect(qa, sa))
-                        questionCorrect = false;
-                }
-                else if (qa.IsCorrect == true)
-                {
-                    questionCorrect = false;
-                }
-            }
-
-            if (questionCorrect) correctCount++;
-        }
+        var evaluatedQuestions = EvaluateSubmission(paper.Questions.DistinctBy(q => q.QuestionId), submission.StudentAnswers);
+        
+        int correctCount = evaluatedQuestions.Count(q => q.IsCorrect);
+        int totalQuestions = evaluatedQuestions.Count;
 
         decimal totalPoints = totalQuestions > 0
             ? Math.Round((decimal)correctCount / totalQuestions * 10, 3)
