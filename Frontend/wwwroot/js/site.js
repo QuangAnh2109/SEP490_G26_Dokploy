@@ -240,7 +240,7 @@ function setBreadcrumb(items) {
         const url = item.url;
 
         if (i > 0) {
-            parts.push('<span class="breadcrumb-sep">â€º</span>');
+            parts.push('<span class="breadcrumb-sep">›</span>');
         }
 
         if (url) {
