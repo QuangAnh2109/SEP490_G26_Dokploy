@@ -39,7 +39,7 @@ public class AuthService(
         if (user.Status == UserStatus.Locked)
             return AuthErrors.AccountLocked;
 
-        return await BuildLoginResponseAsync(user);
+        return await BuildLoginResponseAsync(user, request.RememberMe);
     }
 
     public async Task<Result<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest request)
@@ -57,7 +57,7 @@ public class AuthService(
         if (user.Status == UserStatus.Locked)
             return AuthErrors.AccountLocked;
 
-        return await BuildLoginResponseAsync(user);
+        return await BuildLoginResponseAsync(user, request.RememberMe);
     }
 
     public async Task<Result> RefreshTokenAsync()
@@ -77,7 +77,7 @@ public class AuthService(
         if (user == null)
             return AuthErrors.UserNotFound;
 
-        var loginResult = await BuildLoginResponseAsync(user);
+        var loginResult = await BuildLoginResponseAsync(user, validation.Persistent);
         return loginResult.IsFailure ? loginResult.Error : Result.Success();
     }
 
@@ -148,12 +148,12 @@ public class AuthService(
         await authRepository.UpdateUserAsync(user);
 
         await refreshTokenStore.RevokeAllAsync(user.UserId);
+        ClearAuthCookies();
 
-        var loginResult = await BuildLoginResponseAsync(user);
-        return loginResult.IsFailure ? loginResult.Error : Result.Success();
+        return Result.Success();
     }
 
-    private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user)
+    private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user, bool rememberMe)
     {
         if (!RoleIds.IsValid(user.RoleId))
             return AuthErrors.UnknownRole;
@@ -167,14 +167,18 @@ public class AuthService(
             user.Email,
             user.RoleId.ToString(),
             authProvider,
-            user.MustChangePassword);
+            user.MustChangePassword
+        );
 
         var ip = GetClientIp(ctx);
         var ua = ctx.Request.Headers.UserAgent.ToString();
-        var (refreshToken, refreshExpiresAt) = await refreshTokenStore.IssueAsync(user.UserId, jti, ip, ua);
+        var (refreshToken, refreshExpiresAt) = await refreshTokenStore.IssueAsync(user.UserId, jti, ip, ua, rememberMe);
 
-        CookieHelper.SetAccessCookie(ctx.Response, accessToken, accessExpiresAt, _cookie);
-        CookieHelper.SetRefreshCookie(ctx.Response, refreshToken, refreshExpiresAt, _cookie);
+        DateTimeOffset? accessCookieExpires = rememberMe ? accessExpiresAt : null;
+        DateTimeOffset? refreshCookieExpires = rememberMe ? refreshExpiresAt : null;
+
+        CookieHelper.SetAccessCookie(ctx.Response, accessToken, accessCookieExpires, _cookie);
+        CookieHelper.SetRefreshCookie(ctx.Response, refreshToken, refreshCookieExpires, _cookie);
 
         var roleName = user.Role?.Name ?? RoleIds.GetName(user.RoleId);
 

@@ -7,6 +7,7 @@ public interface IRefreshTokenStore
         string jti,
         string? ip,
         string? userAgent,
+        bool persistent,
         CancellationToken cancellationToken = default);
 
     Task<RefreshTokenValidation?> ConsumeAsync(string rawToken, CancellationToken cancellationToken = default);
@@ -16,4 +17,4 @@ public interface IRefreshTokenStore
     Task RevokeAllAsync(int userId, CancellationToken cancellationToken = default);
 }
 
-public sealed record RefreshTokenValidation(int UserId, string Jti);
+public sealed record RefreshTokenValidation(int UserId, string Jti, bool Persistent);

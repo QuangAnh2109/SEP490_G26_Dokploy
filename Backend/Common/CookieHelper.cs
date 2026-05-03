@@ -5,10 +5,10 @@ namespace Backend.Common;
 
 public static class CookieHelper
 {
-    public static void SetAccessCookie(HttpResponse response, string token, DateTimeOffset expiresAt, AuthCookieOptions opts) =>
+    public static void SetAccessCookie(HttpResponse response, string token, DateTimeOffset? expiresAt, AuthCookieOptions opts) =>
         response.Cookies.Append(AuthCookieDefaults.Name, token, BuildOptions(opts, path: "/", expiresAt));
 
-    public static void SetRefreshCookie(HttpResponse response, string token, DateTimeOffset expiresAt, AuthCookieOptions opts) =>
+    public static void SetRefreshCookie(HttpResponse response, string token, DateTimeOffset? expiresAt, AuthCookieOptions opts) =>
         response.Cookies.Append(AuthCookieDefaults.RefreshName, token, BuildOptions(opts, path: AuthRoutes.RefreshTokenPath, expiresAt));
 
     public static void ClearAccessCookie(HttpResponse response, AuthCookieOptions opts) =>
@@ -23,7 +23,7 @@ public static class CookieHelper
         ClearRefreshCookie(response, opts);
     }
 
-    private static CookieOptions BuildOptions(AuthCookieOptions opts, string path, DateTimeOffset expiresAt) => new()
+    private static CookieOptions BuildOptions(AuthCookieOptions opts, string path, DateTimeOffset? expiresAt) => new()
     {
         HttpOnly = AuthCookieDefaults.HttpOnly,
         Secure = opts.Secure,

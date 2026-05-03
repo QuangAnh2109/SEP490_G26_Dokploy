@@ -26,6 +26,7 @@ public sealed class RefreshTokenStore(
         string jti,
         string? ip,
         string? userAgent,
+        bool persistent,
         CancellationToken cancellationToken = default)
     {
         var now = timeProvider.GetUtcNow();
@@ -49,7 +50,8 @@ public sealed class RefreshTokenStore(
             new("issuedAt", now.ToUnixTimeSeconds()),
             new("ua", ua),
             new("ip", ip ?? string.Empty),
-            new("expiresAt", expiresAt.ToUnixTimeSeconds())
+            new("expiresAt", expiresAt.ToUnixTimeSeconds()),
+            new("persistent", persistent ? "1" : "0")
         });
         _ = tran.KeyExpireAsync(tokenKey, ttl);
         _ = tran.StringSetAsync(hashKey, $"{userId}|{jti}", ttl);
@@ -88,6 +90,9 @@ public sealed class RefreshTokenStore(
         var tokenKey = Keys.Token(userId, jti);
         var userSetKey = Keys.UserSet(userId);
 
+        var persistentRaw = await Db.HashGetAsync(tokenKey, "persistent");
+        var persistent = persistentRaw.HasValue && persistentRaw.ToString() == "1";
+
         var tran = Db.CreateTransaction();
         tran.AddCondition(Condition.HashEqual(tokenKey, "hash", hash));
         var delTokenTask = tran.KeyDeleteAsync(tokenKey);
@@ -98,7 +103,7 @@ public sealed class RefreshTokenStore(
         if (committed)
         {
             await Task.WhenAll(delTokenTask, delHashTask, sremTask);
-            return new RefreshTokenValidation(userId, jti);
+            return new RefreshTokenValidation(userId, jti, persistent);
         }
 
         // Hash condition fail = token đã consume → replay attempt → revoke all để force re-login mọi device.

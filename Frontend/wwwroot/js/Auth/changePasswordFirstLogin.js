@@ -1,5 +1,5 @@
 // Trang đổi password lần đầu — KHÔNG await window.userReady (bootstrap /me sẽ trả 403 và redirect lại trang này).
-// Form submit → BE đổi password + revoke all + reissue cookie với mcp=false → redirect '/'.
+// Form submit → BE đổi password + revoke all + clear cookies → hiện alert + countdown trên nút "Đăng nhập lại"; click chủ động hoặc hết 3s tự redirect '/Auth/Login'.
 
 const ERROR_MESSAGES = {
     AUTH_CURRENT_PASSWORD_WRONG: 'Mật khẩu hiện tại không đúng.',
@@ -48,7 +48,34 @@ $(document).ready(function () {
             xhrFields: { withCredentials: true },
             data: JSON.stringify({ currentPassword: currentPassword, newPassword: newPassword }),
             success: function () {
-                window.location.href = '/';
+                $msg.removeClass('text-danger text-success').html(
+                    '<div class="alert alert-success d-flex align-items-center gap-2 mb-0" role="alert">' +
+                        '<i class="fa-solid fa-circle-check fa-lg"></i>' +
+                        '<div class="fw-bold">Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.</div>' +
+                    '</div>'
+                );
+                $form.find('input').prop('disabled', true);
+
+                let timer = null;
+                const goToLogin = function () {
+                    if (timer) clearInterval(timer);
+                    window.location.href = '/Auth/Login';
+                };
+
+                let secs = 3;
+                $btn.prop('disabled', false)
+                    .attr('type', 'button')
+                    .text('Đăng nhập lại (' + secs + 's)')
+                    .off('click').on('click', goToLogin);
+
+                timer = setInterval(function () {
+                    secs--;
+                    if (secs <= 0) {
+                        goToLogin();
+                    } else {
+                        $btn.text('Đăng nhập lại (' + secs + 's)');
+                    }
+                }, 1000);
             },
             error: function (xhr) {
                 $btn.prop('disabled', false);
