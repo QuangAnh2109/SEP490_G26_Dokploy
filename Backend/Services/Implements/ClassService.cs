@@ -15,7 +15,9 @@ public class ClassService(
     IEmailService emailService,
     IConfiguration config,
     ICurrentUserService currentUser,
-    TimeProvider timeProvider) : IClassService
+    TimeProvider timeProvider,
+    ISemesterRepository semesterRepo,
+    ISubjectRepository subjectRepo) : IClassService
 {
     // ClassDTO.Role values projected by repo (ClassRepository.GetClassesForUserAsync).
     private const string RoleTeacher = "Teacher";
@@ -28,6 +30,7 @@ public class ClassService(
     public Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId) => repo.GetStudentsInClassAsync(classId);
     public Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId) => repo.GetPendingStudentsAsync(classId);
     public Task<List<SubjectOptionDto>> GetSubjectsAsync() => repo.GetSubjectsAsync();
+    public Task<List<SemesterOptionDto>> GetSemestersAsync() => repo.GetSemesterOptionsAsync();
 
     // ── Read with membership check ─────────────────────────────────────────
 
@@ -70,18 +73,23 @@ public class ClassService(
 
     public async Task<Result<ClassDTO>> CreateClassAsync(int teacherId, CreateClassRequestDTO dto)
     {
-        var semesterId = dto.SemesterId!.Value;
+        var semester = await semesterRepo.GetByIdAsync(dto.SemesterId!.Value);
+        if (semester is null) return SemesterErrors.NotFound;
+        if (semester.Status == SemesterStatus.Closed) return SemesterErrors.Closed;
 
-        var subjectId = dto.SubjectId!.Value;
-        var duplicateError = await repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName!, semesterId, subjectId);
+        var subject = await subjectRepo.GetByIdAsync(dto.SubjectId!.Value);
+        if (subject is null) return SubjectErrors.NotFound;
+        if (subject.Status == SubjectStatus.Closed) return SubjectErrors.Closed;
+
+        var duplicateError = await repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName!, semester.SemesterId, subject.SubjectId);
         if (duplicateError != null)
             return ClassErrors.Duplicate;
 
         var newClass = new Class
         {
             Name = dto.ClassName,
-            SemesterId = semesterId,
-            SubjectId = subjectId,
+            SemesterId = semester.SemesterId,
+            SubjectId = subject.SubjectId,
             TeacherId = teacherId,
             Status = 1,
             InvitationCodeStatus = 1,

@@ -33,6 +33,8 @@ namespace Backend.Repositories.Interfaces
         Task<bool> CloseClassAsync(int classId);
         Task<bool> ReopenClassAsync(int classId);
         Task<List<SubjectOptionDto>> GetSubjectsAsync();
+        Task<List<SemesterOptionDto>> GetSemesterOptionsAsync();
+        Task<(DateOnly StartDate, DateOnly EndDate)?> GetSemesterRangeAsync(int classId);
         
         Task<User?> GetUserWithRoleByEmailAsync(string email);
         Task<ClassMember?> GetClassMemberAsync(int classId, int studentId);

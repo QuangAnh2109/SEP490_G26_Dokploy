@@ -150,7 +150,15 @@ public class ClassController(IClassService service, ICurrentUserService currentU
     [Authorize(Roles = RoleIds.Teacher)]
     public async Task<IActionResult> GetSubjects()
     {
-        var subjects = await service.GetSubjectsAsync();
-        return Ok(subjects);
+        var result = await service.GetSubjectsAsync();
+        return Ok(result);
+    }
+
+    [HttpGet("semesters")]
+    [Authorize(Roles = RoleIds.Teacher)]
+    public async Task<IActionResult> ListSemesters()
+    {
+        var result = await service.GetSemestersAsync();
+        return Ok(result);
     }
 }

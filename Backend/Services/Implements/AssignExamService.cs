@@ -15,7 +15,8 @@ public class AssignExamService(
     IAssignExamRepository repo,
     ICurrentUserService currentUserService,
     IExamStatusScheduler examStatusScheduler,
-    TimeProvider timeProvider) : IAssignExamService
+    TimeProvider timeProvider,
+    IClassRepository classRepo) : IAssignExamService
 {
     private static readonly string[] ActiveStatus = [QuestionStatus.Active, QuestionStatus.Inprogress];
 
@@ -23,6 +24,7 @@ public class AssignExamService(
     private readonly ICurrentUserService _currentUserService = currentUserService;
     private readonly IExamStatusScheduler _examStatusScheduler = examStatusScheduler;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly IClassRepository _classRepo = classRepo;
 
     private async Task<Result> EnsureUserActiveAsync(int id, CancellationToken ct)
     {
@@ -185,6 +187,19 @@ public class AssignExamService(
 
         if (r.ClassId.HasValue)
         {
+            var range = await _classRepo.GetSemesterRangeAsync(r.ClassId.Value);
+            if (range is null) return AssignExamErrors.ClassNotFound;
+            var (startDate, endDate) = range.Value;
+
+            if (r.OpenAt.HasValue && r.CloseAt.HasValue)
+            {
+                var semStartUtc = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0, DateTimeKind.Utc);
+                var semEndUtc = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59, 999, DateTimeKind.Utc);
+                
+                if (r.OpenAt < semStartUtc || r.CloseAt > semEndUtc)
+                    return AssignExamErrors.TimeOutOfSemester;
+            }
+
             var cls = await _repo.GetClassByIdAsync(r.ClassId.Value, ct);
             if (cls == null) return AssignExamErrors.ClassNotFound;
 
@@ -476,6 +491,22 @@ public class AssignExamService(
 
         var valResult = ValidateTimeWindow(request.VisibleFrom, request.OpenAt, request.CloseAt);
         if (valResult.IsFailure) return valResult.Error!;
+
+        if (exam.ClassId.HasValue)
+        {
+            var range = await _classRepo.GetSemesterRangeAsync(exam.ClassId.Value);
+            if (range is null) return AssignExamErrors.ClassNotFound;
+            var (startDate, endDate) = range.Value;
+
+            if (request.OpenAt.HasValue && request.CloseAt.HasValue)
+            {
+                var semStartUtc = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0, DateTimeKind.Utc);
+                var semEndUtc = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59, 999, DateTimeKind.Utc);
+                
+                if (request.OpenAt < semStartUtc || request.CloseAt > semEndUtc)
+                    return AssignExamErrors.TimeOutOfSemester;
+            }
+        }
 
         if (exam.Status != ExamStatus.Cancelled && exam.Status != ExamStatus.Ready)
         {

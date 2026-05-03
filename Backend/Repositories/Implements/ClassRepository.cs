@@ -84,6 +84,7 @@ namespace Backend.Repositories.Implements
                     SemesterId = c.SemesterId,
                     Status = c.Status,
                     Chapters = c.Subject != null ? c.Subject.Chapters
+                        .Where(ch => ch.Status == ChapterStatus.Active)
                         .Select(ch => new ChapterDTO
                         {
                             ChapterId = ch.ChapterId,
@@ -386,6 +387,7 @@ namespace Backend.Repositories.Implements
         {
             return await _context.Subjects
                 .AsNoTracking()
+                .Where(s => s.Status == SubjectStatus.Active)
                 .Select(s => new SubjectOptionDto
                 {
                     SubjectId = s.SubjectId,
@@ -393,6 +395,31 @@ namespace Backend.Repositories.Implements
                     Code = s.Code
                 })
                 .ToListAsync();
+        }
+
+        public async Task<List<SemesterOptionDto>> GetSemesterOptionsAsync()
+        {
+            return await _context.Semesters
+                .AsNoTracking()
+                .OrderByDescending(s => s.StartDate)
+                .Select(s => new SemesterOptionDto
+                {
+                    SemesterId = s.SemesterId,
+                    Code = s.Code,
+                    Name = s.Name,
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
+                    Status = s.Status
+                })
+                .ToListAsync();
+        }
+
+        public async Task<(DateOnly StartDate, DateOnly EndDate)?> GetSemesterRangeAsync(int classId)
+        {
+            return await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .Select(c => (ValueTuple<DateOnly, DateOnly>?)ValueTuple.Create(c.Semester.StartDate, c.Semester.EndDate))
+                .FirstOrDefaultAsync();
         }
 
         public async Task<User?> GetUserWithRoleByEmailAsync(string email)

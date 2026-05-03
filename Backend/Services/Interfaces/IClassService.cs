@@ -12,6 +12,7 @@ public interface IClassService
     Task<List<StudentInClassDTO>> GetStudentsInClassAsync(int classId);
     Task<List<StudentInClassDTO>> GetPendingStudentsAsync(int classId);
     Task<List<SubjectOptionDto>> GetSubjectsAsync();
+    Task<List<SemesterOptionDto>> GetSemestersAsync();
 
     // Read with membership check — Result-bound
     Task<Result<List<ExamInClassDTO>>> GetExamsForCurrentUserAsync(int classId);
