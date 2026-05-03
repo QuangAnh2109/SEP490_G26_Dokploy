@@ -40,15 +40,7 @@ window.CurriculumShared = (function () {
         return ERROR_MAP[code] || fallback || 'Có lỗi xảy ra. Vui lòng thử lại.';
     }
 
-    document.addEventListener('click', (e) => {
-        if (e.target.matches('[data-close="modal-stage-notice"]')) {
-            if (typeof closeModal === 'function') {
-                closeModal('modal-stage-notice');
-            } else {
-                document.getElementById('modal-stage-notice').classList.add('hidden');
-            }
-        }
-    });
+
 
     return { showNotice, translateError };
 })();

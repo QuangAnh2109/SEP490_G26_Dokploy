@@ -29,4 +29,13 @@ document.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-stage')) {
         closeModal(e.target.id);
     }
+    
+    // Check if clicked element or its parent has data-close attribute
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) {
+        const modalId = closeBtn.getAttribute('data-close');
+        if (modalId) {
+            closeModal(modalId);
+        }
+    }
 });
