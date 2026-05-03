@@ -153,4 +153,14 @@ public static class ErrorCodes
     public const string AnalyticsExamNotFound = "ANALYTICS_EXAM_NOT_FOUND";
     public const string AnalyticsSubmissionNotFound = "ANALYTICS_SUBMISSION_NOT_FOUND";
     public const string AnalyticsInvalidToken = "ANALYTICS_INVALID_TOKEN";
+
+    // Grading
+    public const string GradingSubmissionNotFound    = "GRADING_SUBMISSION_NOT_FOUND";
+    public const string GradingNotEligibleForRegrade = "GRADING_NOT_ELIGIBLE_FOR_REGRADE";
+    public const string GradingAecHttpFail           = "GRADING_AEC_HTTP_FAIL";
+    public const string GradingAecBadResponse        = "GRADING_AEC_BAD_RESPONSE";
+    public const string GradingAecTimeout            = "GRADING_AEC_TIMEOUT";
+    public const string GradingAecNetwork            = "GRADING_AEC_NETWORK";
+    public const string GradingUnexpected            = "GRADING_UNEXPECTED";
+    public const string GradingRetryExhausted        = "GRADING_RETRY_EXHAUSTED";
 }

@@ -13,6 +13,10 @@ public partial class StudentAnswer
 
     public string? Response { get; set; }
 
+    public bool? IsCorrect { get; set; }
+
+    public decimal? PointsEarned { get; set; }
+
     public byte[] ConcurrencyStamp { get; set; } = null!;
 
     public virtual QuestionAnswer QuestionAnswer { get; set; } = null!;

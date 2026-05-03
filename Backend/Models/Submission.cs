@@ -19,6 +19,10 @@ public partial class Submission
 
     public int Status { get; set; }
 
+    public byte GradingStatus { get; set; }
+
+    public string? GradingError { get; set; }
+
     public byte[] ConcurrencyStamp { get; set; } = null!;
 
     public virtual Paper Paper { get; set; } = null!;

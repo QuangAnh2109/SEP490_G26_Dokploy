@@ -10,6 +10,8 @@ public static class RedisKeys
     public const string ExamJobsPrefix = $"{AppPrefix}exam-jobs";
     public const string RehydratorLockKey = $"{AppPrefix}rehydrator:lock";
 
+    public const string AecRateLimitPrefix = $"{AppPrefix}aec:ratelimit:";
+
     public const string RefreshTokenPrefix = $"{AppPrefix}rt:";
     public const string RefreshTokenHashPrefix = $"{AppPrefix}rt-hash:";
     public const string RefreshTokenUserPrefix = $"{AppPrefix}rt-user:";

@@ -21,5 +21,23 @@ public partial class MtcaSep490G26Context
             entity.Property(e => e.MustChangePassword)
                 .HasDefaultValue(false);
         });
+
+        modelBuilder.Entity<Submission>(entity =>
+        {
+            entity.Property(e => e.GradingStatus)
+                .HasDefaultValue((byte)0);
+
+            entity.Property(e => e.GradingError)
+                .HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<StudentAnswer>(entity =>
+        {
+            entity.Property(e => e.PointsEarned)
+                .HasColumnType("decimal(5, 2)");
+
+            entity.HasIndex(e => new { e.SubmissionId, e.IsCorrect })
+                .HasDatabaseName("IX_StudentAnswers_Submission_IsCorrect");
+        });
     }
 }
