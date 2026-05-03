@@ -38,4 +38,29 @@ public class AdminController : Controller
         ViewBag.UserId = id;
         return View();
     }
+
+    [HttpGet("Semesters")]
+    public IActionResult Semesters()
+    {
+        ViewBag.Breadcrumb = new[] { ("Kỳ học", (string?)null) };
+        return View();
+    }
+
+    [HttpGet("Subjects")]
+    public IActionResult Subjects()
+    {
+        ViewBag.Breadcrumb = new[] { ("Môn học", (string?)null) };
+        return View();
+    }
+
+    [HttpGet("SubjectDetail/{id}")]
+    public IActionResult SubjectDetail(int id)
+    {
+        ViewBag.Breadcrumb = new[] { 
+            ("Môn học", "/Admin/Subjects"),
+            ("Chi tiết môn học", (string?)null)
+        };
+        ViewBag.SubjectId = id;
+        return View();
+    }
 }
