@@ -90,7 +90,8 @@ public class SubjectRepository : ISubjectRepository
                         // Chapter doesn't have Questions navigation directly if we check Chapter model. Wait, let's leave it 0 if not mapped.
                         QuestionCount = 0, 
                         UpdatedByName = c.UpdatedByUser.Email,
-                        UpdatedAtUtc = c.UpdatedAtUtc
+                        UpdatedAtUtc = c.UpdatedAtUtc,
+                        ConcurrencyStamp = System.Convert.ToBase64String(c.ConcurrencyStamp)
                     })
                     .ToList()
             })
