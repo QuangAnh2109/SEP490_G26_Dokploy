@@ -8,8 +8,8 @@ public partial class Semester
     public int SemesterId { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
     public int Status { get; set; }
     public int CreatedByUserId { get; set; }
     public DateTime CreatedAtUtc { get; set; }

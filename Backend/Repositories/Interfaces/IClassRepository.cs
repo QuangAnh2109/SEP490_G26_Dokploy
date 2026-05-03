@@ -40,5 +40,6 @@ namespace Backend.Repositories.Interfaces
         Task<bool> IsTeacherOfClassAsync(int classId, int teacherUserId);
         Task<bool> StudentHasInProgressSubmissionInClassAsync(int classId, int studentId);
         Task<bool> RemoveActiveStudentFromClassAsync(int classId, int studentId);
+        Task<int> BulkCloseBySemesterAsync(int semesterId);
     }
 }

@@ -458,5 +458,12 @@ namespace Backend.Repositories.Implements
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<int> BulkCloseBySemesterAsync(int semesterId)
+        {
+            return await _context.Classes
+                .Where(c => c.SemesterId == semesterId && c.Status == Backend.Constants.ClassStatus.Active)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.Status, Backend.Constants.ClassStatus.Closed));
+        }
     }
 }

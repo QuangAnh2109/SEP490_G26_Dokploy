@@ -26,6 +26,14 @@ public static class ErrorCodes
     public const string ClassInviteTokenInvalid = "CLASS_INVITE_TOKEN_INVALID";
     public const string ClassConfigError = "CLASS_CONFIG_ERROR";
 
+    // Semester
+    public const string SemesterNotFound = "SEMESTER_NOT_FOUND";
+    public const string SemesterCodeDuplicate = "SEMESTER_CODE_DUPLICATE";
+    public const string SemesterClosed = "SEMESTER_CLOSED";
+    public const string SemesterAlreadyClosed = "SEMESTER_ALREADY_CLOSED";
+    public const string SemesterDateInvalid = "SEMESTER_DATE_INVALID";
+    public const string SemesterConcurrentUpdate = "SEMESTER_CONCURRENT_UPDATE";
+
     // Auth
     public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";
     public const string AuthOtpExpired = "AUTH_OTP_EXPIRED";
