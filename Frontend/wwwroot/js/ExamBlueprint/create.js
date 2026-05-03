@@ -388,7 +388,8 @@ $(document).ready(async function () {
     }
 
     function showError(messages) {
-        $('#createWarnings').addClass('d-none').empty();
+        $('#createWarnings').addClass('d-none');
+        $('#warningList').empty();
 
         if (!messages || messages.length === 0) return;
 
@@ -401,15 +402,9 @@ $(document).ready(async function () {
     }
 
     function hideMessages() {
-        $('#createError, #createWarnings, #createSuccess').addClass('d-none');
+        $('#createWarnings, #createSuccess').addClass('d-none');
         $('#createSuccess').empty();
         $('#createWarnings #warningList').empty();
-        
-        // Remove only the generated ul in createError
-        const errorList = document.querySelector('#createError ul');
-        if (errorList) {
-            errorList.remove();
-        }
     }
 
     function resolveApiError(error) {
