@@ -1,42 +1,43 @@
 @{
-    Layout = null;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Đăng nhập Admin";
+    ViewBag.HideHeader = true;
+    ViewBag.HideSidebar = true;
+    ViewBag.IsFullWidth = true;
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Đăng nhập Admin - MTCA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+@section Styles {
     <link rel="stylesheet" href="~/css/shells/shell-auth.css" asp-append-version="true" />
-    @await Html.PartialAsync("_ApiConfig")
-</head>
-<body>
-    <div class="auth-page">
-        <div class="auth-card">
-            <div class="auth-brand">
-                <div class="brand-mark">M</div>
-                <div class="title">MTCA</div>
-                <div class="sub">Admin Console</div>
-            </div>
+}
 
-            <form id="loginForm" class="auth-form">
-                <div class="form-row">
-                    <label>Email</label>
-                    <input type="email" id="email" required />
-                </div>
-                <div class="form-row">
-                    <label>Mật khẩu</label>
-                    <input type="password" id="password" required />
-                </div>
-                <div id="loginError" class="muted" style="color:var(--danger);font-size:12px;"></div>
-                <button type="submit" class="btn btn-primary" id="btnSubmit">Đăng nhập</button>
-            </form>
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <div class="brand-mark">M</div>
+            <div class="title">MTCA</div>
+            <div class="sub">Admin Console</div>
         </div>
-    </div>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+        <form id="loginForm" class="auth-form">
+            <div class="form-row">
+                <label>Email</label>
+                <input type="email" id="email" required />
+            </div>
+            <div class="form-row">
+                <label>Mật khẩu</label>
+                <div class="input-group">
+                    <input type="password" id="password" required />
+                    <button type="button" class="btn btn-outline-secondary" id="togglePassword" aria-label="Hiện/ẩn mật khẩu" tabindex="-1">
+                        <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="loginError" class="muted" style="color:var(--danger);font-size:12px;"></div>
+            <button type="submit" class="btn btn-primary" id="btnSubmit">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
     <script src="~/js/Admin/login.js" asp-append-version="true"></script>
-</body>
-</html>
+}

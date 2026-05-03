@@ -1,4 +1,12 @@
 $(function () {
+    $('#togglePassword').on('click', function () {
+        const $input = $('#password');
+        const $icon = $('#togglePasswordIcon');
+        const isHidden = $input.attr('type') === 'password';
+        $input.attr('type', isHidden ? 'text' : 'password');
+        $icon.toggleClass('fa-eye fa-eye-slash');
+    });
+
     $('#loginForm').on('submit', function (e) {
         e.preventDefault();
         const email = $('#email').val().trim();
@@ -11,17 +19,6 @@ $(function () {
 
         apiClient.post('/api/auth/login', { email, password })
             .then(function () {
-                return apiClient.get('/api/auth/me');
-            })
-            .then(function (user) {
-                if (user.role !== '3') {
-                    apiClient.post('/api/auth/logout', {})
-                        .finally(function() {
-                            $err.text('Tài khoản không có quyền Admin.');
-                            $btn.prop('disabled', false).text('Đăng nhập');
-                        });
-                    return;
-                }
                 window.location.href = '/Admin/Users';
             })
             .catch(function (err) {

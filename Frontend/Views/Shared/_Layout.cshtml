@@ -1,10 +1,14 @@
-
+@{
+	var hideHeader = ViewBag.HideHeader == true;
+	var hideSidebar = ViewBag.HideSidebar == true;
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="auth-pending">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>@ViewData["Title"] - Frontend</title>
+	<style>html.auth-pending body { visibility: hidden; }</style>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -15,10 +19,16 @@
 	@await Html.PartialAsync("_ApiConfig")
 </head>
 <body>
-	@await Html.PartialAsync("_Header")
+	@if (!hideHeader)
+	{
+		@await Html.PartialAsync("_Header")
+	}
 
-	<div class="app-shell">
-		@await Html.PartialAsync("_Sidebar")
+	<div class="app-shell @(hideHeader ? "app-shell-noheader" : "")">
+		@if (!hideSidebar)
+		{
+			@await Html.PartialAsync("_Sidebar")
+		}
 		<div class="app-content @(ViewBag.IsFullWidth == true ? "pt-0" : "")">
 			<div class="@(ViewBag.IsFullWidth == true ? "container-fluid p-0" : "container mt-4")">
 				<main role="main" class="pb-3 w-100">
@@ -60,6 +70,7 @@
 	<script src="~/lib/jquery/dist/jquery.min.js"></script>
 	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script src="~/js/Shared/auth-guard.js" asp-append-version="true"></script>
 	<script>
 		$(document).ready(async function() {
 			// Sidebar: collapsed by default, persisted in localStorage

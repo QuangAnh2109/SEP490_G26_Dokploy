@@ -1,91 +1,52 @@
 @{
-    Layout = null;
+    ViewData["Title"] = "Sửa câu hỏi";
+    ViewBag.HideHeader = true;
+    ViewBag.HideSidebar = true;
+    ViewBag.IsFullWidth = true;
 }
-<!doctype html>
-<html lang="vi">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sửa câu hỏi</title>
-    <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/StudentExam/Exam_preview.css">
-    <link rel="stylesheet" href="/css/Question/question_add.css">
+@section Styles {
+    <link rel="stylesheet" href="~/css/StudentExam/Exam_preview.css">
+    <link rel="stylesheet" href="~/css/Question/question_add.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+}
+
+<main class="page-shell py-4">
+    <div class="container-fluid px-3 px-md-4">
+        <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <h1 class="page-title">Chỉnh sửa câu hỏi</h1>
+                <p class="page-subtitle">Sửa nội dung chi tiết của câu hỏi.</p>
+            </div>
+            <div class="page-actions">
+                <a class="btn btn-outline-secondary" href="/Question">Hủy</a>
+                <button class="btn btn-primary" id="saveQuestionBtn">Cập nhật câu hỏi</button>
+            </div>
+        </section>
+
+        <div class="vstack gap-3" id="editQuestionContainer">
+            <input type="hidden" id="currentQuestionId" value="@ViewBag.QuestionId" />
+
+            <section class="form-section form-section-single" data-question-item data-question-index="1">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="section-title mb-0" data-question-title>Sửa câu hỏi Q-@ViewBag.QuestionId</h2>
+                    <div data-loading-spinner class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+
+                <partial name="_QuestionEditor" />
+            </section>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
-    @await Html.PartialAsync("_ApiConfig")
-</head>
-
-<body>
-    <main class="page-shell py-4">
-        <div class="container-fluid px-3 px-md-4">
-            <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                <div>
-                    <h1 class="page-title">Chỉnh sửa câu hỏi</h1>
-                    <p class="page-subtitle">Sửa nội dung chi tiết của câu hỏi.</p>
-                </div>
-                <div class="page-actions">
-                    <a class="btn btn-outline-secondary" href="/Question">Hủy</a>
-                    <button class="btn btn-primary" id="saveQuestionBtn">Cập nhật câu hỏi</button>
-                </div>
-            </section>
-
-            <div class="vstack gap-3" id="editQuestionContainer">
-                <input type="hidden" id="currentQuestionId" value="@ViewBag.QuestionId" />
-
-                <section class="form-section form-section-single" data-question-item data-question-index="1">
-                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                        <h2 class="section-title mb-0" data-question-title>Sửa câu hỏi Q-@ViewBag.QuestionId</h2>
-                        <div data-loading-spinner class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;">
-                            <span class="visually-hidden">Đang tải...</span>
-                        </div>
-                    </div>
-
-                    <partial name="_QuestionEditor" />
-                </section>
-            </div>
-        </div>
-    </main>
-
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
-        <template id="toastTemplate">
-            <div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body" data-message></div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        </template>
-    </div>
-
-    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="globalConfirmTitle">Xác nhận</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="mb-0 text-muted" id="globalConfirmMessage"></p>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" id="globalConfirmCancelBtn">Hủy</button>
-                    <button type="button" class="btn btn-primary px-4" id="globalConfirmBtn">Đồng ý</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="/lib/jquery/dist/jquery.min.js"></script>
-    <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/site.js" asp-append-version="true"></script>
-    <script src="/js/Question/question_utils.js" asp-append-version="true"></script>
-    <script src="/js/Question/question_mcq.js" asp-append-version="true"></script>
-    <script src="/js/Question/question_fitb.js" asp-append-version="true"></script>
-    <script src="/js/Question/question_shared.js" asp-append-version="true"></script>
-    <script src="/js/Question/question_edit.js" asp-append-version="true"></script>
-</body>
-
-</html>
+    <script src="~/js/Question/question_utils.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_mcq.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_fitb.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_shared.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_edit.js" asp-append-version="true"></script>
+}

@@ -1,19 +1,15 @@
 @{
-    Layout = null;
+    ViewData["Title"] = "Giao đề thi";
+    ViewBag.HideHeader = true;
+    ViewBag.HideSidebar = true;
+    ViewBag.IsFullWidth = true;
 }
-<!doctype html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giao đề thi</title>
-    <link rel="stylesheet" href="/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/Exam/assign_exam.css">
 
-    @await Html.PartialAsync("_ApiConfig")
-</head>
-<body>
-    <main class="page-shell py-4">
+@section Styles {
+    <link rel="stylesheet" href="~/css/Exam/assign_exam.css">
+}
+
+<main class="page-shell py-4">
         <div class="container-fluid px-3 px-md-4">
             <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
                 <div>
@@ -388,22 +384,10 @@
             </div>
         </div>
     </main>
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
-        <template id="toastTemplate">
-            <div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body" data-message></div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        </template>
-    </div>
-    <script src="/lib/jquery/dist/jquery.min.js"></script>
-    <script src="/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/site.js"></script>
+
+@section Scripts {
     <script type="module" src="https://unpkg.com/mathlive"></script>
-    <script src="/js/Shared/validation_shared.js"></script>
-    <script src="/js/Validations/assign_exam_val.js"></script>
-    <script src="/js/Exam/assign_exam.js"></script>
-</body>
-</html>
+    <script src="~/js/Shared/validation_shared.js"></script>
+    <script src="~/js/Validations/assign_exam_val.js"></script>
+    <script src="~/js/Exam/assign_exam.js"></script>
+}

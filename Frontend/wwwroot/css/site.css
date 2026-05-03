@@ -208,6 +208,10 @@ body {
     overflow-x: hidden;
 }
 
+.app-shell.app-shell-noheader {
+    min-height: 100vh;
+}
+
 .app-shell::before {
     content: '';
     position: absolute;

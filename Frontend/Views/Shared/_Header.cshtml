@@ -1,9 +1,12 @@
 <header>
     <nav class="navbar navbar-expand-md navbar-light bg-white border-bottom app-header">
         <div class="container-fluid">
-            <button id="appSidebarToggle" class="btn app-icon-btn me-2" type="button" aria-label="Mở menu">
-                <span class="app-hamburger" aria-hidden="true"></span>
-            </button>
+            @if (ViewBag.HideSidebar != true)
+            {
+                <button id="appSidebarToggle" class="btn app-icon-btn me-2" type="button" aria-label="Mở menu">
+                    <span class="app-hamburger" aria-hidden="true"></span>
+                </button>
+            }
             <a class="navbar-brand app-brand" asp-area="" asp-controller="Home" asp-action="Index" aria-label="Math Test Creator">
                 <span class="app-brand-logo" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
