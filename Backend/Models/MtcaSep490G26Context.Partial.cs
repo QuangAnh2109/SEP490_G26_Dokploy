@@ -12,6 +12,10 @@ public partial class MtcaSep490G26Context
                 .ValueGeneratedNever();
         });
 
+        modelBuilder.Entity<Semester>().Property(e => e.ConcurrencyStamp).IsRowVersion();
+        modelBuilder.Entity<Subject>().Property(e => e.ConcurrencyStamp).IsRowVersion();
+        modelBuilder.Entity<Chapter>().Property(e => e.ConcurrencyStamp).IsRowVersion();
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.MustChangePassword)

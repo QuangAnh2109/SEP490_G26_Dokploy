@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", async function () {
+document.addEventListener("DOMContentLoaded", async function () {
     await window.userReady;
 
     const role = getUserRole();
@@ -48,7 +48,7 @@ function initForm() {
 
         const payload = {
             className: document.getElementById("classNameInput").value.trim(),
-            semester: document.getElementById("semesterInput").value.trim(),
+            semesterId: parseInt(document.getElementById("semesterInput").value),
             subjectId: parseInt(document.getElementById("subjectSelect").value)
         };
 

@@ -37,7 +37,7 @@ namespace Backend.Repositories.Implements
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     // Map Semester from DB
-                    Semester = c.Semester ?? string.Empty,
+                    SemesterId = c.SemesterId,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
                     Status = c.Status,
@@ -58,7 +58,7 @@ namespace Backend.Repositories.Implements
                     TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
-                    Semester = c.Semester ?? string.Empty,
+                    SemesterId = c.SemesterId,
                     StudentCount = c.ClassMembers.Count(),
                     ExamCount = c.Exams.Count,
                     Status = c.Status,
@@ -81,7 +81,7 @@ namespace Backend.Repositories.Implements
                     TeacherName = c.Teacher != null ? c.Teacher.FullName ?? string.Empty : string.Empty,
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
-                    Semester = c.Semester ?? string.Empty,
+                    SemesterId = c.SemesterId,
                     Status = c.Status,
                     Chapters = c.Subject != null ? c.Subject.Chapters
                         .Select(ch => new ChapterDTO
@@ -161,7 +161,7 @@ namespace Backend.Repositories.Implements
                 .ToListAsync();
         }
 
-        public async Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId)
+        public async Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, int semesterId, int subjectId)
         {
             var existingClasses = await _context.Classes
                 .Where(c => c.TeacherId == teacherId && c.Name == className)
@@ -169,7 +169,7 @@ namespace Backend.Repositories.Implements
 
             foreach (var c in existingClasses)
             {
-                if (c.Semester == semester)
+                if (c.SemesterId == semesterId)
                 {
                     return "Lớp học này đã tồn tại trong học kỳ được chọn";
                 }
@@ -216,7 +216,7 @@ namespace Backend.Repositories.Implements
                 SubjectName = newClass.Subject?.Name ?? string.Empty,
                 TeacherName = newClass.Teacher?.FullName ?? string.Empty,
                 InvitationCode = newClass.InvitationCode,
-                Semester = newClass.Semester ?? string.Empty,
+                SemesterId = newClass.SemesterId,
                 StudentCount = 0,
                 ExamCount = 0,
                 Role = "Teacher"

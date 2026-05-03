@@ -13,7 +13,7 @@ namespace Backend.Repositories.Interfaces
         Task<ClassDTO?> GetByIdAsync(int classId);
         Task<List<ExamInClassDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false);
 
-        Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, string semester, int subjectId);
+        Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, int semesterId, int subjectId);
         Task<ClassDTO> CreateClassAsync(Class newClass);
 
         Task<Class?> GetClassByInviteCodeAsync(string inviteCode);

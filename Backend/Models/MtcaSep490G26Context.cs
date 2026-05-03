@@ -43,6 +43,8 @@ public partial class MtcaSep490G26Context : DbContext
 
     public virtual DbSet<StudentAnswer> StudentAnswers { get; set; }
 
+    public virtual DbSet<Semester> Semesters { get; set; }
+
     public virtual DbSet<Subject> Subjects { get; set; }
 
     public virtual DbSet<Submission> Submissions { get; set; }

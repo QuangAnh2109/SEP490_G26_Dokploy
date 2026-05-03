@@ -3,15 +3,13 @@ using System.Collections.Generic;
 
 namespace Backend.Models;
 
-public partial class Subject
+public partial class Semester
 {
-    public int SubjectId { get; set; }
-
+    public int SemesterId { get; set; }
+    public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
-
-    public string? Code { get; set; }
-
-    public string? Description { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public int Status { get; set; }
     public int CreatedByUserId { get; set; }
     public DateTime CreatedAtUtc { get; set; }
@@ -21,12 +19,5 @@ public partial class Subject
 
     public virtual User CreatedByUser { get; set; } = null!;
     public virtual User UpdatedByUser { get; set; } = null!;
-
-    public virtual ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();
-
     public virtual ICollection<Class> Classes { get; set; } = new List<Class>();
-
-    public virtual ICollection<ExamBlueprint> ExamBlueprints { get; set; } = new List<ExamBlueprint>();
-
-    public virtual ICollection<Exam> Exams { get; set; } = new List<Exam>();
 }

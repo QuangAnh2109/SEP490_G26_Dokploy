@@ -70,17 +70,17 @@ public class ClassService(
 
     public async Task<Result<ClassDTO>> CreateClassAsync(int teacherId, CreateClassRequestDTO dto)
     {
-        var normalizedSemester = dto.Semester?.Trim().ToUpper() ?? string.Empty;
+        var semesterId = dto.SemesterId!.Value;
 
         var subjectId = dto.SubjectId!.Value;
-        var duplicateError = await repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName!, normalizedSemester, subjectId);
+        var duplicateError = await repo.GetDuplicateClassErrorAsync(teacherId, dto.ClassName!, semesterId, subjectId);
         if (duplicateError != null)
             return ClassErrors.Duplicate;
 
         var newClass = new Class
         {
             Name = dto.ClassName,
-            Semester = normalizedSemester,
+            SemesterId = semesterId,
             SubjectId = subjectId,
             TeacherId = teacherId,
             Status = 1,
