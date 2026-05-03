@@ -135,7 +135,7 @@ function renderScoreDistChart(distribution) {
     var ctx = canvas.getContext("2d");
 
     if (!distribution || Object.keys(distribution).length === 0) {
-        ctx.font = "14px Inter";
+        ctx.font = "14px 'Be Vietnam Pro', sans-serif";
         ctx.fillStyle = "#94a3b8";
         ctx.textAlign = "center";
         ctx.fillText("Chưa có dữ liệu phổ điểm", canvas.width / 2, canvas.height / 2);
@@ -174,7 +174,7 @@ function renderAccuracyChart(canvasId, stats, labelKey, valueKey) {
     var ctx = canvas.getContext("2d");
 
     if (!stats || stats.length === 0) {
-        ctx.font = "14px Inter";
+        ctx.font = "14px 'Be Vietnam Pro', sans-serif";
         ctx.fillStyle = "#94a3b8";
         ctx.textAlign = "center";
         ctx.fillText("Chưa có dữ liệu phân tích", canvas.width / 2, canvas.height / 2);

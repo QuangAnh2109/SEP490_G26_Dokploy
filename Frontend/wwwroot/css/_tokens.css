@@ -51,4 +51,9 @@
   /* Layout */
   --sidebar-w: 240px;
   --topbar-h: 60px;
+
+  /* Typography */
+  --font-sans:  'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-mono:  'JetBrains Mono', 'Consolas', ui-monospace, monospace;
 }

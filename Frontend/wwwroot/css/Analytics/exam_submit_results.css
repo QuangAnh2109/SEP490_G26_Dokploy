@@ -1,4 +1,4 @@
-body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; }
+body { background-color: #f8f9fa; }
 .table { font-size: 16px; color: #212529; }
 .table > :not(caption) > * > * { padding: 16px; vertical-align: middle; }
 .btn-outline-custom { background-color: #fff; }

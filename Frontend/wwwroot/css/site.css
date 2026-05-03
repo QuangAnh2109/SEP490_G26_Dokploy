@@ -19,6 +19,16 @@
     --radius: 0.5rem;
     --grid-size: 30px;
     --grid-color: rgba(37, 99, 235, 0.05);
+
+    /* Typography — keep in sync with _tokens.css */
+    --font-sans:  'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-mono:  'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+
+    /* Bootstrap variable overrides — apply to .toast, .modal-content, etc. */
+    --bs-body-font-family: var(--font-sans);
+    --bs-font-sans-serif:  var(--font-sans);
+    --bs-font-monospace:   var(--font-mono);
 }
 
 html {
@@ -27,7 +37,7 @@ html {
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
     background-color: hsl(var(--secondary-ink));
     color: hsl(var(--card-foreground));
     margin-bottom: 0; /* Remove old margin */
@@ -35,7 +45,7 @@ body {
 
 /* Math Hero Typography */
 h1, h2, h3, .math-serif {
-    font-family: 'Libre Baskerville', serif;
+    font-family: var(--font-serif);
 }
 
 /* Graph Paper Background */

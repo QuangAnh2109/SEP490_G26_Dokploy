@@ -4,7 +4,7 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink-700);
@@ -457,7 +457,7 @@ body.modal-open { overflow: hidden; }
   background: var(--ink-100);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   color: var(--ink-900);
   margin: var(--s-3) 0 var(--s-2);
@@ -565,7 +565,7 @@ body.modal-open { overflow: hidden; }
 }
 .swatch-preview { height: 56px; }
 .swatch-meta { padding: var(--s-2) var(--s-3); }
-.swatch-name { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; color: var(--ink-700); }
+.swatch-name { font-family: var(--font-mono); font-size: 11px; color: var(--ink-700); }
 .swatch-value { font-size: 11px; color: var(--ink-500); margin-top: 2px; }
 
 .ds-type {
