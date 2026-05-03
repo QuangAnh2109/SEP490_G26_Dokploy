@@ -6,6 +6,7 @@ using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
+using Backend.Helpers;
 
 namespace Backend.Services.Implements;
 
@@ -62,7 +63,7 @@ public class SubmissionService(
             .Where(sa => sa.QuestionAnswerId.HasValue)
             .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
 
-        Backend.Helpers.StudentAnswerSyncHelper.SyncAnswers(
+        StudentAnswerSyncHelper.SyncAnswers(
             submission.StudentAnswers, 
             incomingData, 
             submission.SubmissionId);
