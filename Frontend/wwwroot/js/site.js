@@ -1,15 +1,15 @@
-const API_BASE_URL = window.API_BASE_URL;
+﻿const API_BASE_URL = window.API_BASE_URL;
 
-// Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1"=Teacher, "2"=Student, "3"=Admin),
-// và Authorize attribute dùng RoleIds.Teacher/Student/Admin. FE compare trực tiếp với các const này.
+// Mirror Backend/Common/Roles.cs: BE issue JWT role claim dáº¡ng numeric ("1"=Teacher, "2"=Student, "3"=Admin),
+// vÃ  Authorize attribute dÃ¹ng RoleIds.Teacher/Student/Admin. FE compare trá»±c tiáº¿p vá»›i cÃ¡c const nÃ y.
 const RoleIds = Object.freeze({
     Teacher: '1',
     Student: '2',
     Admin: '3'
 });
 
-// Bootstrap qua /me. Nếu 401 + có refresh cookie → tự refresh + retry /me, tránh logout oan khi reload sau access expiry.
-// Nếu /me trả 403 + code AUTH_PASSWORD_CHANGE_REQUIRED → redirect trang đổi password lần đầu.
+// Bootstrap qua /me. Náº¿u 401 + cÃ³ refresh cookie â†’ tá»± refresh + retry /me, trÃ¡nh logout oan khi reload sau access expiry.
+// Náº¿u /me tráº£ 403 + code AUTH_PASSWORD_CHANGE_REQUIRED â†’ redirect trang Ä‘á»•i password láº§n Ä‘áº§u.
 const PASSWORD_CHANGE_PATH = '/Auth/ChangePasswordFirstLogin';
 window.currentUser = null;
 window.userReady = (function () {
@@ -97,7 +97,7 @@ function isAuthenticated() {
 
 function logout() {
     apiClient.post('/api/auth/logout', {})
-        .catch(function () { /* ignore — vẫn redirect */ })
+        .catch(function () { /* ignore â€” váº«n redirect */ })
         .finally(function () {
             window.currentUser = null;
             if (window.location.pathname.startsWith('/Admin')) {
@@ -108,7 +108,7 @@ function logout() {
         });
 }
 
-// Dedup parallel refresh: nhiều API call song song hết hạn cùng lúc → chỉ gọi /refresh-token 1 lần.
+// Dedup parallel refresh: nhiá»u API call song song háº¿t háº¡n cÃ¹ng lÃºc â†’ chá»‰ gá»i /refresh-token 1 láº§n.
 let _refreshPromise = null;
 function refreshAccessToken() {
     if (_refreshPromise) return _refreshPromise;
@@ -155,7 +155,7 @@ const apiClient = {
                         if (window.location.pathname !== PASSWORD_CHANGE_PATH) {
                             window.location.href = PASSWORD_CHANGE_PATH;
                         }
-                        reject({ xhr: xhr, status: status, error: error, message: 'Yêu cầu đổi mật khẩu trước khi tiếp tục.' });
+                        reject({ xhr: xhr, status: status, error: error, message: 'YÃªu cáº§u Ä‘á»•i máº­t kháº©u trÆ°á»›c khi tiáº¿p tá»¥c.' });
                         return;
                     }
                     if (xhr.status === 401 && !isRetry && !isRefreshEndpoint && !isMeEndpoint) {
@@ -170,7 +170,7 @@ const apiClient = {
                                 }
                                 reject({
                                     xhr: xhr, status: status, error: error,
-                                    message: 'Phiên đăng nhập đã hết hạn.'
+                                    message: 'PhiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ háº¿t háº¡n.'
                                 });
                             });
                         return;
@@ -179,7 +179,7 @@ const apiClient = {
                         xhr: xhr,
                         status: status,
                         error: error,
-                        message: xhr.responseJSON?.message || "Đã có lỗi xảy ra từ máy chủ."
+                        message: xhr.responseJSON?.message || "ÄÃ£ cÃ³ lá»—i xáº£y ra tá»« mÃ¡y chá»§."
                     });
                 }
             };
@@ -240,7 +240,7 @@ function setBreadcrumb(items) {
         const url = item.url;
 
         if (i > 0) {
-            parts.push('<span class="breadcrumb-sep">›</span>');
+            parts.push('<span class="breadcrumb-sep">â€º</span>');
         }
 
         if (url) {
@@ -259,7 +259,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function showConfirm(message, title = 'Xác nhận', onConfirm) {
+function showConfirm(message, title = 'XÃ¡c nháº­n', onConfirm) {
     const modalEl = document.getElementById('globalConfirmModal');
     if (!modalEl) return;
 
@@ -282,3 +282,23 @@ function showConfirm(message, title = 'Xác nhận', onConfirm) {
 
     modal.show();
 }
+
+const inputTypeMathMapping = {
+    'Số vô tỉ': ['\\sqrt{\\placeholder[1]{}}', '\\pi', 'e', '\\phi'],
+    'Số hữu tỉ': ['/', '\\frac{\\placeholder[1]{}}{\\placeholder[2]{}}', '.'],
+    'Ký hiệu toán học cơ bản': ['+', '-', '\\times', '\\cdot', '\\div', '^\\placeholder[1]{}', '\\sqrt{\\placeholder[1]{}}', '(', ')', '[', ']', '\\{', '\\}', '!', '\\pm', '\\mp'],
+    'Giải tích & Vi phân': ['\\partial', '\\nabla', '\\iint', '\\iiint', '\\oint', '\\infty', '-\\infty', '+\\infty'],
+    'Biểu thức so sánh': ['<', '>', '\\ge', '\\le', '=', '\\approx', '\\neq', '\\equiv'],
+    'Hàm lượng giác/Logarit': ['\\sin', '\\cos', '\\tan', '\\cot', '\\log', '\\ln', '^\\circ'],
+    'Hàm lim': ['\\lim_{x \\to \\infty}'],
+    'Ma trận': [
+        '\\begin{bmatrix} \\placeholder[1]{} & \\placeholder[2]{} \\\\ \\placeholder[3]{} & \\placeholder[4]{} \\end{bmatrix}',
+        '\\begin{bmatrix} \\placeholder[1]{} & \\placeholder[2]{} & \\placeholder[3]{} \\\\ \\placeholder[4]{} & \\placeholder[5]{} & \\placeholder[6]{} \\\\ \\placeholder[7]{} & \\placeholder[8]{} & \\placeholder[9]{} \\end{bmatrix}',
+        '\\begin{bmatrix} \\placeholder[1]{} \\\\ \\placeholder[2]{} \\end{bmatrix}'
+    ],
+    'Toán rời rạc (Logic/Tập hợp)': ['\\wedge', '\\vee', '\\neg', '\\oplus', '\\rightarrow', '\\leftrightarrow', '\\forall', '\\exists', '\\cup', '\\cap', '\\in', '\\notin', '\\subset', '\\subseteq', '\\emptyset', '\\setminus'],
+    'Toán rời rạc (Modulo/Trần/Sàn)': ['\\equiv', '\\bmod', '\\pmod{\\placeholder[1]{}}', '\\lceil \\placeholder[1]{} \\rceil', '\\lfloor \\placeholder[1]{} \\rfloor'],
+    'Xác suất (Tổ hợp/Kỳ vọng/Phương sai)': ['\\binom{n}{k}', 'E()', '\\text{Var}()', '\\mu', '\\sigma', '\\sigma^2'],
+    'Biến đổi Laplace/Fourier': ['\\mathcal{L}', '\\mathcal{F}'],
+    'Số phức': ['i', 'j']
+};

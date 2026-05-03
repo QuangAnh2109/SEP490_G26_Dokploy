@@ -48,6 +48,8 @@ window.QuestionEditorFITB = (() => {
                     const id = it.inputTypeId || it.InputTypeId;
                     chip.setAttribute('data-group-type', groupType);
                     chip.setAttribute('data-input-type-id', id);
+                    chip.setAttribute('data-regex', it.regex || it.Regex || '');
+                    chip.setAttribute('data-constraint-label', it.name || it.Name || '');
 
                     const nameElem = chip.querySelector('[data-constraint-name]');
                     if (nameElem) {
@@ -60,6 +62,91 @@ window.QuestionEditorFITB = (() => {
         }
     };
 
+    const SETS_GROUP = 'Sets';
+
+    // ── Human-readable examples from regex patterns ──
+    const REGEX_EXAMPLES = {
+        'Số tự nhiên': ['0', '1', '42', '100'],
+        'Số nguyên': ['-5', '0', '7', '-100'],
+        'Số vô tỉ': ['\\sqrt{2}', '\\pi', 'e', '\\phi'],
+        'Số hữu tỉ': ['3/4', '-1.5', '\\frac{1}{3}'],
+        'Số thực': ['5', '-3/2', '\\sqrt{3}', '\\pi'],
+        'Số phức': ['3+2i', '-1.5+4j', '2i'],
+        'Ký hiệu toán học cơ bản': ['+', '-', '\\times', '\\div', '\\sqrt{}', '\\pm'],
+        'Giải tích & Vi phân': ['\\partial', '\\nabla', '\\iint', '\\infty'],
+        'Biểu thức so sánh': ['<', '>', '\\ge', '\\le', '\\approx', '\\neq'],
+        'Hàm lượng giác/Logarit:': ['\\sin(x)', '\\cos(\\pi)', '\\log(10)', '\\ln(e)'],
+        'Hàm lim': ['\\lim_{x\\to0}', '\\lim_{n\\to\\infty}'],
+        'Chữ cái': ['x', 'y', 'n', 'A'],
+        'Ma trận': ['\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}'],
+        'Toán rời rạc (Logic/Tập hợp)': ['\\wedge', '\\vee', '\\cup', '\\cap', '\\in', '\\forall'],
+        'Toán rời rạc (Modulo/Trần/Sàn)': ['\\bmod', '\\pmod{n}', '\\lceil x\\rceil', '\\lfloor x\\rfloor'],
+        'Xác suất (Tổ hợp/Kỳ vọng/Phương sai)': ['\\binom{n}{k}', 'E(X)', '\\mu', '\\sigma^2'],
+        'Biến đổi Laplace/Fourier': ['\\mathcal{L}', '\\mathcal{F}'],
+    };
+
+    const showConstraintDetail = (row, chip) => {
+        hideConstraintDetail(row);
+
+        const name = chip.getAttribute('data-constraint-label') || '';
+        if (!name) return;
+
+        const examples = REGEX_EXAMPLES[name] || [];
+
+        if (examples.length === 0) return;
+
+        // Clone panel from template
+        const panelT = row.querySelector('[data-constraint-detail-template]');
+        const exTagT = row.querySelector('[data-constraint-detail-example-template]');
+        if (!panelT) return;
+
+        const panel = panelT.content.cloneNode(true).firstElementChild;
+        if (!panel) return;
+
+        // Fill name
+        const nameEl = panel.querySelector('[data-detail-name]');
+        if (nameEl) nameEl.textContent = name;
+
+        const exContainer = panel.querySelector('[data-detail-examples]');
+        if (examples.length > 0 && exContainer && exTagT) {
+            examples.forEach(ex => {
+                const tag = exTagT.content.cloneNode(true).firstElementChild;
+                if (!tag) return;
+                tag.setAttribute('data-latex-example', ex);
+                exContainer.appendChild(tag);
+            });
+        } else if (exContainer) {
+            exContainer.remove();
+        }
+
+        // Render KaTeX on example tags
+        if (window.katex) {
+            panel.querySelectorAll('[data-latex-example]').forEach(tag => {
+                const latex = tag.getAttribute('data-latex-example') || '';
+                try {
+                    window.katex.render(latex, tag, {
+                        throwOnError: false,
+                        displayMode: false,
+                        trust: true,
+                        strict: false
+                    });
+                } catch {
+                    tag.textContent = latex;
+                }
+            });
+        }
+
+        const container = row.querySelector('[data-constraint-container]');
+        if (container) {
+            container.appendChild(panel);
+        }
+    };
+
+    const hideConstraintDetail = (row) => {
+        const existing = row.querySelector('[data-constraint-detail-panel]');
+        if (existing) existing.remove();
+    };
+
     const bindConstraintChips = (row) => {
         const chips = row.querySelectorAll('.constraint-chip');
         UTILS.toArray(chips).forEach(chip => {
@@ -67,13 +154,21 @@ window.QuestionEditorFITB = (() => {
                 const gt = chip.getAttribute('data-group-type');
                 const active = chip.classList.contains('active');
 
-                const siblings = row.querySelectorAll(`.constraint-chip[data-group-type="${gt}"]`);
-                UTILS.toArray(siblings).forEach(s => {
-                    s.classList.remove('active');
-                });
+                if (gt === SETS_GROUP) {
+                    // Radio behavior: only 1 in Sets group
+                    const siblings = row.querySelectorAll(`.constraint-chip[data-group-type="${SETS_GROUP}"]`);
+                    UTILS.toArray(siblings).forEach(s => s.classList.remove('active'));
+                    if (!active) chip.classList.add('active');
+                } else {
+                    // Toggle behavior: multi-select for non-Sets groups
+                    chip.classList.toggle('active');
+                }
 
-                if (!active) {
-                    chip.classList.add('active');
+                // Show detail panel for the clicked chip
+                if (chip.classList.contains('active')) {
+                    showConstraintDetail(row, chip);
+                } else {
+                    hideConstraintDetail(row);
                 }
             });
         });
@@ -148,7 +243,7 @@ window.QuestionEditorFITB = (() => {
             segments.forEach(seg => {
                 const sIdx = String(seg.index);
                 let card = existingCards.get(sIdx);
-                
+
                 if (!card && t) {
                     card = t.content.cloneNode(true).firstElementChild;
                     card.setAttribute('data-segment-index', sIdx);
@@ -169,7 +264,7 @@ window.QuestionEditorFITB = (() => {
                         updateGroupScores(item);
                     });
                 }
-                
+
                 if (card) {
                     // Update label
                     const labelElem = card.querySelector('[data-segment-label]');
@@ -413,7 +508,7 @@ window.QuestionEditorFITB = (() => {
         // 4. Update/Add Nav Buttons
         const navFragment = document.createDocumentFragment();
         const navTmpl = item.querySelector('[data-blank-nav-button-template]');
-        
+
         numbered.forEach(num => {
             const sNum = String(num);
             let btn = existingNavs.get(sNum);
@@ -524,19 +619,34 @@ window.QuestionEditorFITB = (() => {
         const scoring = !!scoringToggle?.checked;
 
         const answerRows = item.querySelectorAll('[data-blank-answer-item]');
+        if (answerRows.length === 0) {
+            throw new Error("Câu hỏi điền khuyết phải có ít nhất 1 ô trống.");
+        }
+
         UTILS.toArray(answerRows).forEach(row => {
             const bNum = parseInt(row.getAttribute('data-blank-num'));
-            const chip = row.querySelector('.constraint-chip.active');
+            const activeChips = row.querySelectorAll('.constraint-chip.active');
             const scoreInp = row.querySelector('[data-blank-score]');
             const ansInp = row.querySelector('[data-blank-answer]');
+
+            if (!activeChips || activeChips.length === 0) {
+                throw new Error(`Ô trống số ${bNum} chưa chọn Giới hạn nhập liệu.`);
+            }
+
+            const correctAns = UTILS.getMathValue(ansInp);
+            if (!correctAns || !String(correctAns).trim()) {
+                throw new Error(`Ô trống số ${bNum} chưa có giá trị nhập liệu (đáp án).`);
+            }
+
+            const inputTypeIds = UTILS.toArray(activeChips).map(c => parseInt(c.getAttribute('data-input-type-id')));
 
             answers.push({
                 answerId: parseInt(row.getAttribute('data-answer-id')) || null,
                 content: `\\placeholder[${bNum}]{}`,
-                correctAnswer: UTILS.getMathValue(ansInp),
+                correctAnswer: correctAns,
                 isCorrect: true,
                 blankIndex: bNum,
-                inputTypeId: chip ? parseInt(chip.getAttribute('data-input-type-id')) : null,
+                inputTypeIds: inputTypeIds,
                 point: scoring ? (parseInt(scoreInp?.value) || 0) : 0
             });
         });
@@ -633,10 +743,12 @@ window.QuestionEditorFITB = (() => {
                         ansInp.value = ans.correctAnswer || '';
                     }
 
-                    if (ans.inputTypeId) {
-                        const chip = row.querySelector(`.constraint-chip[data-input-type-id="${ans.inputTypeId}"]`);
+                    // Restore active chips (supports both legacy inputTypeId and new inputTypeIds)
+                    const ids = ans.inputTypeIds || (ans.inputTypeId ? [ans.inputTypeId] : []);
+                    ids.forEach(id => {
+                        const chip = row.querySelector(`.constraint-chip[data-input-type-id="${id}"]`);
                         chip?.classList.add('active');
-                    }
+                    });
 
                     const scoreInp = row.querySelector('[data-blank-score]');
                     if (scoreInp && ans.point != null) {

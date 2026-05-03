@@ -109,10 +109,19 @@ window.QuestionEditorMCQ = (() => {
         const mcqToggle = item.querySelector('[data-mcq-render-toggle]');
 
         const rows = item.querySelectorAll('[data-answer-list] [data-answer-item]');
-        UTILS.toArray(rows).forEach(row => {
+        
+        if (rows.length < 2) {
+            throw new Error("Câu hỏi trắc nghiệm phải có ít nhất 2 đáp án.");
+        }
+
+        UTILS.toArray(rows).forEach((row, i) => {
             const selector = mcqToggle?.checked ? '[data-option-content]' : '[data-option-raw]';
             const val = UTILS.getMathValue(row.querySelector(selector));
             const ck = row.querySelector('[data-option-correct]')?.checked;
+
+            if (!val || !String(val).trim()) {
+                throw new Error(`Đáp án ${String.fromCharCode(65 + i)} chưa có nội dung.`);
+            }
 
             answers.push({
                 answerId: parseInt(row.getAttribute('data-answer-id')) || null,
@@ -124,6 +133,10 @@ window.QuestionEditorMCQ = (() => {
         });
 
         const corrects = answers.filter(a => a.isCorrect);
+        if (corrects.length === 0) {
+            throw new Error("Vui lòng chọn ít nhất 1 đáp án đúng.");
+        }
+
         if (corrects.length > 0) {
             const p = Math.floor(100 / corrects.length);
             corrects.forEach((a, i) => {

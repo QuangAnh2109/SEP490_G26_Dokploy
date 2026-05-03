@@ -6,6 +6,7 @@ using Backend.DTOs;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
+using Backend.Helpers;
 
 namespace Backend.Services.Implements;
 
@@ -58,56 +59,14 @@ public class SubmissionService(
         }
 
         // ── 4. Xử lý StudentAnswers ────────────────────────────────────
-        var existingAnswers = submission.StudentAnswers.ToList();
-        var incomingAnswers = request.StudentAnswers ?? [];
-
-        // Tập hợp QuestionAnswerId mới từ request
-        var incomingIds = new HashSet<int>(
-            incomingAnswers.Where(sa => sa.QuestionAnswerId.HasValue)
-                           .Select(sa => sa.QuestionAnswerId!.Value));
-
-        // Map QuestionAnswerId → dto cho tra cứu nhanh
-        var incomingMap = incomingAnswers
+        var incomingData = (request.StudentAnswers ?? [])
             .Where(sa => sa.QuestionAnswerId.HasValue)
-            .ToDictionary(sa => sa.QuestionAnswerId!.Value);
+            .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
 
-        // Map QuestionAnswerId → existing StudentAnswer
-        var existingMap = existingAnswers
-            .ToDictionary(sa => sa.QuestionAnswerId);
-
-        // 4a. Xóa những bản ghi cũ không còn trong request (chỉ áp dụng MCQ)
-        var toRemove = existingAnswers
-            .Where(sa => !incomingIds.Contains(sa.QuestionAnswerId))
-            .ToList();
-
-        // 4b. Thêm bản ghi mới chưa tồn tại
-        var toAdd = new List<StudentAnswer>();
-
-        // 4c. Update bản ghi đã tồn tại (FillInBlank: cập nhật Response)
-        foreach (var dto in incomingAnswers.Where(sa => sa.QuestionAnswerId.HasValue))
-        {
-            if (existingMap.TryGetValue(dto.QuestionAnswerId!.Value, out var existing))
-            {
-                // Đã tồn tại → update Response (chủ yếu cho FillInBlank)
-                existing.Response = dto.Response;
-            }
-            else
-            {
-                // Chưa tồn tại → thêm mới
-                toAdd.Add(new StudentAnswer
-                {
-                    SubmissionId = submission.SubmissionId,
-                    QuestionAnswerId = dto.QuestionAnswerId.Value,
-                    Response = dto.Response
-                });
-            }
-        }
-
-        if (toRemove.Count > 0)
-            submissionRepo.RemoveStudentAnswers(toRemove);
-
-        if (toAdd.Count > 0)
-            submissionRepo.AddStudentAnswers(toAdd);
+        StudentAnswerSyncHelper.SyncAnswers(
+            submission.StudentAnswers, 
+            incomingData, 
+            submission.SubmissionId);
 
         // ── 5. Cập nhật Submission ──────────────────────────────────────
         submission.Status = request.Submit == true ? 2 : 1;

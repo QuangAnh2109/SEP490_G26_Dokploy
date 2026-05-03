@@ -23,6 +23,95 @@ public static class AnalyticsHelper
         return false;
     }
 
+    /// <summary>
+    /// Chấm điểm bài làm (áp dụng chung cho cả Thi thật và Luyện tập).
+    /// Yêu cầu: submission phải được eager load Paper.Questions.QuestionAnswers và StudentAnswers.
+    /// Trả về điểm trên thang 10.
+    /// </summary>
+    public static (int CorrectCount, int TotalQuestions, decimal TotalPoints) GradeSubmission(Submission submission)
+    {
+        var paper = submission.Paper;
+        if (paper == null || paper.Questions == null) return (0, 0, 0);
+
+        var evaluatedQuestions = EvaluateSubmission(paper.Questions.DistinctBy(q => q.QuestionId), submission.StudentAnswers);
+        
+        int correctCount = evaluatedQuestions.Count(q => q.IsCorrect);
+        int totalQuestions = evaluatedQuestions.Count;
+
+        decimal totalPoints = totalQuestions > 0
+            ? Math.Round((decimal)correctCount / totalQuestions * 10, 3)
+            : 0;
+
+        return (correctCount, totalQuestions, totalPoints);
+    }
+
+    public record EvaluatedQuestion(
+        int QuestionId,
+        string QuestionContent,
+        string QuestionType,
+        int ChapterId,
+        string ChapterName,
+        int Difficulty,
+        bool IsCorrect,
+        List<EvaluatedOption> Options
+    );
+
+    public record EvaluatedOption(
+        int QuestionAnswerId,
+        string Content,
+        string? StudentResponse,
+        bool IsSelected,
+        bool? IsCorrect,
+        string? CorrectAnswer
+    );
+
+    public static List<EvaluatedQuestion> EvaluateSubmission(IEnumerable<Question> questions, IEnumerable<StudentAnswer> studentAnswers)
+    {
+        var result = new List<EvaluatedQuestion>();
+        
+        foreach (var question in questions)
+        {
+            bool questionCorrect = true;
+            var options = new List<EvaluatedOption>();
+
+            foreach (var qa in question.QuestionAnswers)
+            {
+                var sa = studentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
+                if (sa != null)
+                {
+                    if (!CheckIsCorrect(qa, sa))
+                        questionCorrect = false;
+                }
+                else if (qa.IsCorrect == true)
+                {
+                    questionCorrect = false;
+                }
+
+                options.Add(new EvaluatedOption(
+                    qa.QuestionAnswerId,
+                    qa.Content,
+                    sa?.Response,
+                    sa != null,
+                    qa.IsCorrect,
+                    qa.CorrectAnswer
+                ));
+            }
+
+            result.Add(new EvaluatedQuestion(
+                question.QuestionId,
+                question.QuestionContent,
+                question.QuestionType,
+                question.Chapter?.ChapterId ?? 0,
+                question.Chapter?.Name ?? "N/A",
+                question.Difficulty,
+                questionCorrect,
+                options
+            ));
+        }
+
+        return result;
+    }
+
     public static decimal GetMedian(List<decimal> sorted)
     {
         int count = sorted.Count;

@@ -45,27 +45,7 @@
         </section>
 
         <div class="row g-3">
-            <div class="col-12 col-xl-8" id="question-loading">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-
-            @* ── Khu vực câu hỏi ── *@
-            <div class="col-12 col-xl-8" id="question-area" hidden>
-                <div id="question-header" hidden>
-                    <div id="question-title"></div>
-                    <div class="mb-3">
-                        <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
-                    </div>
-                </div>
-                <ul id="question-block-mcq" hidden></ul>
-                <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
-                    <math-field hidden read-only id="question-block-fib-field"></math-field>
-                </div>
-            </div>
+            @await Html.PartialAsync("_QuestionArea")
 
             @* ── Sidebar ── *@
             <div class="col-12 col-xl-4">
@@ -82,66 +62,29 @@
                         <i class="fas fa-paper-plane me-1"></i> Nộp bài
                     </button>
                 </div>
-                <div id="inputTypeContainer" class="soft-card" hidden>
-                    <div class="summary-label text-center mb-2">Giới hạn nhập liệu</div>
-                    <table class="table table-bordered table-sm text-center mb-0">
-                        <thead class="table-light"><tr><th>Loại dữ liệu</th></tr></thead>
-                        <tbody id="inputTypeBody"></tbody>
-                    </table>
-                </div>
+                @await Html.PartialAsync("_InputLimitContainer")
             </div>
         </div>
     </div>
 </main>
 
-<template id="mcq-template">
-    <li>
-        <label>
-            <input type="checkbox" name="answer">
-            <math-span></math-span>
-        </label>
-    </li>
-</template>
-
-<template id="input-limit-btn-template">
-    <tr><td><button type="button" class="btn btn-outline-primary btn-sm w-100"></button></td></tr>
-</template>
-
-<template id="input-limit-text-template">
-    <tr><td class="align-middle"><span class="text-muted fw-bold"></span></td></tr>
-</template>
+@await Html.PartialAsync("_ExamTemplates")
 
 @section Scripts {
     <script defer src="https://unpkg.com/mathlive"></script>
+    <script src="~/js/exam_engine.js"></script>
     <script>
-        var regexPlaceholder = /\\?placeholder\[([^\]]+)\](?:\{\})?/;
         var practiceData = null;
-        var selectionHandler = null;
-        const fillInBlank = "FillInBlank";
-        const multipleChoice = "MultipleChoice";
-        var questionNumber = 1;
-        var studentAnswers = new Map();
+        var examEngine;
         var isResumed = false;
 
-        var questionHeader, questionLoading, questionArea, questionStem, questionTitle;
-        var questionMcq, questionBlockFib, questionBlockFibField;
-
         document.addEventListener('DOMContentLoaded', async () => {
-            questionHeader = document.getElementById('question-header');
-            questionLoading = document.getElementById('question-loading');
-            questionArea = document.getElementById('question-area');
-            questionStem = document.getElementById('question-stem');
-            questionTitle = document.getElementById('question-title');
-            questionMcq = document.getElementById('question-block-mcq');
-            questionBlockFib = document.getElementById('question-block-fib');
-            questionBlockFibField = document.getElementById('question-block-fib-field');
-
             await loadPracticeExam();
         });
 
         async function loadPracticeExam() {
-
             const submissionId = @submissionId;
+            let answersMap = new Map();
 
             // Thử resume trước (bài đang làm dở)
             try {
@@ -151,11 +94,11 @@
                 // Khôi phục câu trả lời đã lưu
                 if (practiceData.savedAnswers && practiceData.savedAnswers.length > 0) {
                     practiceData.savedAnswers.forEach(sa => {
-                        studentAnswers.set(String(sa.questionAnswerId), sa.response || '');
+                        answersMap.set(String(sa.questionAnswerId), sa.response || '');
                     });
                 }
 
-                initExam();
+                initExam(answersMap);
                 return;
             } catch (error) {
                 if (error.xhr && error.xhr.status === 401) {
@@ -170,214 +113,58 @@
             if (cached) {
                 practiceData = JSON.parse(cached);
                 sessionStorage.removeItem('practiceData_' + submissionId);
-                initExam();
+                initExam(answersMap);
                 return;
             }
 
             showToast('Không tìm thấy bài luyện tập. Vui lòng tạo mới.', 'error');
         }
 
-        function initExam() {
-            document.getElementById('questionProgress').textContent =
-                `0/${practiceData.questions.length}`;
-            buildQuestionNav(practiceData.questions.length);
-            goToQuestion(1);
-        }
+        function initExam(answersMap) {
+            document.getElementById('questionProgress').textContent = `0/${practiceData.questions.length}`;
+            
+            examEngine = new ExamEngine({
+                data: practiceData,
+                studentAnswers: answersMap,
+                onNavUpdated: function(qNum, questions, stdAnswers) {
+                    const validation = examEngine.validateAllAnswers();
+                    const invalidQNums = validation.invalidQNums || [];
 
-        function renderQuestion(question) {
-            if (selectionHandler) {
-                questionBlockFibField.removeEventListener("selection-change", selectionHandler);
-                selectionHandler = null;
-            }
+                    document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                        const questionNum = idx + 1;
+                        const question = questions[idx];
+                        const hasAnswer = question.answers.some(a => stdAnswers.has(String(a.questionAnswerId)));
 
-            questionHeader.hidden = true;
-            questionArea.hidden = true;
-            questionLoading.hidden = false;
-            questionBlockFib.hidden = true;
-            questionMcq.hidden = true;
-            questionBlockFibField.hidden = true;
-
-            if (question.questionType == fillInBlank) {
-                var questionContent = JSON.parse(question.questionContent);
-                questionStem.textContent = questionContent.stem;
-                questionTitle.textContent = "Câu " + questionNumber;
-                document.getElementById('question-block-fib-field').value = questionContent.frame;
-                questionBlockFib.hidden = false;
-                questionBlockFibField.hidden = false;
-
-                // Khôi phục đáp án FIB đã lưu
-                question.answers.forEach(answer => {
-                    const answerId = String(answer.questionAnswerId);
-                    if (studentAnswers.has(answerId)) {
-                        const placeholderMatch = answer.content.match(regexPlaceholder);
-                        if (placeholderMatch) {
-                            const promptId = placeholderMatch[1];
-                            questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                        btn.classList.remove('btn-primary', 'btn-success', 'btn-outline-primary', 'btn-danger');
+                        if (questionNum === qNum) {
+                            btn.classList.add('btn-primary');
+                        } else if (invalidQNums.includes(questionNum)) {
+                            btn.classList.add('btn-danger');
+                            btn.title = "Có lỗi định dạng ở câu này";
+                        } else if (hasAnswer) {
+                            btn.classList.add('btn-success');
+                            btn.removeAttribute('title');
+                        } else {
+                            btn.classList.add('btn-outline-primary');
+                            btn.removeAttribute('title');
                         }
-                    }
-                });
-
-                selectionHandler = () => {
-                    let placeholderId = [];
-                    for (const item of question.answers) {
-                        placeholderId.push(item.content.match(regexPlaceholder)?.[1]);
-                    }
-                    selectPlaceholder(questionBlockFibField, placeholderId);
-                };
-                questionBlockFibField.addEventListener("selection-change", selectionHandler);
-            }
-            else if (question.questionType == multipleChoice) {
-                questionStem.textContent = question.questionContent;
-                questionStem.render?.();
-                questionTitle.textContent = "Câu " + questionNumber;
-                questionMcq.hidden = false;
-
-                var template = document.getElementById("mcq-template");
-                questionMcq.innerHTML = "";
-
-                question.answers.forEach((answer) => {
-                    var newOption = template.content.cloneNode(true);
-                    var li = newOption.querySelector("li");
-                    var checkbox = li.querySelector("input");
-                    var answerId = String(answer.questionAnswerId);
-                    checkbox.value = answerId;
-
-                    if (studentAnswers.has(answerId)) checkbox.checked = true;
-
-                    checkbox.addEventListener('change', function () {
-                        if (this.checked) studentAnswers.set(answerId, '');
-                        else studentAnswers.delete(answerId);
                     });
-
-                    li.querySelector("math-span").textContent = answer.content;
-                    questionMcq.appendChild(newOption);
-                });
-            }
-
-            questionLoading.hidden = true;
-            questionHeader.hidden = false;
-            questionArea.hidden = false;
-        }
-
-        function buildQuestionNav(total) {
-            const nav = document.getElementById('questionNav');
-            nav.innerHTML = '';
-            for (let i = 1; i <= total; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'btn btn-outline-primary btn-sm m-1';
-                btn.textContent = i;
-                btn.style.minWidth = '40px';
-                btn.addEventListener('click', () => goToQuestion(i));
-                nav.appendChild(btn);
-            }
-        }
-
-        function goToQuestion(num) {
-            saveCurrentAnswers();
-            questionNumber = num;
-            renderQuestion(practiceData.questions[num - 1]);
-            updateNavHighlight();
-            updateProgress();
-        }
-
-        function updateNavHighlight() {
-            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
-                const qIdx = idx;
-                const question = practiceData.questions[qIdx];
-                const hasAnswer = question.answers.some(a => studentAnswers.has(String(a.questionAnswerId)));
-
-                btn.classList.remove('btn-primary', 'btn-success', 'btn-outline-primary');
-                if (idx + 1 === questionNumber) btn.classList.add('btn-primary');
-                else if (hasAnswer) btn.classList.add('btn-success');
-                else btn.classList.add('btn-outline-primary');
-            });
-        }
-
-        function updateProgress() {
-            let answered = 0;
-            practiceData.questions.forEach(q => {
-                if (q.answers.some(a => studentAnswers.has(String(a.questionAnswerId)))) answered++;
-            });
-            document.getElementById('questionProgress').textContent =
-                `${answered}/${practiceData.questions.length}`;
-        }
-
-        function saveCurrentAnswers() {
-            if (!practiceData) return;
-            const question = practiceData.questions[questionNumber - 1];
-            if (!question) return;
-
-            if (question.questionType === multipleChoice) {
-                const checkboxes = questionMcq.querySelectorAll('input[name="answer"]');
-                checkboxes.forEach(cb => {
-                    const answerId = String(cb.value);
-                    if (cb.checked) studentAnswers.set(answerId, '');
-                    else studentAnswers.delete(answerId);
-                });
-            }
-            else if (question.questionType === fillInBlank) {
-                const promptIds = questionBlockFibField.getPrompts();
-                promptIds.forEach(promptId => {
-                    const answer = question.answers.find(a => {
-                        const match = a.content.match(regexPlaceholder);
-                        return match && match[1] === promptId;
+                },
+                onProgressUpdated: function(questions, stdAnswers) {
+                    let answered = 0;
+                    questions.forEach(q => {
+                        if (q.answers.some(a => stdAnswers.has(String(a.questionAnswerId)))) answered++;
                     });
-                    if (answer) {
-                        const latex = questionBlockFibField.getPromptValue(promptId, 'latex');
-                        const answerId = String(answer.questionAnswerId);
-                        if (latex && latex.trim() !== '') studentAnswers.set(answerId, latex);
-                        else studentAnswers.delete(answerId);
+                    document.getElementById('questionProgress').textContent = `${answered}/${questions.length}`;
+                    
+                    // Tự động lưu nháp
+                    if (typeof submitPracticeDraft === 'function') {
+                        submitPracticeDraft();
                     }
-                });
-            }
-        }
-
-        function selectPlaceholder(mathField, placeholderId) {
-            const pos = mathField.position;
-            let isInsidePlaceholder = false;
-
-            for (const id of placeholderId) {
-                const range = mathField.getPromptRange(id);
-                if (range && pos >= range[0] && pos <= range[1]) {
-                    isInsidePlaceholder = true;
-                    const currentQuestion = practiceData.questions[questionNumber - 1];
-                    const answer = currentQuestion.answers.find(a => {
-                        const match = a.content.match(regexPlaceholder);
-                        return match && match[1] === id;
-                    });
-
-                    const container = document.getElementById('inputTypeContainer');
-                    const tbody = document.getElementById('inputTypeBody');
-                    const btnTemplate = document.getElementById('input-limit-btn-template');
-                    const textTemplate = document.getElementById('input-limit-text-template');
-
-                    if (container && tbody) {
-                        tbody.innerHTML = '';
-                        if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
-                            answer.inputTypes.forEach(it => {
-                                if (it.groupType === 'Sets') {
-                                    const newRow = textTemplate.content.cloneNode(true);
-                                    newRow.querySelector('span').textContent = 'Tập hợp: ' + it.name;
-                                    tbody.appendChild(newRow);
-                                } else {
-                                    const newRow = btnTemplate.content.cloneNode(true);
-                                    const btn = newRow.querySelector('button');
-                                    btn.textContent = it.name;
-                                    btn.onmousedown = e => e.preventDefault();
-                                    btn.onclick = () => { mathField.focus(); mathField.insert('\\text{' + it.name + '}'); };
-                                    tbody.appendChild(newRow);
-                                }
-                            });
-                            container.hidden = false;
-                        } else container.hidden = true;
-                    }
-                    break;
                 }
-            }
-            if (!isInsidePlaceholder) {
-                const container = document.getElementById('inputTypeContainer');
-                if (container) container.hidden = true;
-            }
+            });
+            
+            examEngine.init();
         }
 
         function confirmSubmit() {
@@ -385,19 +172,15 @@
         }
 
         async function submitPractice() {
-            saveCurrentAnswers();
+            if (examEngine) {
+                examEngine.saveCurrentAnswers();
+            }
 
             const btn = document.getElementById('btnSubmitPractice');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang nộp...';
 
-            const studentAnswerDtos = [];
-            studentAnswers.forEach((response, questionAnswerId) => {
-                studentAnswerDtos.push({
-                    questionAnswerId: parseInt(questionAnswerId),
-                    response: response === '' ? null : response
-                });
-            });
+            const studentAnswerDtos = examEngine ? examEngine.getStudentAnswerDtos() : [];
 
             try {
                 const result = await apiClient.post('/api/practice/submit', {
@@ -415,6 +198,22 @@
                 showToast(error.message || 'Lỗi nộp bài', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Nộp bài';
+            }
+        }
+
+        async function submitPracticeDraft() {
+            if (!examEngine) return;
+            examEngine.saveCurrentAnswers();
+
+            const studentAnswerDtos = examEngine.getStudentAnswerDtos();
+
+            try {
+                await apiClient.post('/api/practice/save', {
+                    submissionId: practiceData.submissionId,
+                    studentAnswers: studentAnswerDtos
+                });
+            } catch (error) {
+                console.error('Lỗi tự động lưu nháp', error);
             }
         }
     </script>

@@ -6,6 +6,7 @@ using Backend.Common.Models;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
+using Backend.Helpers;
 
 namespace Backend.Services.Implements
 {
@@ -241,72 +242,30 @@ namespace Backend.Services.Implements
                     return PracticeExamErrors.InvalidAnswer;
             }
 
-            // Xử lý StudentAnswers: xóa cũ + thêm mới
-            var existingAnswers = submission.StudentAnswers.ToList();
-            var incomingMap = request.StudentAnswers.ToDictionary(a => a.QuestionAnswerId);
+            // Xử lý StudentAnswers: đồng bộ cũ mới
+            var incomingData = request.StudentAnswers!
+                .Where(sa => sa.QuestionAnswerId.HasValue)
+                .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
 
-            // Update existing hoặc thêm mới
-            foreach (var dto in request.StudentAnswers!)
-            {
-                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId!.Value);
-                if (existing != null)
-                {
-                    existing.Response = dto.Response;
-                }
-                else
-                {
-                    submission.StudentAnswers.Add(new StudentAnswer
-                    {
-                        SubmissionId = submission.SubmissionId,
-                        QuestionAnswerId = dto.QuestionAnswerId!.Value,
-                        Response = dto.Response
-                    });
-                }
-            }
-
-            // Xóa answers không còn trong request
-            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId!.Value).ToHashSet();
-            var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
-            foreach (var sa in toRemove)
-                submission.StudentAnswers.Remove(sa);
-
-            // Tính điểm
-            int correctCount = 0;
-            int totalQuestions = 0;
-            foreach (var question in paper.Questions.DistinctBy(q => q.QuestionId))
-            {
-                totalQuestions++;
-                bool questionCorrect = true;
-                foreach (var qa in question.QuestionAnswers)
-                {
-                    var sa = submission.StudentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
-                    if (sa != null)
-                    {
-                        if (!AnalyticsHelper.CheckIsCorrect(qa, sa))
-                            questionCorrect = false;
-                    }
-                    else if (qa.IsCorrect == true)
-                        questionCorrect = false;
-                }
-                if (questionCorrect) correctCount++;
-            }
+            StudentAnswerSyncHelper.SyncAnswers(
+                submission.StudentAnswers, 
+                incomingData, 
+                submission.SubmissionId);
 
             // Cập nhât submission
             submission.Status = SubmissionStatus.Submitted;
             submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
-            submission.TotalPoints = totalQuestions > 0
-                ? Math.Round((decimal)correctCount / totalQuestions * 10, 3)
-                : 0;
 
             await _repo.SaveChangesAsync();
+
+            var totalQuestions = paper.Questions.DistinctBy(q => q.QuestionId).Count();
 
             return new SubmitPracticeExamResponse
             {
                 SubmissionId = submission.SubmissionId,
                 TotalQuestions = totalQuestions,
-                CorrectCount = correctCount,
-                AccuracyRate = totalQuestions > 0
-                    ? Math.Round((double)correctCount / totalQuestions * 100, 1) : 0,
+                CorrectCount = 0,
+                AccuracyRate = 0,
                 SubmittedAtUtc = submission.UpdatedAtUtc
             };
         }
@@ -340,32 +299,15 @@ namespace Backend.Services.Implements
                     return PracticeExamErrors.InvalidAnswer;
             }
 
-            // Xử lý StudentAnswers: update existing hoặc thêm mới
-            var existingAnswers = submission.StudentAnswers.ToList();
+            // Xử lý StudentAnswers: đồng bộ cũ mới
+            var incomingData = request.StudentAnswers!
+                .Where(sa => sa.QuestionAnswerId.HasValue)
+                .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
 
-            foreach (var dto in request.StudentAnswers!)
-            {
-                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId!.Value);
-                if (existing != null)
-                {
-                    existing.Response = dto.Response;
-                }
-                else
-                {
-                    submission.StudentAnswers.Add(new StudentAnswer
-                    {
-                        SubmissionId = submission.SubmissionId,
-                        QuestionAnswerId = dto.QuestionAnswerId!.Value,
-                        Response = dto.Response
-                    });
-                }
-            }
-
-            // Xóa answers không còn trong request
-            var incomingIds = request.StudentAnswers.Select(a => a.QuestionAnswerId!.Value).ToHashSet();
-            var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
-            foreach (var sa in toRemove)
-                submission.StudentAnswers.Remove(sa);
+            StudentAnswerSyncHelper.SyncAnswers(
+                submission.StudentAnswers, 
+                incomingData, 
+                submission.SubmissionId);
 
             // Giữ nguyên Status = InProgress, chỉ cập nhật thời gian
             submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
@@ -426,48 +368,38 @@ namespace Backend.Services.Implements
             var paper = submission.Paper;
             var questions = paper?.Questions?.DistinctBy(q => q.QuestionId).ToList() ?? new();
 
-            int questionOrder = 0, correctCount = 0, wrongCount = 0;
+            int questionOrder = 0;
             var answerReview = new List<PracticeAnswerReviewDto>();
             var chapterStats = new List<(string ChapterName, int ChapterId, bool IsCorrect)>();
 
-            foreach (var question in questions)
+            var evaluatedQuestions = AnalyticsHelper.EvaluateSubmission(questions, submission.StudentAnswers);
+
+            int correctCount = evaluatedQuestions.Count(q => q.IsCorrect);
+            int wrongCount = evaluatedQuestions.Count(q => !q.IsCorrect);
+
+            foreach (var eq in evaluatedQuestions)
             {
                 questionOrder++;
-                bool questionCorrect = true;
-
-                var options = new List<PracticeOptionReviewDto>();
-                foreach (var qa in question.QuestionAnswers)
-                {
-                    var sa = submission.StudentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
-                    bool optionCorrect = sa != null && AnalyticsHelper.CheckIsCorrect(qa, sa);
-
-                    if (sa != null && !optionCorrect) questionCorrect = false;
-                    if (sa == null && qa.IsCorrect == true) questionCorrect = false;
-
-                    options.Add(new PracticeOptionReviewDto
-                    {
-                        QuestionAnswerId = qa.QuestionAnswerId,
-                        Content = qa.Content,
-                        StudentResponse = sa?.Response,
-                        IsSelected = sa != null,
-                        IsCorrect = qa.IsCorrect,
-                        CorrectAnswer = qa.CorrectAnswer
-                    });
-                }
-
-                if (questionCorrect) correctCount++; else wrongCount++;
-                chapterStats.Add((question.Chapter?.Name ?? "N/A", question.ChapterId, questionCorrect));
+                chapterStats.Add((eq.ChapterName, eq.ChapterId, eq.IsCorrect));
 
                 answerReview.Add(new PracticeAnswerReviewDto
                 {
-                    QuestionId = question.QuestionId,
+                    QuestionId = eq.QuestionId,
                     QuestionOrder = questionOrder,
-                    QuestionContent = question.QuestionContent,
-                    QuestionType = question.QuestionType,
-                    ChapterName = question.Chapter?.Name ?? "N/A",
-                    Difficulty = question.Difficulty,
-                    IsCorrect = questionCorrect,
-                    Options = options
+                    QuestionContent = eq.QuestionContent,
+                    QuestionType = eq.QuestionType,
+                    ChapterName = eq.ChapterName,
+                    Difficulty = eq.Difficulty,
+                    IsCorrect = eq.IsCorrect,
+                    Options = eq.Options.Select(opt => new PracticeOptionReviewDto
+                    {
+                        QuestionAnswerId = opt.QuestionAnswerId,
+                        Content = opt.Content,
+                        StudentResponse = opt.StudentResponse,
+                        IsSelected = opt.IsSelected,
+                        IsCorrect = opt.IsCorrect,
+                        CorrectAnswer = opt.CorrectAnswer
+                    }).ToList()
                 });
             }
 
