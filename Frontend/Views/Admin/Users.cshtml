@@ -13,7 +13,9 @@
     </div>
 </div>
 
-<div class="card">
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<div id="page-content" class="card is-hidden">
     <div class="filter-bar">
         <div class="form-row">
             <label>Tìm kiếm</label>
@@ -35,9 +37,6 @@
                 <option value="0">Đã khóa</option>
             </select>
         </div>
-        <div class="form-row" style="flex-direction:row;align-items:flex-end;">
-            <button id="btnFilter" class="btn btn-secondary" style="width:100%">Áp dụng</button>
-        </div>
     </div>
 
     <div class="table-wrap">
@@ -50,15 +49,11 @@
                     <th>Kích hoạt</th>
                 </tr>
             </thead>
-            <tbody id="userTableBody">
-                <!-- Data populated by JS -->
-            </tbody>
+            <tbody id="userTableBody"></tbody>
         </table>
     </div>
 
-    <div id="pagerWrapper">
-        @await Component.InvokeAsync("Pager", new { current = 1, total = 0, pageSize = 20 })
-    </div>
+    <div id="pager-users"></div>
 </div>
 
 @section Scripts {

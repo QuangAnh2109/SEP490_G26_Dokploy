@@ -5,22 +5,15 @@
     </div>
 </div>
 
-<div class="detail-grid">
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<div id="page-content" class="detail-grid is-hidden">
     <div class="main-col">
         <div class="card" style="margin-bottom: var(--s-5);">
-            <div class="detail-banner" id="userBanner">
-                <!-- Populated by JS -->
-                <div class="avatar-lg">?</div>
-                <div class="ident">
-                    <div class="name">Đang tải...</div>
-                    <div class="email">...</div>
-                </div>
-            </div>
-            
+            <div class="detail-banner" id="userBanner"></div>
+
             <div class="card-section">
-                <ul class="kv-list" id="userKvList">
-                    <!-- Populated by JS -->
-                </ul>
+                <ul class="kv-list" id="userKvList"></ul>
             </div>
         </div>
     </div>

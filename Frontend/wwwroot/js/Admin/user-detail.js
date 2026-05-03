@@ -5,6 +5,18 @@ $(function () {
         return;
     }
 
+    const pageLoading = document.getElementById('page-loading');
+    const pageContent = document.getElementById('page-content');
+    let firstLoad = true;
+
+    function revealContent() {
+        if (firstLoad) {
+            pageLoading.classList.add('is-hidden');
+            pageContent.classList.remove('is-hidden');
+            firstLoad = false;
+        }
+    }
+
     function renderRole(roleId) {
         if (roleId === 1) return 'Giáo viên';
         if (roleId === 2) return 'Học sinh';
@@ -15,6 +27,7 @@ $(function () {
     function loadUserDetail() {
         apiClient.get('/api/admin/users/' + userId)
             .then(function (user) {
+                revealContent();
                 const initials = user.fullName ? user.fullName.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase();
                 
                 let actionsHtml = '';
@@ -62,6 +75,7 @@ $(function () {
                 $('#userKvList').html(kvHtml);
             })
             .catch(function (err) {
+                revealContent();
                 AdminUI.showError(err, 'Lỗi khi tải chi tiết.');
             });
     }

@@ -1,28 +1,49 @@
 $(function () {
     const tbody = document.getElementById('tbody-semesters');
+    const pagerEl = document.getElementById('pager-semesters');
+    const pageLoading = document.getElementById('page-loading');
+    const pageContent = document.getElementById('page-content');
+    const PAGE_SIZE = 10;
+
     let dataList = [];
+    let currentPage = 1;
     let closeTargetId = 0;
+    let firstLoad = true;
 
     function renderStatusPill(status) {
         if (status === 1) return '<span class="pill pill-success"><span class="dot"></span>Đang hoạt động</span>';
         return '<span class="pill pill-soft"><span class="dot"></span>Đã đóng</span>';
     }
 
-    function load() {
+    function load(page) {
+        currentPage = Math.max(1, page || 1);
         const q = $('#filter-q').val().trim();
         const status = $('#filter-status').val();
-        
+
         const params = new URLSearchParams();
         if (q) params.set('q', q);
         if (status) params.set('status', status);
+        params.set('page', currentPage);
+        params.set('pageSize', PAGE_SIZE);
 
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Đang tải...</td></tr>';
+        if (!firstLoad) {
+            tbody.innerHTML = '';
+        }
 
         apiClient.get('/api/admin/curriculum/semesters?' + params.toString())
-            .then(items => {
+            .then(res => {
+                const items = res.items || [];
                 dataList = items;
+
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+
                 if (items.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="title">Không có dữ liệu</div></td></tr>';
+                    pagerEl.innerHTML = '';
                     return;
                 }
 
@@ -49,9 +70,22 @@ $(function () {
                             ` : ''}
                         </td>
                     </tr>`).join('');
+
+                AdminPager.render(pagerEl, {
+                    current: res.page || currentPage,
+                    pageSize: res.pageSize || PAGE_SIZE,
+                    totalItems: res.totalItems || 0,
+                    onChange: (target) => load(target)
+                });
             })
             .catch(err => {
-                tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--danger)">Lỗi: ${escapeHtml(err.message)}</td></tr>`;
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--danger)">Lỗi: ${escapeHtml(err.message || 'Không tải được dữ liệu')}</td></tr>`;
+                pagerEl.innerHTML = '';
             });
     }
 
@@ -73,7 +107,7 @@ $(function () {
         if (!data.name.trim()) { $(form.name).siblings('.help-error').text('Vui lòng nhập tên kỳ học.'); hasErr = true; }
         if (!data.startDate) { $(form.startDate).siblings('.help-error').text('Bắt buộc.'); hasErr = true; }
         if (!data.endDate) { $(form.endDate).siblings('.help-error').text('Bắt buộc.'); hasErr = true; }
-        
+
         if (data.startDate && data.endDate && data.endDate <= data.startDate) {
             $(form.endDate).siblings('.help-error').text('Ngày kết thúc phải sau ngày bắt đầu.');
             hasErr = true;
@@ -82,10 +116,10 @@ $(function () {
         if (hasErr) return;
 
         apiClient.post('/api/admin/curriculum/semesters', data)
-            .then(res => {
+            .then(() => {
                 closeModal('modal-stage-create');
                 AdminUI.showNotice('success', 'Thành công', 'Đã tạo kỳ học.');
-                load();
+                load(1);
             })
             .catch(err => {
                 const msg = err.code ? AdminUI.translateError(err.code) : err.message;
@@ -108,14 +142,14 @@ $(function () {
             const form = document.getElementById('form-edit');
             form.reset();
             $(form).find('.help-error').text('');
-            
+
             form.id.value = item.semesterId;
             form.concurrencyStamp.value = item.concurrencyStamp;
             form.code.value = item.code;
             form.name.value = item.name;
             form.startDate.value = item.startDate;
             form.endDate.value = item.endDate;
-            
+
             openModal('modal-stage-edit');
         } else if (action === 'close') {
             closeTargetId = id;
@@ -135,7 +169,7 @@ $(function () {
         if (!data.name.trim()) { $(form.name).siblings('.help-error').text('Vui lòng nhập tên kỳ học.'); hasErr = true; }
         if (!data.startDate) { $(form.startDate).siblings('.help-error').text('Bắt buộc.'); hasErr = true; }
         if (!data.endDate) { $(form.endDate).siblings('.help-error').text('Bắt buộc.'); hasErr = true; }
-        
+
         if (data.startDate && data.endDate && data.endDate <= data.startDate) {
             $(form.endDate).siblings('.help-error').text('Ngày kết thúc phải sau ngày bắt đầu.');
             hasErr = true;
@@ -151,10 +185,10 @@ $(function () {
         };
 
         apiClient.put(`/api/admin/curriculum/semesters/${data.id}`, payload)
-            .then(res => {
+            .then(() => {
                 closeModal('modal-stage-edit');
                 AdminUI.showNotice('success', 'Thành công', 'Đã lưu thay đổi.');
-                load();
+                load(currentPage);
             })
             .catch(err => {
                 const msg = err.code ? AdminUI.translateError(err.code) : err.message;
@@ -165,12 +199,12 @@ $(function () {
     // Close Confirmation
     $('#btn-confirm-close').on('click', () => {
         if (!closeTargetId) return;
-        
+
         apiClient.patch(`/api/admin/curriculum/semesters/${closeTargetId}/close`, null)
-            .then(res => {
+            .then(() => {
                 closeModal('modal-stage-close');
                 AdminUI.showNotice('success', 'Thành công', 'Đã đóng kỳ học.');
-                load();
+                load(currentPage);
             })
             .catch(err => {
                 const msg = err.code ? AdminUI.translateError(err.code) : err.message;
@@ -178,18 +212,18 @@ $(function () {
             });
     });
 
-    // Filters
+    // Filters — search/filter luôn reset về trang 1
     let timeout;
     $('#filter-q').on('input', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(load, 300);
+        timeout = setTimeout(() => load(1), 300);
     });
-    $('#filter-status').on('change', load);
+    $('#filter-status').on('change', () => load(1));
 
     // Initial load
     if (window.userReady) {
-        window.userReady.then(() => load());
+        window.userReady.then(() => load(1));
     } else {
-        load();
+        load(1);
     }
 });

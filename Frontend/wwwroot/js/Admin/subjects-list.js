@@ -1,28 +1,49 @@
 $(function () {
     const tbody = document.getElementById('tbody-subjects');
+    const pagerEl = document.getElementById('pager-subjects');
+    const pageLoading = document.getElementById('page-loading');
+    const pageContent = document.getElementById('page-content');
+    const PAGE_SIZE = 10;
+
     let dataList = [];
+    let currentPage = 1;
     let closeTargetId = 0;
+    let firstLoad = true;
 
     function renderStatusPill(status) {
         if (status === 1) return '<span class="pill pill-success"><span class="dot"></span>Đang hoạt động</span>';
         return '<span class="pill pill-soft"><span class="dot"></span>Đã đóng</span>';
     }
 
-    function load() {
+    function load(page) {
+        currentPage = Math.max(1, page || 1);
         const q = $('#filter-q').val().trim();
         const status = $('#filter-status').val();
-        
+
         const params = new URLSearchParams();
         if (q) params.set('q', q);
         if (status) params.set('status', status);
+        params.set('page', currentPage);
+        params.set('pageSize', PAGE_SIZE);
 
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Đang tải...</td></tr>';
+        if (!firstLoad) {
+            tbody.innerHTML = '';
+        }
 
         apiClient.get('/api/admin/curriculum/subjects?' + params.toString())
-            .then(items => {
+            .then(res => {
+                const items = res.items || [];
                 dataList = items;
+
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+
                 if (items.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="title">Không có dữ liệu</div></td></tr>';
+                    pagerEl.innerHTML = '';
                     return;
                 }
 
@@ -48,9 +69,22 @@ $(function () {
                             ` : ''}
                         </td>
                     </tr>`).join('');
+
+                AdminPager.render(pagerEl, {
+                    current: res.page || currentPage,
+                    pageSize: res.pageSize || PAGE_SIZE,
+                    totalItems: res.totalItems || 0,
+                    onChange: (target) => load(target)
+                });
             })
             .catch(err => {
-                tbody.innerHTML = `<tr><td colspan="6" class="empty-state" style="color:var(--danger)">Lỗi: ${escapeHtml(err.message)}</td></tr>`;
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state" style="color:var(--danger)">Lỗi: ${escapeHtml(err.message || 'Không tải được dữ liệu')}</td></tr>`;
+                pagerEl.innerHTML = '';
             });
     }
 
@@ -69,14 +103,14 @@ $(function () {
         let hasErr = false;
 
         const codeVal = data.code.trim().toUpperCase();
-        if (!codeVal) { 
-            $(form.code).siblings('.help-error').text('Vui lòng nhập mã môn học.'); 
-            hasErr = true; 
+        if (!codeVal) {
+            $(form.code).siblings('.help-error').text('Vui lòng nhập mã môn học.');
+            hasErr = true;
         } else if (!/^[A-Z0-9]+$/.test(codeVal)) {
-            $(form.code).siblings('.help-error').text('Mã môn học chỉ gồm chữ cái và số, không khoảng trắng.'); 
+            $(form.code).siblings('.help-error').text('Mã môn học chỉ gồm chữ cái và số, không khoảng trắng.');
             hasErr = true;
         } else if (codeVal.length > 20) {
-            $(form.code).siblings('.help-error').text('Tối đa 20 ký tự.'); 
+            $(form.code).siblings('.help-error').text('Tối đa 20 ký tự.');
             hasErr = true;
         }
 
@@ -84,13 +118,13 @@ $(function () {
 
         if (hasErr) return;
 
-        data.code = codeVal; // uppercase code
+        data.code = codeVal;
 
         apiClient.post('/api/admin/curriculum/subjects', data)
-            .then(res => {
+            .then(() => {
                 closeModal('modal-stage-create');
                 AdminUI.showNotice('success', 'Thành công', 'Đã tạo môn học mới.');
-                load();
+                load(1);
             })
             .catch(err => {
                 AdminUI.showError(err);
@@ -101,52 +135,51 @@ $(function () {
     tbody.addEventListener('click', (e) => {
         const tr = e.target.closest('tr');
         if (!tr) return;
-        
+
         const id = parseInt(tr.dataset.id);
         const btn = e.target.closest('button');
-        
+
         if (btn && btn.dataset.action === 'close') {
-            e.stopPropagation(); // prevent row click navigation
+            e.stopPropagation();
             const item = dataList.find(x => x.subjectId === id);
             if (!item) return;
-            
+
             closeTargetId = id;
             document.getElementById('close-name').textContent = item.name;
             openModal('modal-stage-close');
             return;
         }
 
-        // Navigate to detail
         window.location.href = '/Admin/SubjectDetail/' + id;
     });
 
     // Close Confirmation
     $('#btn-confirm-close').on('click', () => {
         if (!closeTargetId) return;
-        
+
         apiClient.patch(`/api/admin/curriculum/subjects/${closeTargetId}/close`, null)
-            .then(res => {
+            .then(() => {
                 closeModal('modal-stage-close');
                 AdminUI.showNotice('success', 'Thành công', 'Đã đóng môn học.');
-                load();
+                load(currentPage);
             })
             .catch(err => {
                 AdminUI.showError(err);
             });
     });
 
-    // Filters
+    // Filters — search/filter luôn reset về trang 1
     let timeout;
     $('#filter-q').on('input', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(load, 300);
+        timeout = setTimeout(() => load(1), 300);
     });
-    $('#filter-status').on('change', load);
+    $('#filter-status').on('change', () => load(1));
 
     // Initial load
     if (window.userReady) {
-        window.userReady.then(() => load());
+        window.userReady.then(() => load(1));
     } else {
-        load();
+        load(1);
     }
 });

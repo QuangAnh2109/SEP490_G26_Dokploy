@@ -1,10 +1,13 @@
 $(function () {
     const SUBJECT_ID = parseInt(document.querySelector('[data-subject-id]').dataset.subjectId, 10);
     const listEl = document.getElementById('chapter-list');
-    
+    const pageLoading = document.getElementById('page-loading');
+    const pageContent = document.getElementById('page-content');
+
     let subjectDetail = null;
     let deleteTargetId = 0;
     let sortableInstance = null;
+    let firstLoad = true;
 
     function renderStatus(status) {
         if (status === 1) return '<span class="pill pill-success"><span class="dot"></span>Đang hoạt động</span>';
@@ -21,7 +24,13 @@ $(function () {
         apiClient.get('/api/admin/curriculum/subjects/' + SUBJECT_ID)
             .then(data => {
                 subjectDetail = data;
-                
+
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+
                 // Render subject header
                 document.getElementById('subject-name').textContent = data.name;
                 document.getElementById('subject-code').textContent = data.code;
@@ -42,6 +51,7 @@ $(function () {
                     $('#btn-close-subject').hide();
                     $('#banner-subject-closed').removeClass('is-hidden');
                     $('#btn-create-chapter').hide();
+                    $('#btn-save-order').hide();
                     listEl.classList.add('chapter-list-locked');
                     if (sortableInstance) {
                         sortableInstance.destroy();
@@ -52,6 +62,7 @@ $(function () {
                     $('#btn-close-subject').show();
                     $('#banner-subject-closed').addClass('is-hidden');
                     $('#btn-create-chapter').show();
+                    $('#btn-save-order').show();
                     listEl.classList.remove('chapter-list-locked');
                 }
 
@@ -104,6 +115,11 @@ $(function () {
                 }
             })
             .catch(err => {
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
                 if (err.code === 'SUBJECT_NOT_FOUND') {
                     AdminUI.showNotice('error', 'Lỗi', 'Không tìm thấy môn học.');
                     setTimeout(() => window.location.href = '/Admin/Subjects', 1500);

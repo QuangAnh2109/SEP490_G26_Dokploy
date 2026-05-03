@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Backend.DTOs.Curriculum;
 using Backend.DTOs.Curriculum.Chapter;
 using Backend.DTOs.Curriculum.Subject;
 using Backend.Models;
@@ -18,27 +20,30 @@ public class SubjectRepository : ISubjectRepository
         _context = context;
     }
 
-    public async Task<List<SubjectListItem>> ListAsync(int? status, string? q)
+    public async Task<(List<SubjectListItem> Items, int Total)> ListAsync(CurriculumListQuery query)
     {
-        var query = _context.Subjects
-            .Include(s => s.Chapters)
-            .Include(s => s.Classes)
-            .AsNoTracking()
-            .AsQueryable();
+        var q = _context.Subjects.AsNoTracking().AsQueryable();
 
-        if (status.HasValue)
+        if (query.Status.HasValue)
         {
-            query = query.Where(s => s.Status == status.Value);
+            q = q.Where(s => s.Status == query.Status.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(q))
+        if (!string.IsNullOrWhiteSpace(query.Q))
         {
-            var lowerQ = q.ToLower();
-            query = query.Where(s => s.Code != null && s.Code.ToLower().Contains(lowerQ) || s.Name.ToLower().Contains(lowerQ));
+            var lowerQ = query.Q.ToLower();
+            q = q.Where(s => (s.Code != null && s.Code.ToLower().Contains(lowerQ)) || s.Name.ToLower().Contains(lowerQ));
         }
 
-        return await query
+        var total = await q.CountAsync();
+
+        var page = Math.Max(1, query.Page);
+        var size = Math.Clamp(query.PageSize, 1, 100);
+
+        var items = await q
             .OrderBy(s => s.Code)
+            .Skip((page - 1) * size)
+            .Take(size)
             .Select(s => new SubjectListItem
             {
                 SubjectId = s.SubjectId,
@@ -51,6 +56,8 @@ public class SubjectRepository : ISubjectRepository
                 ActiveClassCount = s.Classes.Count(c => c.Status == 1)
             })
             .ToListAsync();
+
+        return (items, total);
     }
 
     public async Task<SubjectDetail?> GetDetailAsync(int subjectId)
@@ -86,9 +93,7 @@ public class SubjectRepository : ISubjectRepository
                         Description = c.Description,
                         DisplayOrder = c.DisplayOrder,
                         Status = c.Status,
-                        // QuestionCount could be complex, assuming it is nav property or we join?
-                        // Chapter doesn't have Questions navigation directly if we check Chapter model. Wait, let's leave it 0 if not mapped.
-                        QuestionCount = 0, 
+                        QuestionCount = 0,
                         UpdatedByName = c.UpdatedByUser.Email,
                         UpdatedAtUtc = c.UpdatedAtUtc,
                         ConcurrencyStamp = System.Convert.ToBase64String(c.ConcurrencyStamp)

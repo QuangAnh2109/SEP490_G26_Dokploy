@@ -1,6 +1,8 @@
 using Backend.Common.Errors;
 using Backend.Common.Models;
 using Backend.Constants;
+using Backend.DTOs;
+using Backend.DTOs.Curriculum;
 using Backend.DTOs.Curriculum.Semester;
 using Backend.Jobs;
 using Backend.Models;
@@ -35,10 +37,10 @@ public class SemesterService : ISemesterService
         _timeProvider = timeProvider;
     }
 
-    public async Task<List<SemesterListItem>> ListAsync(int? status, string? q)
+    public async Task<Result<PagedResultDto<SemesterListItem>>> ListAsync(CurriculumListQuery query)
     {
-        var semesters = await _semesterRepo.GetAllAsync(status, q);
-        return semesters.Select(s => new SemesterListItem
+        var (semesters, total) = await _semesterRepo.GetAllAsync(query);
+        var items = semesters.Select(s => new SemesterListItem
         {
             SemesterId = s.SemesterId,
             Code = s.Code,
@@ -51,6 +53,10 @@ public class SemesterService : ISemesterService
             ActiveExamCount = s.Classes.SelectMany(c => c.Exams).Count(e => e.Status == ExamStatus.Published || e.Status == ExamStatus.InProgress),
             ConcurrencyStamp = Convert.ToBase64String(s.ConcurrencyStamp)
         }).ToList();
+
+        var page = Math.Max(1, query.Page);
+        var size = Math.Clamp(query.PageSize, 1, 100);
+        return new PagedResultDto<SemesterListItem>(page, size, total, items);
     }
 
     public async Task<Result<SemesterDetail>> GetByIdAsync(int id)

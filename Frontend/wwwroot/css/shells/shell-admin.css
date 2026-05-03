@@ -220,7 +220,7 @@ button { font-family: inherit; }
 .form-row .help.help-error { color: var(--danger); }
 .form-row + .form-row { margin-top: var(--s-4); }
 .card.card-narrow { max-width: 600px; }
-.is-hidden { display: none; }
+.is-hidden { display: none !important; }
 .uppercase { text-transform: uppercase; }
 .form-actions {
   display: flex; gap: var(--s-2); justify-content: flex-end;
@@ -311,6 +311,24 @@ button { font-family: inherit; }
 
 .empty-state { padding: var(--s-12); text-align: center; color: var(--ink-500); }
 .empty-state .title { font-weight: 600; color: var(--ink-700); margin-bottom: var(--s-1); }
+
+/* ============================================================================
+ * Page-level loading spinner — shown trước khi có dữ liệu, ẩn nội dung phía sau
+ * để tránh flicker. Dùng class .page-loading ở wrapper full-width.
+ * ========================================================================== */
+.page-loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-12);
+  min-height: 240px;
+}
+.page-loading .spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--ink-100);
+  border-top-color: var(--navy-700);
+  border-radius: 50%;
+  animation: admin-spin .8s linear infinite;
+}
+@keyframes admin-spin { to { transform: rotate(360deg); } }
 
 /* ============================================================================
  * Status pill (with leading dot)

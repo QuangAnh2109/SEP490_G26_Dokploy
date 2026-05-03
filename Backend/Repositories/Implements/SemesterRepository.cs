@@ -1,6 +1,8 @@
+using Backend.DTOs.Curriculum;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,25 +18,37 @@ public class SemesterRepository : ISemesterRepository
         _context = context;
     }
 
-    public async Task<List<Semester>> GetAllAsync(int? status, string? q)
+    public async Task<(List<Semester> Items, int Total)> GetAllAsync(CurriculumListQuery query)
     {
-        var query = _context.Semesters
+        var q = _context.Semesters.AsQueryable();
+
+        if (query.Status.HasValue)
+        {
+            q = q.Where(s => s.Status == query.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            var search = query.Q.Trim().ToLower();
+            q = q.Where(s => s.Code.ToLower().Contains(search) || s.Name.ToLower().Contains(search));
+        }
+
+        var total = await q.CountAsync();
+
+        var page = Math.Max(1, query.Page);
+        var size = Math.Clamp(query.PageSize, 1, 100);
+
+        var items = await q
             .Include(s => s.Classes)
                 .ThenInclude(c => c.Exams)
-            .AsQueryable();
+            .OrderByDescending(s => s.StartDate)
+            .ThenByDescending(s => s.SemesterId)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .AsSplitQuery()
+            .ToListAsync();
 
-        if (status.HasValue)
-        {
-            query = query.Where(s => s.Status == status.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(q))
-        {
-            var search = q.Trim().ToLower();
-            query = query.Where(s => s.Code.ToLower().Contains(search) || s.Name.ToLower().Contains(search));
-        }
-
-        return await query.OrderByDescending(s => s.StartDate).ThenByDescending(s => s.SemesterId).ToListAsync();
+        return (items, total);
     }
 
     public async Task<Semester?> GetByIdAsync(int id)

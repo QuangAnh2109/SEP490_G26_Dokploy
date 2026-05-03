@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Backend.Common.Models;
 using Backend.Common.Errors;
 using Backend.Constants;
+using Backend.DTOs;
+using Backend.DTOs.Curriculum;
 using Backend.DTOs.Curriculum.Subject;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
@@ -24,10 +26,12 @@ public class SubjectService : ISubjectService
         _timeProvider = timeProvider;
     }
 
-    public async Task<Result<List<SubjectListItem>>> ListAsync(int? status, string? q)
+    public async Task<Result<PagedResultDto<SubjectListItem>>> ListAsync(CurriculumListQuery query)
     {
-        var list = await _repo.ListAsync(status, q);
-        return Result<List<SubjectListItem>>.Success(list);
+        var (items, total) = await _repo.ListAsync(query);
+        var page = Math.Max(1, query.Page);
+        var size = Math.Clamp(query.PageSize, 1, 100);
+        return new PagedResultDto<SubjectListItem>(page, size, total, items);
     }
 
     public async Task<Result<SubjectDetail>> GetAsync(int id)

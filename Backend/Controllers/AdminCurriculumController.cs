@@ -1,5 +1,6 @@
 using Backend.Common;
 using Backend.Constants;
+using Backend.DTOs.Curriculum;
 using Backend.DTOs.Curriculum.Chapter;
 using Backend.DTOs.Curriculum.Semester;
 using Backend.DTOs.Curriculum.Subject;
@@ -35,10 +36,10 @@ public class AdminCurriculumController : ControllerBase
 
     [HttpGet("semesters")]
     [Authorize(Roles = RoleIds.Admin)]
-    public async Task<ActionResult<List<SemesterListItem>>> ListSemestersAsync([FromQuery] int? status, [FromQuery] string? q)
+    public async Task<IActionResult> ListSemestersAsync([FromQuery] CurriculumListQuery query)
     {
-        var result = await _semesterService.ListAsync(status, q);
-        return Ok(result);
+        var result = await _semesterService.ListAsync(query);
+        return result.ToActionResult(this);
     }
 
     [HttpGet("semesters/{id:int}")]
@@ -76,9 +77,9 @@ public class AdminCurriculumController : ControllerBase
     // ----- Subjects -----
     [HttpGet("subjects")]
     [Authorize(Roles = RoleIds.Admin)]
-    public async Task<IActionResult> ListSubjectsAsync([FromQuery] int? status, [FromQuery] string? q)
+    public async Task<IActionResult> ListSubjectsAsync([FromQuery] CurriculumListQuery query)
     {
-        var result = await _subjectService.ListAsync(status, q);
+        var result = await _subjectService.ListAsync(query);
         return result.ToActionResult(this);
     }
 

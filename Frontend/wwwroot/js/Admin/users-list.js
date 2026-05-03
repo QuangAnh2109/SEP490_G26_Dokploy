@@ -3,7 +3,13 @@ $(function () {
     const $q = $('#userQ');
     const $role = $('#userRole');
     const $status = $('#userStatus');
+    const pagerEl = document.getElementById('pager-users');
+    const pageLoading = document.getElementById('page-loading');
+    const pageContent = document.getElementById('page-content');
+    const PAGE_SIZE = 10;
+
     let currentPage = 1;
+    let firstLoad = true;
 
     function renderStatusPill(status) {
         if (status === 1) return '<span class="pill pill-success"><span class="dot"></span>Đang hoạt động</span>';
@@ -23,30 +29,36 @@ $(function () {
     }
 
     function loadUsers(page) {
-        currentPage = page || 1;
-        const query = {
-            q: $q.val().trim(),
-            roleId: $role.val() ? parseInt($role.val()) : null,
-            status: $status.val() ? parseInt($status.val()) : null,
-            page: currentPage,
-            pageSize: 20
-        };
+        currentPage = Math.max(1, page || 1);
 
         const params = new URLSearchParams();
-        if (query.q) params.append('q', query.q);
-        if (query.roleId) params.append('roleId', query.roleId);
-        if (query.status !== null && !isNaN(query.status)) params.append('status', query.status);
-        params.append('page', query.page);
-        params.append('pageSize', query.pageSize);
+        const q = $q.val().trim();
+        const roleId = $role.val();
+        const status = $status.val();
 
-        $tbody.html('<tr><td colspan="4" class="empty-state">Đang tải...</td></tr>');
+        if (q) params.append('q', q);
+        if (roleId) params.append('roleId', roleId);
+        if (status !== '') params.append('status', status);
+        params.append('page', currentPage);
+        params.append('pageSize', PAGE_SIZE);
+
+        if (!firstLoad) {
+            $tbody.html('');
+        }
 
         apiClient.get('/api/admin/users?' + params.toString())
             .then(res => {
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+
                 $('#totalCount').text(res.total);
-                if (res.items.length === 0) {
+
+                if (!res.items || res.items.length === 0) {
                     $tbody.html('<tr><td colspan="4" class="empty-state"><div class="title">Không có dữ liệu</div></td></tr>');
-                    $('#pagerWrapper').empty();
+                    pagerEl.innerHTML = '';
                     return;
                 }
 
@@ -70,34 +82,32 @@ $(function () {
                 });
                 $tbody.html(html);
 
-                const totalPages = Math.ceil(res.total / 20);
-                if (totalPages > 1) {
-                    $('#pagerWrapper').html(`
-                        <div class="pager" id="pagerContainer">
-                            <div class="info">
-                                Hiển thị ${currentPage} / ${totalPages} trang (${res.total} dòng)
-                            </div>
-                            <div class="ctrls">
-                                <button class="btn-pager" ${currentPage <= 1 ? "disabled" : ""} onclick="window.changePage(${currentPage - 1})">&larr;</button>
-                                <button class="active">${currentPage}</button>
-                                <button class="btn-pager" ${currentPage >= totalPages ? "disabled" : ""} onclick="window.changePage(${currentPage + 1})">&rarr;</button>
-                            </div>
-                        </div>
-                    `);
-                } else {
-                    $('#pagerWrapper').empty();
-                }
+                AdminPager.render(pagerEl, {
+                    current: res.page || currentPage,
+                    pageSize: res.pageSize || PAGE_SIZE,
+                    totalItems: res.total || 0,
+                    onChange: (target) => loadUsers(target)
+                });
             })
             .catch(err => {
-                $tbody.html(`<tr><td colspan="4" class="empty-state" style="color:var(--danger)">Lỗi tải dữ liệu: ${err.message}</td></tr>`);
+                if (firstLoad) {
+                    pageLoading.classList.add('is-hidden');
+                    pageContent.classList.remove('is-hidden');
+                    firstLoad = false;
+                }
+                $tbody.html(`<tr><td colspan="4" class="empty-state" style="color:var(--danger)">Lỗi tải dữ liệu: ${escapeHtml(err.message || 'Không xác định')}</td></tr>`);
+                pagerEl.innerHTML = '';
             });
     }
 
-    window.changePage = function(page) {
-        loadUsers(page);
-    };
-
-    $('#btnFilter').on('click', () => loadUsers(1));
+    // Filters — search/filter luôn reset về trang 1
+    let timeout;
+    $q.on('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => loadUsers(1), 300);
+    });
+    $role.on('change', () => loadUsers(1));
+    $status.on('change', () => loadUsers(1));
 
     if (window.userReady) {
         window.userReady.then(() => loadUsers(1));

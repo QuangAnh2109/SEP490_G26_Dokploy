@@ -11,7 +11,6 @@ window.AdminUI = (function () {
         'SUBJECT_NOT_FOUND':           'Không tìm thấy môn học.',
         'SUBJECT_ALREADY_CLOSED':      'Môn học này đã được đóng.',
         'SUBJECT_CONCURRENT_UPDATE':   'Dữ liệu đã thay đổi. Vui lòng tải lại trang.',
-        'SUBJECT_CLOSED':              'Môn học đã đóng, không thể tạo lớp mới.',
         'CHAPTER_NAME_DUPLICATE':      'Tên chương đã tồn tại trong môn này.',
         'CHAPTER_NOT_FOUND':           'Không tìm thấy chương.',
         'CHAPTER_ALREADY_DELETED':     'Chương đã được xoá.',

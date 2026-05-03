@@ -21,7 +21,9 @@
     </div>
 </header>
 
-<section class="card">
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<section id="page-content" class="card is-hidden">
     <div class="filter-bar">
         <div class="form-row">
             <label>Tìm kiếm</label>
@@ -49,15 +51,14 @@
                     <th class="text-right">Hành động</th>
                 </tr>
             </thead>
-            <tbody id="tbody-semesters">
-                <!-- JS render -->
-            </tbody>
+            <tbody id="tbody-semesters"></tbody>
         </table>
     </div>
+    <div id="pager-semesters"></div>
 </section>
 
 <!-- Modals -->
-<div id="modal-stage-create" class="modal-stage hidden">
+<div id="modal-stage-create" class="modal-stage">
     <div class="modal">
         <div class="modal-head">
             <div class="title">Tạo kỳ học mới</div>
@@ -89,13 +90,13 @@
             </form>
         </div>
         <div class="modal-foot">
-            <button class="btn btn-secondary" data-close="modal-stage-create">Hủy</button>
-            <button class="btn btn-primary" id="btn-submit-create">Tạo</button>
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-create">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-create">Tạo</button>
         </div>
     </div>
 </div>
 
-<div id="modal-stage-edit" class="modal-stage hidden">
+<div id="modal-stage-edit" class="modal-stage">
     <div class="modal">
         <div class="modal-head">
             <div class="title">Sửa kỳ học</div>
@@ -128,13 +129,13 @@
             </form>
         </div>
         <div class="modal-foot">
-            <button class="btn btn-secondary" data-close="modal-stage-edit">Hủy</button>
-            <button class="btn btn-primary" id="btn-submit-edit">Lưu thay đổi</button>
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-edit">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-edit">Lưu thay đổi</button>
         </div>
     </div>
 </div>
 
-<div id="modal-stage-close" class="modal-stage hidden">
+<div id="modal-stage-close" class="modal-stage">
     <div class="modal modal-confirm">
         <div class="modal-head">
             <div class="title">Đóng kỳ học</div>
@@ -144,8 +145,8 @@
             <p class="warn">Sẽ đóng theo <strong id="close-class-count">0</strong> lớp đang hoạt động và <strong id="close-exam-count">0</strong> đề thi đang sẵn sàng.</p>
         </div>
         <div class="modal-foot">
-            <button class="btn btn-secondary" data-close="modal-stage-close">Hủy</button>
-            <button class="btn btn-danger" id="btn-confirm-close">Đóng kỳ</button>
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-close">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-close">Đóng kỳ</button>
         </div>
     </div>
 </div>
