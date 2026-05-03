@@ -302,15 +302,7 @@ function truncateText(str, maxLen) {
     return str.length > maxLen ? str.substring(0, maxLen) + "..." : str;
 }
 
-function formatDateVN(dateStr) {
-    if (!dateStr) return "—";
-    var s = String(dateStr).trim();
-    if (s && !s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
-    var d = new Date(s);
-    if (isNaN(d.getTime())) return "—";
-    var opts = { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" };
-    return d.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) + " " + d.toLocaleTimeString("vi-VN", opts);
-}
+
 
 function sanitizeLatex(str) {
     return str;

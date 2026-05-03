@@ -454,14 +454,6 @@ $(document).ready(async function () {
         }
     }
 
-    function formatDate(value) {
-        if (!value) return '--';
-        var s = String(value).trim();
-        if (s && !s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
-        const d = new Date(s);
-        if (Number.isNaN(d.getTime())) return '--';
-        return d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    }
 
     function showPageError(message) {
         const el = document.getElementById('pageError');

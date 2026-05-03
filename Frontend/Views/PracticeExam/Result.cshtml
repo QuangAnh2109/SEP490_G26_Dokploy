@@ -162,8 +162,8 @@
             document.getElementById('wrongCount').textContent = data.wrongCount;
 
             // Time
-            document.getElementById('startTime').textContent = formatDate(data.createdAtUtc);
-            document.getElementById('endTime').textContent = formatDate(data.submittedAtUtc);
+            document.getElementById('startTime').textContent = formatDateTime(data.createdAtUtc);
+            document.getElementById('endTime').textContent = formatDateTime(data.submittedAtUtc);
 
             // Chapter stats
             renderChapterStats(data.chapterStats);
@@ -330,13 +330,6 @@
             return map[diff] || '';
         }
 
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            return new Date(dateStr).toLocaleString('vi-VN', {
-                timeZone: 'Asia/Ho_Chi_Minh',
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            });
-        }
+
     </script>
 }

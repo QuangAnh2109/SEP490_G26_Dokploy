@@ -131,15 +131,6 @@ function showError(message) {
     $('#error-state').removeClass('d-none');
 }
 
-function formatDateTime(isoString) {
-    if (!isoString) return '—';
-    let s = String(isoString).trim();
-    if (s && !s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return '—';
-    const opts = { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" };
-    return d.toLocaleString("vi-VN", opts);
-}
 
 function escapeHtml(str) {
     return $('<div>').text(str || '').html();

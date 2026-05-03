@@ -64,14 +64,7 @@ async function loadStudents() {
     }
 }
 
-function formatDateTime(dateString) {
-    if (!dateString) return "-";
-    var s = String(dateString).trim();
-    if (s && !s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
-    var d = new Date(s);
-    if (isNaN(d.getTime())) return "-";
-    return d.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-}
+
 
 function renderStudents(students) {
     const tbody = document.getElementById("studentTableBody");
