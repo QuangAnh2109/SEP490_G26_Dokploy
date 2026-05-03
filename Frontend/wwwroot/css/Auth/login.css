@@ -226,6 +226,49 @@ body {
         background-color: #ffffff;
     }
 
+.password-field {
+    position: relative;
+}
+
+.password-field .form-control {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+    .password-toggle:hover {
+        color: #2563eb;
+        background-color: rgba(37, 99, 235, 0.08);
+    }
+
+    .password-toggle:focus-visible {
+        outline: none;
+        color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+    }
+
+    .password-toggle i {
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+
 .btn-login {
     background: linear-gradient(135deg, #2563eb, #3b82f6);
     color: #ffffff;

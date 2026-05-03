@@ -8,9 +8,12 @@ $(document).ready(function () {
     $('#togglePassword').on('click', function () {
         const $input = $('#Password');
         const $icon = $('#togglePasswordIcon');
-        const isHidden = $input.attr('type') === 'password';
-        $input.attr('type', isHidden ? 'text' : 'password');
+        const $btn = $(this);
+        const willShow = $input.attr('type') === 'password';
+        $input.attr('type', willShow ? 'text' : 'password');
         $icon.toggleClass('fa-eye fa-eye-slash');
+        $btn.attr('aria-label', willShow ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+        $btn.attr('aria-pressed', willShow ? 'true' : 'false');
     });
 
     // 1. Handle traditional login form submission
@@ -38,7 +41,8 @@ $(document).ready(function () {
 
         const requestData = {
             Email: email,
-            Password: password
+            Password: password,
+            RememberMe: $('#rememberMe').is(':checked')
         };
 
         apiClient.post("/api/auth/login", requestData)
@@ -59,7 +63,8 @@ $(document).ready(function () {
 // 2. Handle Google Login callback
 function handleCredentialResponse(response) {
     const requestData = {
-        IdToken: response.credential
+        IdToken: response.credential,
+        RememberMe: $('#rememberMe').is(':checked')
     };
 
     apiClient.post("/api/auth/google-login", requestData)
