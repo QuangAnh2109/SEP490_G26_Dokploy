@@ -1,22 +1,22 @@
-@{
+﻿@{
     ViewData["Title"] = "Kết quả";
     var classId = ViewBag.ClassId ?? 0;
     ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/Class/class_sidebar.css" asp-append-version="true" />
 }
 
-<div class="course-wrapper">
-    <aside class="course-sidebar">
+<div class="class-wrapper">
+    <aside class="class-sidebar">
         <div class="mb-4">
             <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
             <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
 
         <div class="nav-section-title">Bài thi</div>
-        <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
+        <a href="/Class/ExamListInClass/@classId" class="sidebar-link">
             <i class="fas fa-list"></i> Danh sách đề
         </a>
         <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
@@ -27,18 +27,18 @@
         </a>
 
         <div class="nav-section-title">Quản lý</div>
-        <a href="/Course/StudentList/@classId" class="sidebar-link">
+        <a href="/Class/StudentList/@classId" class="sidebar-link">
             <i class="fas fa-users"></i> Danh sách học sinh
         </a>
-        <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
+        <a href="/Class/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
             <i class="fas fa-user-clock"></i> Phê duyệt học sinh
         </a>
-        <a href="/Course/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+        <a href="/Class/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
             <i class="fas fa-cog"></i> Cài đặt
         </a>
     </aside>
 
-    <main class="course-content">
+    <main class="class-content">
         <section class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="mb-0 fw-bold pt-4 pb-2">Kết quả</h2>
             <a href="/PracticeExam/Setup?classId=@classId" class="btn btn-primary">
@@ -131,15 +131,15 @@
 
         async function loadSidebarClassName() {
             try {
-                const data = await apiClient.get(`/api/Course/${classId}/settings`);
+                const data = await apiClient.get(`/api/class/${classId}/settings`);
                 const className = data.className || 'Lớp ' + classId;
                 const el = document.getElementById('sidebarClassName');
                 if (el) el.textContent = className;
 
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: className, url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: className, url: "/Class/ExamListInClass/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
                         { text: "Kết quả", url: null }
                     ]);
                 }
@@ -147,8 +147,8 @@
                 const fallbackName = 'Lớp ' + classId;
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: fallbackName, url: "/Course/ExamListInCourse/" + classId },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: fallbackName, url: "/Class/ExamListInClass/" + classId },
                         { text: "Kết quả", url: null }
                     ]);
                 }

@@ -1,0 +1,141 @@
+﻿@{
+    ViewData["Title"] = "Danh sách đề trong lớp";
+    var classId = ViewBag.ClassId ?? 0;
+    var className = ViewBag.ClassName as string;
+    var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
+    ViewBag.IsFullWidth = true;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Class/class_sidebar.css" asp-append-version="true" />
+}
+
+<div class="class-wrapper">
+    <!-- Sidebar -->
+    <aside class="class-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
+        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Class/ExamListInClass/@classId@classNameParam" class="sidebar-link active">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Class/StudentList/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Class/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Class/Settings/@classId@classNameParam" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="class-content">
+
+        <section class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fw-bold">Danh sách đề trong lớp</h2>
+            <a id="btnCreateExam" class="btn btn-primary d-none" href="/Exam/AssignExam?classId=@classId">
+                <i class="fas fa-plus me-1"></i> Tạo đề
+            </a>
+        </section>
+
+        <!-- Filters -->
+        <section class="card p-3 mb-4">
+            <div class="row g-2">
+
+            <!-- Chapter -->
+            <div class="col-md-3">
+                <select id="chapterFilter" class="form-select">
+                    <option value="">Tất cả chương</option>
+                </select>
+            </div>
+
+            <!-- Status -->
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="open">Mở</option>
+                    <option value="upcoming">Sắp diễn ra</option>
+                    <option value="closed">Đóng</option>
+                </select>
+            </div>
+
+            <!-- Search -->
+            <div class="col-md-6">
+                <input id="searchFilter"
+                        class="form-control"
+                        placeholder="Tìm theo tên đề..." />
+            </div>
+
+
+        </div>
+    </section>
+
+    <!-- Table -->
+    <section class="card p-3">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tên đề</th>
+                        <th>Khoảng thời gian</th>
+                        <th>Thời lượng</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="examTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center">Đang tải...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    </main>
+</div>
+
+<!-- Templates -->
+<template id="exam-row-template">
+    <tr class="exam-row">
+        <td class="exam-title"></td>
+        <td class="exam-time"></td>
+        <td class="exam-duration"></td>
+        <td class="exam-status"></td>
+        <td class="exam-actions"></td>
+    </tr>
+</template>
+
+<template id="teacher-action-template">
+    <a class="btn btn-sm btn-outline-secondary d-inline btn-detail" href="#">Chi tiết</a>
+    <a class="btn btn-sm btn-info text-white btn-result" href="#"><i class="fas fa-chart-bar"></i> Xem kết quả</a>
+    <a class="btn btn-sm btn-outline-info btn-analytics" href="#"><i class="fas fa-chart-pie"></i> Phân tích</a>
+</template>
+
+<template id="student-action-template">
+    <a class="btn btn-sm btn-outline-secondary d-inline btn-detail" href="#">Chi tiết</a>
+    <a class="btn btn-sm btn-primary d-inline btn-take" href="#">Vào làm</a>
+</template>
+
+@section Scripts {
+    <div id="classData" data-class-id="@classId" data-class-name="@className" style="display: none;"></div>
+    <script>
+        const API_BASE = window.API_BASE_URL;
+    </script>
+    <script src="~/js/Exam/exam_list_in_class.js" asp-append-version="true"></script>
+}

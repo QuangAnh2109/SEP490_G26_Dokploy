@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Kết quả luyện tập";
     var submissionId = ViewBag.SubmissionId ?? 0;
 }
@@ -103,7 +103,7 @@
             if (classId) {
                 window.location.href = `/PracticeExam/History?classId=${classId}`;
             } else {
-                window.location.href = `/Course/CourseList`;
+                window.location.href = `/Class/ClassList`;
             }
         }
 
@@ -112,11 +112,11 @@
             if (!classId) return;
 
             try {
-                const data = await apiClient.get(`/api/Course/${classId}/settings`);
+                const data = await apiClient.get(`/api/class/${classId}/settings`);
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: data.className || ('Lớp ' + classId), url: "/Course/ExamListInCourse/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: data.className || ('Lớp ' + classId), url: "/Class/ExamListInClass/" + classId + (data.className ? "?className=" + encodeURIComponent(data.className) : "") },
                         { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
                         { text: "Chi tiết bài làm", url: null }
                     ]);
@@ -124,8 +124,8 @@
             } catch {
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: 'Lớp ' + classId, url: "/Course/ExamListInCourse/" + classId },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: 'Lớp ' + classId, url: "/Class/ExamListInClass/" + classId },
                         { text: "Lịch sử luyện tập", url: "/PracticeExam/History?classId=" + classId },
                         { text: "Chi tiết bài làm", url: null }
                     ]);

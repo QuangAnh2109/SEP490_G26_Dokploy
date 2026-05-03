@@ -29,10 +29,10 @@ namespace Frontend.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        // Redirect /Home/CourseList to /Course/CourseList (the action that fetches from backend)
-        public IActionResult CourseList()
+        // Redirect /Home/ClassList to /Class/ClassList (the action that fetches from backend)
+        public IActionResult ClassList()
         {
-            return RedirectToAction("CourseList", "Course");
+            return RedirectToAction("ClassList", "Class");
         }
     }
 }

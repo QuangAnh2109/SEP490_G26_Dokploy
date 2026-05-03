@@ -1,11 +1,11 @@
-// Phân quyền route phía FE. Chạy IIFE sau khi site.js load → dùng lại window.userReady + getUserRole.
+﻿// Phân quyền route phía FE. Chạy IIFE sau khi site.js load → dùng lại window.userReady + getUserRole.
 // Replace cho các inline guard cũ ở _Layout/_LayoutAdmin/Auth-login/Admin-login.
 (function () {
     'use strict';
 
     const ROLE_HOME = {
-        '1': '/Course/CourseList', // Teacher
-        '2': '/Course/CourseList', // Student
+        '1': '/Class/ClassList', // Teacher
+        '2': '/Class/ClassList', // Student
         '3': '/Admin/Users'        // Admin
     };
 
@@ -33,7 +33,7 @@
         { prefix: '/exam/',         allow: ['1'] },
         { prefix: '/practiceexam',  allow: ['2'] },
         { prefix: '/studentexam',   allow: ['2'] },
-        { prefix: '/course',        allow: ['1', '2'] },
+        { prefix: '/class',        allow: ['1', '2'] },
         { prefix: '/profile',       allow: ['1', '2'] }
     ];
 

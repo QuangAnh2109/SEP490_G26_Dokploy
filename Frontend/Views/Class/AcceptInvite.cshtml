@@ -1,0 +1,37 @@
+﻿@{
+    ViewData["Title"] = "Chấp nhận lời mời";
+    var token = ViewBag.Token as string;
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div id="loadingStatus">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <h4>Đang xử lý lời mời...</h4>
+            </div>
+            
+            <div id="successStatus" class="d-none">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h4>Tham gia thành công!</h4>
+                <p>Bạn đã được thêm vào lớp học.</p>
+                <p>Đang chuyển hướng đến danh sách đề thi...</p>
+            </div>
+
+            <div id="errorStatus" class="d-none">
+                <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                <h4 id="errorMessage">Link không hợp lệ hoặc đã hết hạn</h4>
+                <p>Vui lòng kiểm tra lại đường link hoặc liên hệ giáo viên để được cấp lại.</p>
+                <a href="/Class/ClassList" class="btn btn-primary mt-3">Về danh sách lớp</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <div id="classData" data-token-query="@token" style="display: none;"></div>
+    <script>
+        const API_BASE = window.API_BASE_URL;
+    </script>
+    <script src="~/js/Class/accept_invite.js" asp-append-version="true"></script>
+}

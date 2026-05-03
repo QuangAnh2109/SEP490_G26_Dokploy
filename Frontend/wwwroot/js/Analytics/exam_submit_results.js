@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════
+﻿// ═══════════════════════════════════════════
 //  ExamSubmitResults — Thống kê nộp bài (Giáo viên)
 // ═══════════════════════════════════════════
 
@@ -38,7 +38,7 @@
     function setupBackLink() {
         var backLink = document.getElementById("backLink");
         if (backLink) {
-            backLink.href = classId ? "/Course/ExamListInCourse/" + classId : "/Course/CourseList";
+            backLink.href = classId ? "/Class/ExamListInClass/" + classId : "/Class/ClassList";
         }
     }
 

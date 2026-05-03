@@ -1,4 +1,4 @@
-using Backend.Common;
+﻿using Backend.Common;
 using Backend.DTOs.PracticeExam;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +14,7 @@ namespace Backend.Controllers
         private readonly IPracticeExamService _practiceService = practiceService;
 
         /// <summary>
-        /// Lấy danh sách chương của khóa học kèm proficiency và số câu luyện tập có sẵn.
+        /// Lấy danh sách chương của Lớp học kèm proficiency và số câu luyện tập có sẵn.
         /// </summary>
         [HttpGet("class/{classId}/chapters")]
         [Authorize(Roles = RoleIds.Student)]

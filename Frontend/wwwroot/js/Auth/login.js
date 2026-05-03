@@ -1,4 +1,4 @@
-// Chỉ chấp nhận same-origin path tương đối, tránh open redirect (`?returnUrl=https://evil.com`).
+﻿// Chỉ chấp nhận same-origin path tương đối, tránh open redirect (`?returnUrl=https://evil.com`).
 function safeReturnUrl(raw) {
     if (!raw) return null;
     return (raw.startsWith('/') && !raw.startsWith('//')) ? raw : null;
@@ -39,7 +39,7 @@ $(document).ready(function () {
         apiClient.post("/api/auth/login", requestData)
             .then(function () {
                 const safe = safeReturnUrl($('#returnUrl').val());
-                window.location.href = safe || '/Course/CourseList';
+                window.location.href = safe || '/Class/ClassList';
             })
             .catch(function (err) {
                 if (err.xhr && err.xhr.status === 403 && err.xhr.responseJSON?.code === 'AUTH_ACCOUNT_LOCKED') {
@@ -61,7 +61,7 @@ function handleCredentialResponse(response) {
     apiClient.post("/api/auth/google-login", requestData)
         .then(function () {
             const safe = safeReturnUrl($('#returnUrl').val());
-            window.location.href = safe || '/Course/CourseList';
+            window.location.href = safe || '/Class/ClassList';
         })
         .catch(function (err) {
             const code = err && err.xhr && err.xhr.responseJSON ? err.xhr.responseJSON.code : null;

@@ -1,4 +1,4 @@
-using Backend.Common;
+﻿using Backend.Common;
 using Backend.Common.Models;
 using Backend.DTOs.PracticeExam;
 
@@ -7,7 +7,7 @@ namespace Backend.Services.Interfaces
     public interface IPracticeExamService
     {
         /// <summary>
-        /// Lấy danh sách chương + proficiency + số câu khả dụng cho khóa học.
+        /// Lấy danh sách chương + proficiency + số câu khả dụng cho Lớp học.
         /// </summary>
         Task<Result<List<ChapterProficiencyDto>>> GetChaptersForPracticeAsync(int classId);
 

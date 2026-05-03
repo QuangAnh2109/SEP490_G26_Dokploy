@@ -1,4 +1,4 @@
-/**
+﻿/**
  * exam_review.js
  * Redesigned logic for Exam Review with Sidebar navigation.
  */
@@ -505,7 +505,7 @@ function approveExam() {
             await apiClient.post(`${API_BASE}/approve/${currentReviewData.examId}`);
             showToast("Đề thi đã được phê duyệt!", "success");
             setTimeout(() => {
-                if (CLASS_ID) window.location.href = `/Course/ExamListInCourse/${CLASS_ID}`;
+                if (CLASS_ID) window.location.href = `/Class/ExamListInClass/${CLASS_ID}`;
                 else window.location.href = "/Exam";
             }, 1000);
         } catch (e) {
@@ -654,7 +654,7 @@ function deleteExam() {
         try {
             await apiClient.delete(`${API_BASE}/${currentReviewData.examId}`);
             showToast("Đề thi đã được xóa!", "success");
-            let redirectUrl = CLASS_ID ? `/Course/ExamListInCourse/${CLASS_ID}` : "/Exam";
+            let redirectUrl = CLASS_ID ? `/Class/ExamListInClass/${CLASS_ID}` : "/Exam";
             setTimeout(() => {
                 window.location.href = redirectUrl;
             }, 500);
@@ -669,7 +669,7 @@ function deleteExam() {
 
 function goBack() {
     if (CLASS_ID) {
-        window.location.href = `/Course/ExamListInCourse/${CLASS_ID}`;
+        window.location.href = `/Class/ExamListInClass/${CLASS_ID}`;
     } else {
         history.back();
     }

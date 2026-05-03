@@ -8,7 +8,7 @@ namespace Frontend.Controllers
         [HttpGet]
         public IActionResult Setup(int classId)
         {
-            if (classId <= 0) return RedirectToAction("CourseList", "Course");
+            if (classId <= 0) return RedirectToAction("ClassList", "Class");
             ViewBag.ClassId = classId;
             return View();
         }
@@ -17,7 +17,7 @@ namespace Frontend.Controllers
         [HttpGet]
         public IActionResult TakePractice(int submissionId)
         {
-            if (submissionId <= 0) return RedirectToAction("CourseList", "Course");
+            if (submissionId <= 0) return RedirectToAction("ClassList", "Class");
             ViewBag.SubmissionId = submissionId;
             return View();
         }
@@ -26,7 +26,7 @@ namespace Frontend.Controllers
         [HttpGet]
         public IActionResult Result(int submissionId)
         {
-            if (submissionId <= 0) return RedirectToAction("CourseList", "Course");
+            if (submissionId <= 0) return RedirectToAction("ClassList", "Class");
             ViewBag.SubmissionId = submissionId;
             return View();
         }
@@ -35,7 +35,7 @@ namespace Frontend.Controllers
         [HttpGet]
         public IActionResult History(int classId)
         {
-            if (classId <= 0) return RedirectToAction("CourseList", "Course");
+            if (classId <= 0) return RedirectToAction("ClassList", "Class");
             ViewBag.ClassId = classId;
             return View();
         }

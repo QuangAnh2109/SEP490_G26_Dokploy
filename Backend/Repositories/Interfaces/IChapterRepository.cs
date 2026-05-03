@@ -1,4 +1,4 @@
-﻿using Backend.DTOs.Course;
+using Backend.DTOs.Class;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

@@ -12,19 +12,19 @@ public static class ErrorCodes
     public const string ProfileWrongPassword = "PROFILE_WRONG_PASSWORD";
     public const string ProfileStudentIdRequired = "PROFILE_STUDENT_ID_REQUIRED";
 
-    // Course
-    public const string CourseNotFound = "COURSE_NOT_FOUND";
-    public const string CourseClosed = "COURSE_CLOSED";
-    public const string CourseDuplicate = "COURSE_DUPLICATE";
-    public const string CourseInviteCodeInvalid = "COURSE_INVITE_CODE_INVALID";
-    public const string CourseAlreadyMember = "COURSE_ALREADY_MEMBER";
-    public const string CourseAlreadyInvited = "COURSE_ALREADY_INVITED";
-    public const string CourseNotMember = "COURSE_NOT_MEMBER";
-    public const string CourseAccessDenied = "COURSE_ACCESS_DENIED";
-    public const string CourseStudentNotFound = "COURSE_STUDENT_NOT_FOUND";
-    public const string CourseUserNotStudent = "COURSE_USER_NOT_STUDENT";
-    public const string CourseInviteTokenInvalid = "COURSE_INVITE_TOKEN_INVALID";
-    public const string CourseConfigError = "COURSE_CONFIG_ERROR";
+    // Class
+    public const string ClassNotFound = "CLASS_NOT_FOUND";
+    public const string ClassClosed = "CLASS_CLOSED";
+    public const string ClassDuplicate = "CLASS_DUPLICATE";
+    public const string ClassInviteCodeInvalid = "CLASS_INVITE_CODE_INVALID";
+    public const string ClassAlreadyMember = "CLASS_ALREADY_MEMBER";
+    public const string ClassAlreadyInvited = "CLASS_ALREADY_INVITED";
+    public const string ClassNotMember = "CLASS_NOT_MEMBER";
+    public const string ClassAccessDenied = "CLASS_ACCESS_DENIED";
+    public const string ClassStudentNotFound = "CLASS_STUDENT_NOT_FOUND";
+    public const string ClassUserNotStudent = "CLASS_USER_NOT_STUDENT";
+    public const string ClassInviteTokenInvalid = "CLASS_INVITE_TOKEN_INVALID";
+    public const string ClassConfigError = "CLASS_CONFIG_ERROR";
 
     // Auth
     public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";

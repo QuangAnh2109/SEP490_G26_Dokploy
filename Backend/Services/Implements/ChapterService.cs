@@ -1,4 +1,4 @@
-using Backend.DTOs.Course;
+using Backend.DTOs.Class;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using System.Collections.Generic;

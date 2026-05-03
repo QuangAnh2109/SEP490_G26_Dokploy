@@ -106,7 +106,7 @@ namespace Backend
             builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IExamBlueprintRepository, ExamBlueprintRepository>();
-            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            builder.Services.AddScoped<IClassRepository, ClassRepository>();
             builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
             builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
             builder.Services.AddScoped<IStudentExamRepository, StudentExamRepository>();
@@ -141,7 +141,7 @@ namespace Backend
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IExamBlueprintService, ExamBlueprintService>();
             builder.Services.AddScoped<IAssignExamService, AssignExamService>();
-            builder.Services.AddScoped<ICourseService, CourseService>();
+            builder.Services.AddScoped<IClassService, ClassService>();
             builder.Services.AddScoped<IChapterService, ChapterService>();
             builder.Services.AddScoped<IQuestionService, QuestionService>();
             builder.Services.AddScoped<IStudentExamService, StudentExamService>();

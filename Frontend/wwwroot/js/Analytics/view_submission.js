@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════
+﻿// ═══════════════════════════════════════════
 //  ViewSubmission — Giáo viên xem bài làm học sinh
 // ═══════════════════════════════════════════
 
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (backLink && examId) {
         backLink.href = "/Analytics/ExamSubmitResults?examId=" + examId + (classId ? "&classId=" + classId : "");
     } else if (backLink) {
-        backLink.href = "/Course/CourseList";
+        backLink.href = "/Class/ClassList";
     }
 
     apiClient.get("/api/analytics/submission/" + submissionId)

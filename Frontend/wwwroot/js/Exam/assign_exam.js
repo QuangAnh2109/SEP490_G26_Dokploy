@@ -1,4 +1,4 @@
-(async () => {
+﻿(async () => {
   await window.userReady;
 
   const get = (id) => document.getElementById(id);
@@ -284,7 +284,7 @@
     bindClick(ui.btnSaveTop, () => { if(validate(1) && validate(2) && validate(3)) saveAssignExam(); else showToast('Vui lòng hoàn thành thông tin.', 'error'); });
     
     bindClick(ui.btnCloseTop, () => {
-      if (state.selClassId) window.location.href = `/Course/ExamListInCourse/${state.selClassId}`;
+      if (state.selClassId) window.location.href = `/Class/ExamListInClass/${state.selClassId}`;
       else window.location.href = '/Exam';
     });
     
@@ -304,15 +304,15 @@
 
       // Gọi API lấy thông tin lớp học (apiGetJson đã tự động kèm Token và API_BASE_URL)
       try {
-        const courseData = await apiGetJson(`/api/Course/${state.selClassId}/settings`);
-        if (courseData) {
-          // CourseDTO trả về 'className' hoặc 'name'
-          const realName = courseData.className || courseData.name || courseData.classCode;
+        const classData = await apiGetJson(`/api/class/${state.selClassId}/settings`);
+        if (classData) {
+          // ClassDTO trả về 'className' hoặc 'name'
+          const realName = classData.className || classData.name || classData.classCode;
           if (ui.displayClassName && realName) {
             ui.displayClassName.textContent = `Lớp: ${realName}`;
           }
-          if (ui.displaySubjectCode) ui.displaySubjectCode.textContent = courseData.subjectCode || state.lockedSubject;
-          if (!state.lockedSubject) state.lockedSubject = courseData.subjectCode;
+          if (ui.displaySubjectCode) ui.displaySubjectCode.textContent = classData.subjectCode || state.lockedSubject;
+          if (!state.lockedSubject) state.lockedSubject = classData.subjectCode;
         }
       } catch (err) { console.warn("Lỗi khi tải tên lớp chi tiết:", err); }
 

@@ -1,0 +1,101 @@
+﻿@{
+    ViewData["Title"] = "Danh sách học sinh";
+    var classId = ViewBag.ClassId ?? 0;
+    var className = ViewBag.ClassName as string;
+    var classNameParam = !string.IsNullOrEmpty(className) ? "?className=" + Uri.EscapeDataString(className) : "";
+    ViewBag.IsFullWidth = true;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/Class/class_sidebar.css" asp-append-version="true" />
+}
+
+<div class="class-wrapper">
+    <!-- Sidebar -->
+    <aside class="class-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
+        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Class/ExamListInClass/@classId@classNameParam" class="sidebar-link">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link" id="practiceMenuItem">
+            <i class="fas fa-brain"></i> Luyện tập
+        </a>
+        <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
+            <i class="fas fa-chart-bar"></i> Kết quả
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Class/StudentList/@classId@classNameParam" class="sidebar-link active">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Class/PendingStudents/@classId@classNameParam" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Class/Settings/@classId@classNameParam" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="class-content">
+
+        <section class="mb-4">
+            <h2 class="fw-bold">Danh sách học sinh trong lớp</h2>
+        </section>
+
+        <!-- Table -->
+        <section class="card p-3">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Mã sinh viên</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Ngày tham gia</th>
+                            <th class="action-col" style="display:none;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center">Đang tải...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Template cho một học sinh -->
+<template id="student-row-template">
+    <tr>
+        <td class="fw-bold student-index"></td>
+        <td class="student-code"></td>
+        <td class="student-name"></td>
+        <td class="student-email"></td>
+        <td class="student-date"></td>
+        <td class="action-col" style="display:none;">
+            <button class="btn btn-sm btn-outline-danger btn-remove-student" title="Xóa học sinh khỏi lớp">
+                <i class="fas fa-user-minus"></i> Xóa
+            </button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    <div id="classData" data-class-id="@classId" data-class-name="@className" style="display: none;"></div>
+    <script>
+        const API_BASE = window.API_BASE_URL;
+    </script>
+    <script src="~/js/Class/student_list.js" asp-append-version="true"></script>
+}

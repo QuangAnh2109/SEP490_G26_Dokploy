@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    Practice Exam — Setup Page JS (Logic Only)
    ═══════════════════════════════════════════ */
 
@@ -51,7 +51,7 @@ async function loadChapters() {
         const httpStatus = err.xhr ? err.xhr.status : null;
         if (httpStatus === 401) { window.location.href = '/Auth/Login'; return; }
         if (httpStatus === 404) {
-            showToast('Không tìm thấy khóa học hoặc bạn không thuộc lớp này.', 'error');
+            showToast('Không tìm thấy Lớp học hoặc bạn không thuộc lớp này.', 'error');
             return;
         }
         showToast('Lỗi tải dữ liệu: ' + err.message, 'error');

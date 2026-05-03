@@ -1,4 +1,4 @@
-namespace Backend.DTOs.PracticeExam
+﻿namespace Backend.DTOs.PracticeExam
 {
     // ═══════════════════════════════════════════════════════════
     //  REQUEST / RESPONSE
@@ -7,7 +7,7 @@ namespace Backend.DTOs.PracticeExam
     /// <summary>Yêu cầu tạo đề luyện tập</summary>
     public class CreatePracticeExamRequest
     {
-        /// <summary>Khóa học (biết luôn môn + giáo viên)</summary>
+        /// <summary>Lớp học (biết luôn môn + giáo viên)</summary>
         public int? ClassId { get; set; }
 
         /// <summary>Danh sách chương muốn luyện — chọn 1 hoặc nhiều</summary>

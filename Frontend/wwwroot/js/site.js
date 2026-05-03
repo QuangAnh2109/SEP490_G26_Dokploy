@@ -1,4 +1,4 @@
-const API_BASE_URL = window.API_BASE_URL;
+﻿const API_BASE_URL = window.API_BASE_URL;
 
 // Mirror Backend/Common/Roles.cs: BE issue JWT role claim dạng numeric ("1"=Teacher, "2"=Student, "3"=Admin),
 // và Authorize attribute dùng RoleIds.Teacher/Student/Admin. FE compare trực tiếp với các const này.
@@ -220,7 +220,7 @@ function showToast(message, type = 'success', duration = 3000) {
 }
 
 /**
- * Set breadcrumb in header (Classroom-style: Khóa học > [Tên lớp] > Danh sách đề)
+ * Set breadcrumb in header (Classroom-style: Lớp học > [Tên lớp] > Danh sách đề)
  * @param {Array<{text: string, url?: string|null}>} items - Each item: text, url (null/undefined = current, no link)
  */
 function setBreadcrumb(items) {

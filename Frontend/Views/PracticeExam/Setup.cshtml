@@ -1,23 +1,23 @@
-@{
+﻿@{
     ViewData["Title"] = "Luyện tập";
     var classId = ViewBag.ClassId ?? 0;
     ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/Course/course_sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/Class/class_sidebar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
 }
 
-<div class="course-wrapper">
-    <aside class="course-sidebar">
+<div class="class-wrapper">
+    <aside class="class-sidebar">
         <div class="mb-4">
             <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
             <div class="text-muted small" id="sidebarClassName">---</div>
         </div>
 
         <div class="nav-section-title">Bài thi</div>
-        <a href="/Course/ExamListInCourse/@classId" class="sidebar-link">
+        <a href="/Class/ExamListInClass/@classId" class="sidebar-link">
             <i class="fas fa-list"></i> Danh sách đề
         </a>
         <a href="/PracticeExam/Setup?classId=@classId" class="sidebar-link active" id="practiceMenuItem">
@@ -28,18 +28,18 @@
         </a>
 
         <div class="nav-section-title">Quản lý</div>
-        <a href="/Course/StudentList/@classId" class="sidebar-link">
+        <a href="/Class/StudentList/@classId" class="sidebar-link">
             <i class="fas fa-users"></i> Danh sách học sinh
         </a>
-        <a href="/Course/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
+        <a href="/Class/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
             <i class="fas fa-user-clock"></i> Phê duyệt học sinh
         </a>
-        <a href="/Course/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+        <a href="/Class/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
             <i class="fas fa-cog"></i> Cài đặt
         </a>
     </aside>
 
-    <main class="course-content">
+    <main class="class-content">
         <section class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="mb-0 fw-bold pt-4 pb-2">Luyện tập</h2>
         </section>
@@ -138,15 +138,15 @@
             }
 
             try {
-                const data = await apiClient.get(`/api/Course/${practiceClassId}/settings`);
+                const data = await apiClient.get(`/api/class/${practiceClassId}/settings`);
                 const className = data.className || 'Lớp ' + practiceClassId;
                 const el = document.getElementById('sidebarClassName');
                 if (el) el.textContent = className;
 
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: className, url: "/Course/ExamListInCourse/" + practiceClassId + "?className=" + encodeURIComponent(className) },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: className, url: "/Class/ExamListInClass/" + practiceClassId + "?className=" + encodeURIComponent(className) },
                         { text: "Luyện tập", url: null }
                     ]);
                 }
@@ -154,8 +154,8 @@
                 const classNameFallback = 'Lớp ' + practiceClassId;
                 if (typeof setBreadcrumb === "function") {
                     setBreadcrumb([
-                        { text: "Khóa học", url: "/Course/CourseList" },
-                        { text: classNameFallback, url: "/Course/ExamListInCourse/" + practiceClassId },
+                        { text: "Lớp học", url: "/Class/ClassList" },
+                        { text: classNameFallback, url: "/Class/ExamListInClass/" + practiceClassId },
                         { text: "Luyện tập", url: null }
                     ]);
                 }
