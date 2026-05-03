@@ -69,7 +69,7 @@ $(function () {
                 openModal('emailSentModal');
             })
             .catch(function (err) {
-                showApiError(err, 'Lỗi khi tạo tài khoản.');
+                AdminUI.showError(err, 'Lỗi khi tạo tài khoản.');
             })
             .finally(function () {
                 $btn.prop('disabled', false).text('Tạo tài khoản');

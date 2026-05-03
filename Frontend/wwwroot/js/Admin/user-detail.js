@@ -62,7 +62,7 @@ $(function () {
                 $('#userKvList').html(kvHtml);
             })
             .catch(function (err) {
-                showApiError(err, 'Lỗi khi tải chi tiết.');
+                AdminUI.showError(err, 'Lỗi khi tải chi tiết.');
             });
     }
 
@@ -73,11 +73,11 @@ $(function () {
         apiClient.patch('/api/admin/users/' + userId + '/unlock', {})
             .then(function() {
                 closeModal('unlockModal');
-                showToast('Đã mở khóa tài khoản.');
+                AdminUI.showNotice('success', 'Thành công', 'Đã mở khóa tài khoản.');
                 loadUserDetail();
             })
             .catch(function(err) {
-                showApiError(err, 'Lỗi khi mở khóa.');
+                AdminUI.showError(err, 'Lỗi khi mở khóa.');
             })
             .finally(function() {
                 $btn.prop('disabled', false).text('Mở khóa');
@@ -91,11 +91,11 @@ $(function () {
         apiClient.patch('/api/admin/users/' + userId + '/lock', {})
             .then(function() {
                 closeModal('lockModal');
-                showToast('Đã khóa tài khoản.');
+                AdminUI.showNotice('success', 'Thành công', 'Đã khóa tài khoản.');
                 loadUserDetail();
             })
             .catch(function(err) {
-                showApiError(err, 'Lỗi khi khóa.');
+                AdminUI.showError(err, 'Lỗi khi khóa.');
             })
             .finally(function() {
                 $btn.prop('disabled', false).text('Khóa tài khoản');
@@ -113,7 +113,7 @@ $(function () {
                 loadUserDetail();
             })
             .catch(function(err) {
-                showApiError(err, 'Lỗi khi cấp lại mật khẩu.');
+                AdminUI.showError(err, 'Lỗi khi cấp lại mật khẩu.');
             })
             .finally(function() {
                 $btn.prop('disabled', false).text('Cấp lại mật khẩu');

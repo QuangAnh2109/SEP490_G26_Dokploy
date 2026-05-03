@@ -84,12 +84,12 @@ $(function () {
         apiClient.post('/api/admin/curriculum/semesters', data)
             .then(res => {
                 closeModal('modal-stage-create');
-                CurriculumShared.showNotice('success', 'Thành công', 'Đã tạo kỳ học.');
+                AdminUI.showNotice('success', 'Thành công', 'Đã tạo kỳ học.');
                 load();
             })
             .catch(err => {
-                const msg = err.code ? CurriculumShared.translateError(err.code) : err.message;
-                CurriculumShared.showNotice('error', 'Lỗi', msg);
+                const msg = err.code ? AdminUI.translateError(err.code) : err.message;
+                AdminUI.showNotice('error', 'Lỗi', msg);
             });
     });
 
@@ -153,12 +153,12 @@ $(function () {
         apiClient.put(`/api/admin/curriculum/semesters/${data.id}`, payload)
             .then(res => {
                 closeModal('modal-stage-edit');
-                CurriculumShared.showNotice('success', 'Thành công', 'Đã lưu thay đổi.');
+                AdminUI.showNotice('success', 'Thành công', 'Đã lưu thay đổi.');
                 load();
             })
             .catch(err => {
-                const msg = err.code ? CurriculumShared.translateError(err.code) : err.message;
-                CurriculumShared.showNotice('error', 'Lỗi', msg);
+                const msg = err.code ? AdminUI.translateError(err.code) : err.message;
+                AdminUI.showNotice('error', 'Lỗi', msg);
             });
     });
 
@@ -169,12 +169,12 @@ $(function () {
         apiClient.patch(`/api/admin/curriculum/semesters/${closeTargetId}/close`, null)
             .then(res => {
                 closeModal('modal-stage-close');
-                CurriculumShared.showNotice('success', 'Thành công', 'Đã đóng kỳ học.');
+                AdminUI.showNotice('success', 'Thành công', 'Đã đóng kỳ học.');
                 load();
             })
             .catch(err => {
-                const msg = err.code ? CurriculumShared.translateError(err.code) : err.message;
-                CurriculumShared.showNotice('error', 'Lỗi', msg);
+                const msg = err.code ? AdminUI.translateError(err.code) : err.message;
+                AdminUI.showNotice('error', 'Lỗi', msg);
             });
     });
 
