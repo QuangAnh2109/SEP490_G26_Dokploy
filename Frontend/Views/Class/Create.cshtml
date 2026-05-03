@@ -42,8 +42,11 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="semesterInput" class="form-label">ID Kỳ học (tạm thời, sẽ thay bằng dropdown ở P8) *</label>
-                        <input type="number" class="form-control" id="semesterInput" min="1" required placeholder="Nhập ID kỳ học">
+                        <label for="semesterSelect" class="form-label">Kỳ học *</label>
+                        <select class="form-select" id="semesterSelect" required>
+                            <option value="">-- Đang tải danh sách kỳ học --</option>
+                        </select>
+                        <p class="text-muted small mt-1" id="semester-help"></p>
                     </div>
 
                     <div class="mb-4">
