@@ -113,6 +113,9 @@ window.QuestionEditor = (() => {
             const type = typeSel?.value;
 
             const stem = item._stemEditor?.getValue() || '';
+            if (!stem || !stem.trim()) {
+                throw new Error("Nội dung câu hỏi không được để trống.");
+            }
 
 
             const chapterSel = item.querySelector('[data-chapter-select]');

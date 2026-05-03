@@ -64,10 +64,7 @@ async function loadStudents() {
     }
 }
 
-function formatDateTime(dateString) {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleString("vi-VN");
-}
+
 
 function renderStudents(students) {
     const tbody = document.getElementById("studentTableBody");

@@ -690,12 +690,7 @@ function setButtonContent(btn, iconClass, label) {
     btn.appendChild(document.createTextNode(" " + label));
 }
 
-function formatDateTime(iso) {
-    if (!iso) return "---";
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+
 
 function getDifficultyText(d) {
     if (d === 1) return "Nhận biết";

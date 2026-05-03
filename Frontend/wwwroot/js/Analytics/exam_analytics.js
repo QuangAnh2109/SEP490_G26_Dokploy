@@ -302,11 +302,7 @@ function truncateText(str, maxLen) {
     return str.length > maxLen ? str.substring(0, maxLen) + "..." : str;
 }
 
-function formatDateVN(dateStr) {
-    if (!dateStr) return "—";
-    var d = new Date(dateStr);
-    return d.toLocaleDateString("vi-VN") + " " + d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-}
+
 
 function sanitizeLatex(str) {
     return str;

@@ -116,7 +116,7 @@ public class AssignExamRepository : IAssignExamRepository
     {
         var query = from b in _db.ExamBlueprints
                     join s in _db.Subjects on b.SubjectId equals s.SubjectId
-                    where b.Status == 1
+                    where b.Status == 1 || b.Status == 2
                     select new { b, s };
 
         if (teacherId.HasValue)
@@ -197,7 +197,7 @@ public class AssignExamRepository : IAssignExamRepository
         return await _db.ExamBlueprints
             .Include(x => x.ExamBlueprintChapters)
                 .ThenInclude(c => c.Chapter)
-            .FirstOrDefaultAsync(x => x.ExamBlueprintId == id && x.Status == 1, ct);
+            .FirstOrDefaultAsync(x => x.ExamBlueprintId == id && (x.Status == 1 || x.Status == 2), ct);
     }
 
     public async Task<List<int>> GetQuestionIdsForBlueprintRowAsync(int chapterId, int difficulty, int count, string[] activeStatus, CancellationToken ct)

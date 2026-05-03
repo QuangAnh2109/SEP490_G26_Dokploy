@@ -64,8 +64,9 @@ public class FillBlankAnswerDtoValidator : AbstractValidator<AnswerDto>
 
     public FillBlankAnswerDtoValidator()
     {
-        RuleFor(x => x.InputTypeId)
-            .NotNull().GreaterThan(0);
+        RuleFor(x => x.InputTypeIds)
+            .NotNull().NotEmpty()
+            .Must(ids => ids!.All(id => id > 0));
 
         RuleFor(x => x.Point)
             .NotNull().InclusiveBetween(MinPoint, MaxPoint);

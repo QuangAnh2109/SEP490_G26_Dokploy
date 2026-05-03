@@ -149,10 +149,7 @@ function applyFilter() {
     });
 }
 
-function formatDateTime(dateString) {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleString("vi-VN");
-}
+
 
 function getStatusStyles(status) {
     // Integer statuses from DB (teacher view)

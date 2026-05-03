@@ -24,7 +24,7 @@ namespace Backend.DTOs.Question
         public string? Content { get; set; }
         public string? CorrectAnswer { get; set; }
         public bool? IsCorrect { get; set; }
-        public int? InputTypeId { get; set; }
+        public List<int>? InputTypeIds { get; set; }
         public int? BlankIndex { get; set; }
         public int? Point { get; set; }
     }
@@ -97,6 +97,7 @@ namespace Backend.DTOs.Question
     {
         public int InputTypeId { get; set; }
         public string Name { get; set; } = null!;
+        public string? Regex { get; set; }
         public string? GroupType { get; set; }
     }
 

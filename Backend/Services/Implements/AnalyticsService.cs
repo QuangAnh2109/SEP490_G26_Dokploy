@@ -234,39 +234,37 @@ public class AnalyticsService(IAnalyticsRepository analyticsRepo, IStudentExamRe
         var paperQuestions = paper?.Questions?.ToList() ?? new List<Question>();
         dto.TotalQuestions = paperQuestions.DistinctBy(q => q.QuestionId).Count();
 
-        int questionOrder = 0, correctCount = 0, wrongCount = 0;
+        int questionOrder = 0;
         var answerAnalysis = new List<(string ChapterName, int Difficulty, bool IsCorrect)>();
 
-        foreach (var question in paperQuestions.DistinctBy(q => q.QuestionId))
+        var evaluatedQuestions = AnalyticsHelper.EvaluateSubmission(paperQuestions.DistinctBy(q => q.QuestionId), submission.StudentAnswers);
+
+        int correctCount = evaluatedQuestions.Count(q => q.IsCorrect);
+        int wrongCount = evaluatedQuestions.Count(q => !q.IsCorrect);
+
+        foreach (var eq in evaluatedQuestions)
         {
             questionOrder++;
             var review = new AnswerReviewDto
             {
-                QuestionId = question.QuestionId,
+                QuestionId = eq.QuestionId,
                 QuestionOrder = questionOrder,
-                QuestionContent = question.QuestionContent,
-                QuestionType = question.QuestionType,
-                ChapterName = question.Chapter?.Name ?? "N/A"
+                QuestionContent = eq.QuestionContent,
+                QuestionType = eq.QuestionType,
+                ChapterName = eq.ChapterName
             };
 
-            bool questionCorrect = true;
-            foreach (var qa in question.QuestionAnswers)
+            review.Options = eq.Options.Select(opt => new AnswerOptionReviewDto
             {
-                var sa = submission.StudentAnswers.FirstOrDefault(a => a.QuestionAnswerId == qa.QuestionAnswerId);
-                review.Options.Add(new AnswerOptionReviewDto
-                {
-                    QuestionAnswerId = qa.QuestionAnswerId,
-                    Content = qa.Content,
-                    StudentResponse = sa?.Response,
-                    IsSelected = sa != null,
-                    IsCorrect = showAnswer != 0 ? qa.IsCorrect : null,
-                    CorrectAnswer = showAnswer != 0 ? qa.CorrectAnswer : null
-                });
-                if (sa != null) { if (!AnalyticsHelper.CheckIsCorrect(qa, sa)) questionCorrect = false; }
-                else if (qa.IsCorrect == true) questionCorrect = false;
-            }
-            if (questionCorrect) correctCount++; else wrongCount++;
-            answerAnalysis.Add((question.Chapter?.Name ?? "N/A", question.Difficulty, questionCorrect));
+                QuestionAnswerId = opt.QuestionAnswerId,
+                Content = opt.Content,
+                StudentResponse = opt.StudentResponse,
+                IsSelected = opt.IsSelected,
+                IsCorrect = showAnswer != 0 ? opt.IsCorrect : null,
+                CorrectAnswer = showAnswer != 0 ? opt.CorrectAnswer : null
+            }).ToList();
+
+            answerAnalysis.Add((eq.ChapterName, eq.Difficulty, eq.IsCorrect));
             dto.AnswerReview.Add(review);
         }
 

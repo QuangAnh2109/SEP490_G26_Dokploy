@@ -1,0 +1,24 @@
+<div class="col-12 col-xl-8" id="question-loading">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<div class="col-12 col-xl-8" id="question-area" hidden>
+    <div id="question-header" hidden>
+        <div id="question-title"></div>
+        <div class="mb-3">
+            <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
+        </div>
+    </div>
+
+    @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
+    <ul id="question-block-mcq" hidden></ul>
+
+    @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
+    <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
+        <math-field hidden read-only id="question-block-fib-field"></math-field>
+    </div>
+</div>

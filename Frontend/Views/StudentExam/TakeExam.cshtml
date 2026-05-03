@@ -33,7 +33,7 @@
             <div>
                 <h1 class="page-title">Kiểm tra</h1>
                 <div class="badge bg-info mt-2" style="font-size: 1rem;">
-                    <i class="bi bi-file-earmark-text"></i> Mã đề thi: <span>204</span>
+                    <i class="bi bi-file-earmark-text"></i> Mã đề thi: <span id="examCodeSpan">---</span>
                 </div>
             </div>
             <div class="soft-card">
@@ -43,33 +43,7 @@
         </section>
 
         <div class="row g-3">
-            <div class="col-12 col-xl-8" id="question-loading">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-
-            @* ── Question Area (single question) ── *@
-            <div class="col-12 col-xl-8" id="question-area" hidden>
-                <div id="question-header" hidden>
-                    <div id="question-title"></div>
-                    <div class="mb-3">
-                        <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
-                    </div>
-                </div>
-
-                @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
-                <ul id="question-block-mcq" hidden>
-                </ul>
-
-                @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
-                <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
-                    <math-field hidden read-only id="question-block-fib-field"></math-field>
-                </div>
-
-            </div>
+            @await Html.PartialAsync("_QuestionArea")
 
             @* ── Sidebar ── *@
             <div class="col-12 col-xl-4">
@@ -85,369 +59,122 @@
                     <button class="btn btn-danger flex-grow-1" id="btnSubmitExam" onclick="confirmSubmit()">Nộp bài</button>
                 </div>
 
-                <div id="inputTypeContainer" class="soft-card" hidden>
-                    <div class="summary-label text-center mb-2">Giới hạn nhập liệu</div>
-                    <table class="table table-bordered table-sm text-center mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Loại dữ liệu</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inputTypeBody">
-                        </tbody>
-                    </table>
-                </div>
+                @await Html.PartialAsync("_InputLimitContainer")
             </div>
 
         </div>
     </div>
 </main>
 
-<template id="mcq-template">
-    <li>
-        <label>
-            <input type="checkbox" name="answer">
-            <math-span></math-span>
-        </label>
-    </li>
-</template>
-
-<template id="input-limit-btn-template">
-    <tr>
-        <td>
-            <button type="button" class="btn btn-outline-primary btn-sm w-100"></button>
-        </td>
-    </tr>
-</template>
-
-<template id="input-limit-text-template">
-    <tr>
-        <td class="align-middle">
-            <span class="text-muted fw-bold"></span>
-        </td>
-    </tr>
-</template>
+@await Html.PartialAsync("_ExamTemplates")
 
 @section Scripts {
-    <!-- MathLive for math rendering -->
     <script defer src="https://unpkg.com/mathlive"></script>
+    <script src="~/js/exam_engine.js"></script>
     <script>
-        var regexPlaceholder = /\\placeholder\[([^\]]+)\]\{\}/;
+        var examEngine;
         var exam;
-        var selectionHandler = null;
-        const fillInBlank = "FillInBlank";
-        const multipleChoice = "MultipleChoice";
-        var questionNumber = 1;
 
         // ── Timer variables ──
         var timerInterval = null;
         var remainingSeconds = 0;
 
-        // ── Lưu đáp án học sinh: Map<string, string> ──
-        // key: questionAnswerId (string)
-        // value: response (string) — rỗng với MCQ, latex với FIB
-        var studentAnswers = new Map();
-
-        var questionHeader;
-        var questionLoading;
-        var questionArea;
-        var questionStem;
-        var questionTitle;
-        var questionMcq;
-        var questionBlockFib;
-
         document.addEventListener('DOMContentLoaded', async () => {
-            questionHeader = document.getElementById('question-header');
-            questionLoading = document.getElementById('question-loading');
-            questionArea = document.getElementById('question-area');
-            questionStem = document.getElementById('question-stem');
-            questionTitle = document.getElementById('question-title');
-            questionMcq = document.getElementById('question-block-mcq');
-            questionBlockFib = document.getElementById('question-block-fib');
-            questionBlockFibField = document.getElementById('question-block-fib-field');
             //Lấy giá trị examId
             const examId = new URLSearchParams(window.location.search).get('examId');
 
             //Kiểm tra tính hợp lệ
             if (!examId || isNaN(examId)) {
-                alert("Không tìm thấy mã bài thi hợp lệ trong URL.");
+                showToast("Không tìm thấy mã bài thi hợp lệ trong URL.", "error");
                 return;
             }
 
             apiClient.post(`/api/student/exams/${examId}/take`)
                 .then((response) => {
                     exam = response;
-                    console.log(exam);
-                    buildQuestionNav(exam.questions.length);
-                    goToQuestion(1);
+                    
+                    // Update exam code
+                    const codeSpan = document.getElementById('examCodeSpan');
+                    if (codeSpan && exam.code) {
+                        codeSpan.textContent = exam.code;
+                    }
 
-                    // ── Khởi tạo bộ đếm thời gian ──
-                    startCountdown(exam.duration);
-                })
-                .catch((error) => {
-                    alert("Lỗi: " + error.message);
-                });
-        });
+                    examEngine = new ExamEngine({
+                        data: exam,
+                        studentAnswers: new Map((exam.savedAnswers || []).map(a => [String(a.questionAnswerId), a.response])),
+                        onNavUpdated: function(qNum) {
+                            const validation = examEngine.validateAllAnswers();
+                            const invalidQNums = validation.invalidQNums || [];
 
-        function renderQuestion(question){
-            // remove event cũ nếu có
-            if (selectionHandler) {
-                questionBlockFibField.removeEventListener("selection-change", selectionHandler);
-                selectionHandler = null;
-            }
-
-            //Ẩn câu hỏi cũ và hiện loading
-            questionHeader.hidden = true;
-            questionArea.hidden = true;
-            questionLoading.hidden = false;
-            questionBlockFib.hidden = true;
-            questionMcq.hidden = true;
-            questionBlockFibField.hidden = true;
-
-            //Truyền nội dung câu hỏi
-            if(question.questionType == fillInBlank){
-                var questionContent = JSON.parse(question.questionContent);
-                questionStem.textContent = questionContent.stem;
-                questionTitle.textContent = "Câu " + questionNumber;
-                document.getElementById('question-block-fib-field').value = questionContent.frame;
-                questionBlockFib.hidden = false;
-                questionBlockFibField.hidden = false;
-
-                // ── Khôi phục đáp án FIB đã lưu ──
-                    question.answers.forEach(answer => {
-                        const answerId = String(answer.questionAnswerId);
-                        if (studentAnswers.has(answerId)) {
-                            const placeholderMatch = answer.content.match(regexPlaceholder);
-                            if (placeholderMatch) {
-                                const promptId = placeholderMatch[1];
-                                questionBlockFibField.setPromptValue(promptId, studentAnswers.get(answerId), { silenceNotifications: true });
+                            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                                const questionNum = idx + 1;
+                                btn.classList.remove('btn-outline-primary', 'btn-primary', 'btn-danger');
+                                
+                                if (questionNum === qNum) {
+                                    btn.classList.add('btn-primary');
+                                } else if (invalidQNums.includes(questionNum)) {
+                                    btn.classList.add('btn-danger'); // Báo đỏ nếu sai định dạng
+                                    btn.title = "Có lỗi định dạng ở câu này";
+                                } else {
+                                    btn.classList.add('btn-outline-primary');
+                                    btn.removeAttribute('title');
+                                }
+                            });
+                            // Tự động lưu bài lưu nháp khi chuyển câu
+                            if (typeof submitExam === 'function') {
+                                submitExam(false);
                             }
                         }
                     });
+                    
+                    examEngine.init();
 
-                selectionHandler = () => {
-                    let placeholderId = [];
-                    for (const item of question.answers) {
-                        placeholderId.push(item.content.match(regexPlaceholder)?.[1]);
+                    // ── Khởi tạo bộ đếm thời gian ──
+                    let createdAtStr = exam.createdAtUtc;
+                    if (!createdAtStr.endsWith('Z') && !createdAtStr.includes('+')) {
+                        createdAtStr += 'Z';
                     }
-                    selectPlaceholder(questionBlockFibField, placeholderId);
-                };
-
-                questionBlockFibField.addEventListener("selection-change", selectionHandler);
-            }
-            else if(question.questionType == multipleChoice){
-                questionStem.textContent = question.questionContent;
-                questionStem.render?.();
-                questionTitle.textContent = "Câu " + questionNumber;
-                questionMcq.hidden = false;
-
-                var template = document.getElementById("mcq-template");
-
-                questionMcq.innerHTML = "";
-
-                question.answers.forEach((answer) => {
-
-                    var newOption = template.content.cloneNode(true);
-
-                    var li = newOption.querySelector("li");
-
-                    var checkbox = li.querySelector("input");
-                    var answerId = String(answer.questionAnswerId);
-                    checkbox.value = answerId;
-
-                    // ── Khôi phục trạng thái checked từ Map ──
-                    if (studentAnswers.has(answerId)) {
-                        checkbox.checked = true;
-                    }
-
-                    // ── Lưu/xóa đáp án MCQ khi checkbox thay đổi ──
-                    checkbox.addEventListener('change', function () {
-                        if (this.checked) {
-                            studentAnswers.set(answerId, '');
-                        } else {
-                            studentAnswers.delete(answerId);
-                        }
-                        console.log('studentAnswers:', Object.fromEntries(studentAnswers));
-                    });
-
-                    li.querySelector("math-span").textContent = answer.content;
-
-                    questionMcq.appendChild(newOption);
+                    startCountdown(exam.duration, createdAtStr);
+                })
+                .catch((error) => {
+                    showToast("Lỗi: " + error.message, "error");
                 });
-            }
-
-            console.log(studentAnswers);
-
-            //Hiện câu hỏi
-            questionLoading.hidden = true;
-            questionHeader.hidden = false;
-            questionArea.hidden = false;
-        }
-
-        function buildQuestionNav(total) {
-            const nav = document.getElementById('questionNav');
-            nav.innerHTML = '';
-            for (let i = 1; i <= total; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'btn btn-outline-primary btn-sm m-1';
-                btn.textContent = i;
-                btn.style.minWidth = '40px';
-                btn.addEventListener('click', () => goToQuestion(i));
-                nav.appendChild(btn);
-            }
-        }
-
-        function goToQuestion(num) {
-            // ── Lưu đáp án câu hiện tại trước khi chuyển ──
-            saveCurrentAnswers();
-
-            questionNumber = num;
-            renderQuestion(exam.questions[num-1]);
-
-            document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
-                if (idx + 1 === questionNumber) {
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('btn-primary');
-                } else {
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                }
-            });
-        }
-
-        // ══════════════════════════════════════════
-        // ── Lưu đáp án học sinh ──
-        // ══════════════════════════════════════════
-
-        function saveCurrentAnswers() {
-            if (!exam) return;
-            const question = exam.questions[questionNumber - 1];
-            if (!question) return;
-
-            if (question.questionType === multipleChoice) {
-                // MCQ: duyệt tất cả checkbox, cập nhật Map
-                const checkboxes = questionMcq.querySelectorAll('input[name="answer"]');
-                checkboxes.forEach(cb => {
-                    const answerId = String(cb.value);
-                    if (cb.checked) {
-                        studentAnswers.set(answerId, '');
-                    } else {
-                        studentAnswers.delete(answerId);
-                    }
-                });
-            }
-            else if (question.questionType === fillInBlank) {
-                // FIB: dùng getPrompts() của MathLive để lấy danh sách prompt ID
-                const promptIds = questionBlockFibField.getPrompts();
-                promptIds.forEach(promptId => {
-                    // Tìm answer tương ứng với promptId
-                    const answer = question.answers.find(a => {
-                        const match = a.content.match(regexPlaceholder);
-                        return match && match[1] === promptId;
-                    });
-                    if (answer) {
-                        const latex = questionBlockFibField.getPromptValue(promptId, 'latex');
-                        const answerId = String(answer.questionAnswerId);
-                        if (latex && latex.trim() !== '') {
-                            studentAnswers.set(answerId, latex);
-                        } else {
-                            studentAnswers.delete(answerId);
-                        }
-                    }
-                });
-            }
-
-            console.log('studentAnswers saved:', Object.fromEntries(studentAnswers));
-        }
-
-        function selectPlaceholder(mathField, placeholderId){
-            const pos = mathField.position;
-            let isInsidePlaceholder = false;
-
-            for (const id of placeholderId) {
-                const range = mathField.getPromptRange(id);
-
-                if (range && pos >= range[0] && pos <= range[1]) {
-                    console.log(id);
-                    isInsidePlaceholder = true;
-
-                    const currentQuestion = exam.questions[questionNumber - 1];
-                    const answer = currentQuestion.answers.find(a => {
-                        const match = a.content.match(regexPlaceholder);
-                        return match && match[1] === id;
-                    });
-
-                    const container = document.getElementById('inputTypeContainer');
-                    const tbody = document.getElementById('inputTypeBody');
-                    const btnTemplate = document.getElementById('input-limit-btn-template');
-                    const textTemplate = document.getElementById('input-limit-text-template');
-
-                    if (container && tbody) {
-                        tbody.innerHTML = '';
-                        if (answer && answer.inputTypes && answer.inputTypes.length > 0) {
-                            answer.inputTypes.forEach(it => {
-                                if (it.groupType === 'Sets') {
-                                    const newRow = textTemplate.content.cloneNode(true);
-                                    const span = newRow.querySelector('span');
-                                    span.textContent = 'Tập hợp: ' + it.name;
-                                    tbody.appendChild(newRow);
-                                } else {
-                                    const newRow = btnTemplate.content.cloneNode(true);
-                                    const btn = newRow.querySelector('button');
-                                    btn.textContent = it.name;
-                                    
-                                    btn.onmousedown = function(e) {
-                                        // Check user intent to not lose focus
-                                        e.preventDefault();
-                                    };
-                                    btn.onclick = function() {
-                                        mathField.focus();
-                                        mathField.insert('\\text{' + it.name + '}');
-                                    };
-                                    tbody.appendChild(newRow);
-                                }
-                            });
-                            container.hidden = false;
-                        } else {
-                            container.hidden = true;
-                        }
-                    }
-                    break;
-                }
-            }
-
-            if (!isInsidePlaceholder) {
-                const container = document.getElementById('inputTypeContainer');
-                if (container) container.hidden = true;
-            }
-        }
+        });
 
         // ══════════════════════════════════════════
         // ── Bộ đếm thời gian nộp bài ──
         // ══════════════════════════════════════════
 
-        function startCountdown(durationMinutes) {
+        function startCountdown(durationMinutes, createdAtUtcStr) {
             // Dừng timer cũ nếu có
             if (timerInterval) clearInterval(timerInterval);
 
-            remainingSeconds = Math.max(0, Math.floor(durationMinutes * 60));
-            updateTimerDisplay();
+            // Thời gian bắt đầu làm bài (UTC -> chuyển sang local timezone bằng Date object)
+            let createdAt = new Date(createdAtUtcStr);
+            let durationSeconds = durationMinutes * 60;
 
-            timerInterval = setInterval(() => {
-                remainingSeconds--;
+            let updateTime = () => {
+                let now = new Date();
+                let elapsedSeconds = Math.floor((now - createdAt) / 1000);
+                remainingSeconds = durationSeconds - elapsedSeconds;
 
                 if (remainingSeconds <= 0) {
                     remainingSeconds = 0;
                     clearInterval(timerInterval);
                     updateTimerDisplay();
                     // Hết giờ → tự động nộp bài
-                    alert("Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.");
+                    showToast("Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.", "warning", 5000);
                     submitExam(true);
                     return;
                 }
-
                 updateTimerDisplay();
-            }, 1000);
+            };
+
+            // Chạy ngay lần đầu để set thời gian
+            updateTime();
+
+            // Lặp lại mỗi giây
+            timerInterval = setInterval(updateTime, 1000);
         }
 
         /**
@@ -475,32 +202,20 @@
          * Xác nhận trước khi nộp bài (cho nút Nộp bài).
          */
         function confirmSubmit() {
-            if (confirm('Bạn có chắc chắn muốn nộp bài?')) {
-                submitExam(true);
-            }
+            showConfirm('Bạn có chắc chắn muốn nộp bài?', 'Xác nhận nộp bài', () => submitExam(true));
         }
 
         function submitExam(isFinal) {
-            // Lưu đáp án câu hiện tại trước khi nộp
-            saveCurrentAnswers();
+            if (examEngine) {
+                examEngine.saveCurrentAnswers();
+            }
 
             if (isFinal) {
-                // Dừng bộ đếm khi nộp bài chính thức
                 if (timerInterval) clearInterval(timerInterval);
             }
 
-            // Lấy examId từ URL
             const examId = parseInt(new URLSearchParams(window.location.search).get('examId'));
-
-            // Xây dựng danh sách StudentAnswerDto từ studentAnswers Map
-            const studentAnswerDtos = [];
-            studentAnswers.forEach((response, questionAnswerId) => {
-                console.log('Map key:', questionAnswerId, 'type:', typeof questionAnswerId, 'parseInt:', parseInt(questionAnswerId));
-                studentAnswerDtos.push({
-                    questionAnswerId: parseInt(questionAnswerId),
-                    response: response === '' ? null : response
-                });
-            });
+            const studentAnswerDtos = examEngine ? examEngine.getStudentAnswerDtos() : [];
 
             // Tạo SubmitExamRequest
             const requestBody = {
@@ -530,9 +245,9 @@
                         });
 
                         if (response.isLate) {
-                            alert(`Nộp bài trễ!\nThời điểm ghi nhận: ${formattedTime}\nBài làm của bạn đã được nộp nhưng đã quá thời hạn.`);
+                            showToast(`Nộp bài trễ! Thời điểm ghi nhận: ${formattedTime}. Bài làm của bạn đã được nộp nhưng đã quá thời hạn.`, "warning", 8000);
                         } else {
-                            alert(`Nộp bài thành công!\nThời điểm ghi nhận: ${formattedTime}`);
+                            showToast(`Nộp bài thành công! Thời điểm ghi nhận: ${formattedTime}`, "success", 5000);
                         }
 
                         // Chuyển hướng hoặc vô hiệu hóa giao diện sau khi nộp
@@ -545,7 +260,7 @@
                 })
                 .catch((error) => {
                     console.error('submitExam error:', error);
-                    alert('Lỗi khi nộp bài: ' + error.message);
+                    showToast('Lỗi khi nộp bài: ' + error.message, 'error');
                     if (btnSubmit) btnSubmit.disabled = false;
 
                     // Nếu nộp bài cuối cùng thất bại, khởi động lại timer
