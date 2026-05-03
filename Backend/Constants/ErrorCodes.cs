@@ -41,6 +41,12 @@ public static class ErrorCodes
     public const string SubjectAlreadyClosed = "SUBJECT_ALREADY_CLOSED";
     public const string SubjectConcurrentUpdate = "SUBJECT_CONCURRENT_UPDATE";
 
+    // Chapter
+    public const string ChapterNotFound = "CHAPTER_NOT_FOUND";
+    public const string ChapterNameDuplicate = "CHAPTER_NAME_DUPLICATE";
+    public const string ChapterAlreadyDeleted = "CHAPTER_ALREADY_DELETED";
+    public const string ChapterConcurrentUpdate = "CHAPTER_CONCURRENT_UPDATE";
+
     // Auth
     public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";
     public const string AuthOtpExpired = "AUTH_OTP_EXPIRED";

@@ -1,5 +1,6 @@
 using Backend.Common;
 using Backend.Constants;
+using Backend.DTOs.Curriculum.Chapter;
 using Backend.DTOs.Curriculum.Semester;
 using Backend.DTOs.Curriculum.Subject;
 
@@ -17,15 +18,18 @@ public class AdminCurriculumController : ControllerBase
 {
     private readonly ISemesterService _semesterService;
     private readonly ISubjectService _subjectService;
+    private readonly IChapterAdminService _chapterService;
     private readonly ICurrentUserService _currentUserService;
 
     public AdminCurriculumController(
         ISemesterService semesterService,
         ISubjectService subjectService,
+        IChapterAdminService chapterService,
         ICurrentUserService currentUserService)
     {
         _semesterService = semesterService;
         _subjectService = subjectService;
+        _chapterService = chapterService;
         _currentUserService = currentUserService;
     }
 
@@ -107,6 +111,39 @@ public class AdminCurriculumController : ControllerBase
     public async Task<IActionResult> CloseSubjectAsync(int id)
     {
         var result = await _subjectService.CloseAsync(id, _currentUserService.UserId);
+        return result.ToActionResult(this);
+    }
+
+    // ----- Chapters -----
+    [HttpPost("subjects/{subjectId:int}/chapters")]
+    [Authorize(Roles = RoleIds.Admin)]
+    public async Task<IActionResult> CreateChapterAsync(int subjectId, [FromBody] CreateChapterRequest request)
+    {
+        var result = await _chapterService.CreateAsync(subjectId, request, _currentUserService.UserId);
+        return result.IsSuccess ? StatusCode(201, result.Value) : result.ToActionResult(this);
+    }
+
+    [HttpPut("subjects/{subjectId:int}/chapters/{chapterId:int}")]
+    [Authorize(Roles = RoleIds.Admin)]
+    public async Task<IActionResult> UpdateChapterAsync(int subjectId, int chapterId, [FromBody] UpdateChapterRequest request)
+    {
+        var result = await _chapterService.UpdateAsync(subjectId, chapterId, request, _currentUserService.UserId);
+        return result.ToActionResult(this);
+    }
+
+    [HttpDelete("subjects/{subjectId:int}/chapters/{chapterId:int}")]
+    [Authorize(Roles = RoleIds.Admin)]
+    public async Task<IActionResult> DeleteChapterAsync(int subjectId, int chapterId)
+    {
+        var result = await _chapterService.DeleteAsync(subjectId, chapterId, _currentUserService.UserId);
+        return result.ToActionResult(this);
+    }
+
+    [HttpPatch("subjects/{subjectId:int}/chapters/order")]
+    [Authorize(Roles = RoleIds.Admin)]
+    public async Task<IActionResult> ReorderChaptersAsync(int subjectId, [FromBody] ReorderChaptersRequest request)
+    {
+        var result = await _chapterService.ReorderAsync(subjectId, request, _currentUserService.UserId);
         return result.ToActionResult(this);
     }
 }
