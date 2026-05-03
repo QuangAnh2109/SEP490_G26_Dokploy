@@ -116,6 +116,7 @@ namespace Backend
             builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
             builder.Services.AddScoped<IAssignExamRepository, AssignExamRepository>();
             builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
+            builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 
             // get OPTIONS
             builder.Services.AddOptions<JwtOptions>()
@@ -149,6 +150,7 @@ namespace Backend
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<IProfileService, ProfileService>();
             builder.Services.AddScoped<ISemesterService, SemesterService>();
+            builder.Services.AddScoped<ISubjectService, SubjectService>();
             // Add AnalyticsService
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             // Add PracticeExam

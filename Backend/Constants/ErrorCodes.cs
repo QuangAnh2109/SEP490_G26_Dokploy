@@ -34,6 +34,13 @@ public static class ErrorCodes
     public const string SemesterDateInvalid = "SEMESTER_DATE_INVALID";
     public const string SemesterConcurrentUpdate = "SEMESTER_CONCURRENT_UPDATE";
 
+    // Subject
+    public const string SubjectNotFound = "SUBJECT_NOT_FOUND";
+    public const string SubjectCodeDuplicate = "SUBJECT_CODE_DUPLICATE";
+    public const string SubjectClosed = "SUBJECT_CLOSED";
+    public const string SubjectAlreadyClosed = "SUBJECT_ALREADY_CLOSED";
+    public const string SubjectConcurrentUpdate = "SUBJECT_CONCURRENT_UPDATE";
+
     // Auth
     public const string AuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS";
     public const string AuthOtpExpired = "AUTH_OTP_EXPIRED";
