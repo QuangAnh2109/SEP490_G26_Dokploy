@@ -248,13 +248,22 @@ function renderExams(exams) {
             } else if (isStudent && studentActionTemplate) {
                 const actionFragment = studentActionTemplate.content.cloneNode(true);
                 actionFragment.querySelector(".btn-detail").href = detailUrl;
-                
-                if (status === "open" && currentClassStatus !== 0) {
+
+                // Hide btn-take when:
+                //  - exam is not open or class is closed, OR
+                //  - student has hit MaxAttempts AND has no in-progress submission for this exam
+                //    (student with in-progress can still continue regardless of attempts).
+                const maxAttempts = exam.maxAttempts || 0;
+                const studentAttempts = exam.studentAttempts || 0;
+                const hasInProgress = !!exam.hasInProgressSubmission;
+                const attemptsExhausted = maxAttempts > 0 && studentAttempts >= maxAttempts && !hasInProgress;
+
+                if (status === "open" && currentClassStatus !== 0 && !attemptsExhausted) {
                     actionFragment.querySelector(".btn-take").href = `/StudentExam/TakeExam?examId=${exam.examId}`;
                 } else {
                     actionFragment.querySelector(".btn-take").remove();
                 }
-                
+
                 actionsCol.appendChild(actionFragment);
             }
         }

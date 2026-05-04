@@ -35,5 +35,11 @@ namespace Backend.DTOs.Class
         public int ShowScore { get; set; }
         public int ShowAnswer { get; set; }
         public int AnswerTimingMode { get; set; }
+
+        // Student-only fields (0/false for teacher view)
+        // 0 means unlimited attempts (matches BE rule MaxAttempts > 0 && StudentAttempts >= MaxAttempts).
+        public int MaxAttempts { get; set; }
+        public int StudentAttempts { get; set; }
+        public bool HasInProgressSubmission { get; set; }
     }
 }

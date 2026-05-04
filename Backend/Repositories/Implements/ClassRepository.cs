@@ -98,39 +98,11 @@ namespace Backend.Repositories.Implements
                 .FirstOrDefaultAsync();
         }
 
-        // Return exams that belong to the class and are visible now.
-        // Exams with NULL VisibleFrom are treated as immediately visible.
-        // Compute Status based on OpenAt / CloseAt:
-        // - 1 => Open (now between OpenAt and CloseAt)
-        // - 2 => Upcoming (within 30 minutes before OpenAt)
-        // - 0 => Closed (otherwise)
-        public async Task<List<ExamInClassDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false)
+        // Teacher view: every exam in the class, status taken raw from DB.
+        public Task<List<ExamInClassDTO>> GetExamsByClassForTeacherAsync(int classId)
         {
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-            var upcomingThreshold = now.AddMinutes(30);
-
-            IQueryable<Models.Exam> query;
-
-            if (isTeacher)
-            {
-                // Teachers see all exams except hard-deleted ones
-                query = _context.Exams
-                    .Where(e => e.ClassId == classId);
-            }
-            else
-            {
-                // Students only see Published (1), InProgress (2), Closed (5)
-                // and only if VisibleFrom has passed
-                query = _context.Exams
-                    .Where(e => e.ClassId == classId
-                        && (e.Status == Backend.Constants.ExamStatus.Published
-                            || e.Status == Backend.Constants.ExamStatus.InProgress
-                            || e.Status == Backend.Constants.ExamStatus.Closed)
-                        && (e.VisibleFrom == null || e.VisibleFrom <= now));
-            }
-
-            // Project to DTO including ChapterId and computed Status
-            return await query
+            return _context.Exams
+                .Where(e => e.ClassId == classId)
                 .Select(e => new ExamInClassDTO
                 {
                     ExamId = e.ExamId,
@@ -142,25 +114,85 @@ namespace Backend.Repositories.Implements
                                     .Where(ebc => e.ExamBlueprintId != null && ebc.ExamBlueprintId == e.ExamBlueprintId)
                                     .Select(ebc => (int?)ebc.ChapterId)
                                     .FirstOrDefault(),
-
                     VisibleFrom = e.VisibleFrom,
                     OpenAt = e.OpenAt,
                     CloseAt = e.CloseAt,
                     DurationMinutes = e.Duration,
-                    // For teachers: use the raw DB status directly
-                    // For students: compute status from OpenAt/CloseAt
-                    Status = isTeacher
-                        ? e.Status
-                        : (e.OpenAt != null
-                            ? ((e.OpenAt <= now && (e.CloseAt == null || e.CloseAt >= now)) ? 1
-                                : (e.OpenAt > now && e.OpenAt <= upcomingThreshold) ? 2
-                                : 0)
-                            : e.Status),
+                    Status = e.Status,
                     ShowScore = e.ShowScore,
                     ShowAnswer = e.ShowAnswer,
                     AnswerTimingMode = e.AnswerTimingMode
                 })
                 .ToListAsync();
+        }
+
+        // Student view: only Published/InProgress/Closed exams that have become visible.
+        // Status is computed from OpenAt/CloseAt:
+        //   1 = Open, 2 = Upcoming (within 30 min), 0 = Closed.
+        // Per-exam attempt stats are loaded in a single GROUP BY query and merged in memory
+        // to avoid a correlated subquery per exam in the projection.
+        public async Task<List<ExamInClassDTO>> GetExamsByClassForStudentAsync(int classId, int studentId)
+        {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var upcomingThreshold = now.AddMinutes(30);
+
+            var exams = await _context.Exams
+                .Where(e => e.ClassId == classId
+                    && (e.Status == Backend.Constants.ExamStatus.Published
+                        || e.Status == Backend.Constants.ExamStatus.InProgress
+                        || e.Status == Backend.Constants.ExamStatus.Closed)
+                    && (e.VisibleFrom == null || e.VisibleFrom <= now))
+                .Select(e => new ExamInClassDTO
+                {
+                    ExamId = e.ExamId,
+                    Title = e.Title,
+                    Code = null,
+                    SubjectName = e.Subject != null ? e.Subject.Name : string.Empty,
+                    TeacherName = e.Teacher != null ? e.Teacher.FullName : null,
+                    ChapterId = _context.ExamBlueprintChapters
+                                    .Where(ebc => e.ExamBlueprintId != null && ebc.ExamBlueprintId == e.ExamBlueprintId)
+                                    .Select(ebc => (int?)ebc.ChapterId)
+                                    .FirstOrDefault(),
+                    VisibleFrom = e.VisibleFrom,
+                    OpenAt = e.OpenAt,
+                    CloseAt = e.CloseAt,
+                    DurationMinutes = e.Duration,
+                    Status = e.OpenAt != null
+                        ? ((e.OpenAt <= now && (e.CloseAt == null || e.CloseAt >= now)) ? 1
+                            : (e.OpenAt > now && e.OpenAt <= upcomingThreshold) ? 2
+                            : 0)
+                        : e.Status,
+                    ShowScore = e.ShowScore,
+                    ShowAnswer = e.ShowAnswer,
+                    AnswerTimingMode = e.AnswerTimingMode,
+                    MaxAttempts = e.MaxAttempts
+                })
+                .ToListAsync();
+
+            if (exams.Count == 0) return exams;
+
+            var examIds = exams.Select(e => (int?)e.ExamId).ToList();
+            var stats = await _context.Submissions
+                .Where(s => s.StudentId == studentId && examIds.Contains(s.Paper.ExamId))
+                .GroupBy(s => s.Paper.ExamId!.Value)
+                .Select(g => new
+                {
+                    ExamId = g.Key,
+                    Count = g.Count(),
+                    HasInProgress = g.Any(s => s.Status == Backend.Constants.SubmissionStatus.InProgress)
+                })
+                .ToDictionaryAsync(x => x.ExamId);
+
+            foreach (var dto in exams)
+            {
+                if (stats.TryGetValue(dto.ExamId, out var s))
+                {
+                    dto.StudentAttempts = s.Count;
+                    dto.HasInProgressSubmission = s.HasInProgress;
+                }
+            }
+
+            return exams;
         }
 
         public async Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, int semesterId, int subjectId)

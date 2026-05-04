@@ -11,7 +11,8 @@ namespace Backend.Repositories.Interfaces
         Task<List<ClassDTO>> GetClassesForUserAsync(int userId);
         Task<List<ClassDTO>> GetAllAsync();
         Task<ClassDTO?> GetByIdAsync(int classId);
-        Task<List<ExamInClassDTO>> GetExamsByClassAsync(int classId, bool isTeacher = false);
+        Task<List<ExamInClassDTO>> GetExamsByClassForTeacherAsync(int classId);
+        Task<List<ExamInClassDTO>> GetExamsByClassForStudentAsync(int classId, int studentId);
 
         Task<string?> GetDuplicateClassErrorAsync(int teacherId, string className, int semesterId, int subjectId);
         Task<ClassDTO> CreateClassAsync(Class newClass);

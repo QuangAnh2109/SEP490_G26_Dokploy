@@ -40,7 +40,9 @@ public class ClassService(
         if (membership.IsFailure) return membership.Error;
 
         var isTeacher = membership.Value.Role == RoleTeacher;
-        return await repo.GetExamsByClassAsync(classId, isTeacher);
+        return isTeacher
+            ? await repo.GetExamsByClassForTeacherAsync(classId)
+            : await repo.GetExamsByClassForStudentAsync(classId, currentUser.UserId);
     }
 
     public async Task<Result<List<ChapterDTO>>> GetChaptersForCurrentUserAsync(int classId)

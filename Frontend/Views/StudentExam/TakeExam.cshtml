@@ -137,9 +137,39 @@
                     startCountdown(exam.duration, createdAtStr);
                 })
                 .catch((error) => {
-                    showToast("Lỗi: " + error.message, "error");
+                    const code = error?.xhr?.responseJSON?.code || null;
+                    showTakeExamError(code);
                 });
         });
+
+        const TAKE_EXAM_ERROR_MESSAGES = {
+            STUDENT_EXAM_NOT_FOUND: "Không tìm thấy bài thi hoặc bạn không thuộc lớp được giao bài này.",
+            STUDENT_EXAM_NOT_ALLOWED: "Bạn không có quyền làm bài thi này.",
+            STUDENT_EXAM_MAX_ATTEMPTS_REACHED: "Bạn đã hết số lần làm bài cho phép cho bài thi này.",
+            STUDENT_EXAM_ANOTHER_ACTIVE_SUBMISSION: "Bạn đang làm dở một bài thi khác. Vui lòng hoàn tất bài đó trước khi vào bài này.",
+            STUDENT_EXAM_NO_PAPERS: "Bài thi chưa có đề. Vui lòng liên hệ giáo viên."
+        };
+
+        function showTakeExamError(code) {
+            const msg = TAKE_EXAM_ERROR_MESSAGES[code] || "Không thể vào làm bài. Vui lòng thử lại sau.";
+            const workspace = document.getElementById('examWorkspace');
+            if (!workspace) {
+                showToast(msg, "error", 6000);
+                return;
+            }
+            workspace.innerHTML = `
+                <div class="container-fluid px-3 px-md-4 py-5">
+                    <div class="alert alert-warning d-flex flex-column align-items-start gap-3" role="alert">
+                        <div>
+                            <h2 class="h5 mb-2"><i class="bi bi-exclamation-triangle"></i> Không thể vào làm bài</h2>
+                            <p class="mb-0">${msg}</p>
+                        </div>
+                        <a href="/Class/ClassList" class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> Quay lại danh sách lớp
+                        </a>
+                    </div>
+                </div>`;
+        }
 
         // ══════════════════════════════════════════
         // ── Bộ đếm thời gian nộp bài ──
