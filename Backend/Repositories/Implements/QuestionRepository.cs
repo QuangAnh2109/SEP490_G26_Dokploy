@@ -111,7 +111,12 @@ namespace Backend.Repositories.Implements
         public async Task<List<Subject>> GetSubjectsWithChaptersAsync()
         {
             return await _dbContext.Subjects
-                .Include(s => s.Chapters)
+                .AsNoTracking()
+                .Where(s => s.Status == Backend.Constants.SubjectStatus.Active)
+                .Include(s => s.Chapters
+                    .Where(c => c.Status == Backend.Constants.ChapterStatus.Active)
+                    .OrderBy(c => c.DisplayOrder)
+                    .ThenBy(c => c.Name))
                 .OrderBy(s => s.Name)
                 .ToListAsync();
         }
