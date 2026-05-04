@@ -148,6 +148,7 @@ public static class ErrorCodes
     public const string PracticeExamPaperNotFound = "PRACTICE_EXAM_PAPER_NOT_FOUND";
     public const string PracticeExamInvalidAnswer = "PRACTICE_EXAM_INVALID_ANSWER";
     public const string PracticeExamNotSubmitted = "PRACTICE_EXAM_NOT_SUBMITTED";
+    public const string PracticeExamGradingFailed = "PRACTICE_EXAM_GRADING_FAILED";
 
     // Analytics
     public const string AnalyticsExamNotFound = "ANALYTICS_EXAM_NOT_FOUND";

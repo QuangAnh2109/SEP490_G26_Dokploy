@@ -44,4 +44,8 @@ public static class PracticeExamErrors
     public static readonly Error NotSubmitted = new(
         ErrorCodes.PracticeExamNotSubmitted,
         ErrorType.Conflict);
+
+    public static readonly Error GradingFailed = new(
+        ErrorCodes.PracticeExamGradingFailed,
+        ErrorType.Unexpected);
 }

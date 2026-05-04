@@ -13,31 +13,34 @@ namespace Backend.Helpers
             IEnumerable<(int QuestionAnswerId, string? Response)> incomingAnswers,
             int submissionId)
         {
-            var incomingMap = incomingAnswers.ToDictionary(a => a.QuestionAnswerId);
-            
-            // 1. Cập nhật câu trả lời cũ hoặc thêm mới
-            foreach (var dto in incomingAnswers)
+            // Dedupe theo QuestionAnswerId, ưu tiên giá trị cuối nếu FE gửi trùng.
+            var incomingMap = incomingAnswers
+                .GroupBy(a => a.QuestionAnswerId)
+                .ToDictionary(g => g.Key, g => g.Last().Response);
+
+            var existingByQaId = existingAnswers.ToDictionary(a => a.QuestionAnswerId);
+
+            foreach (var (questionAnswerId, response) in incomingMap)
             {
-                var existing = existingAnswers.FirstOrDefault(a => a.QuestionAnswerId == dto.QuestionAnswerId);
-                if (existing != null)
+                if (existingByQaId.TryGetValue(questionAnswerId, out var existing))
                 {
-                    existing.Response = dto.Response;
+                    existing.Response = response;
                 }
                 else
                 {
                     existingAnswers.Add(new StudentAnswer
                     {
                         SubmissionId = submissionId,
-                        QuestionAnswerId = dto.QuestionAnswerId,
-                        Response = dto.Response
+                        QuestionAnswerId = questionAnswerId,
+                        Response = response
                     });
                 }
             }
 
-            // 2. Xóa các câu trả lời không còn trong request
-            var incomingIds = incomingMap.Keys.ToHashSet();
-            var toRemove = existingAnswers.Where(a => !incomingIds.Contains(a.QuestionAnswerId)).ToList();
-            
+            var toRemove = existingAnswers
+                .Where(a => !incomingMap.ContainsKey(a.QuestionAnswerId))
+                .ToList();
+
             foreach (var sa in toRemove)
             {
                 existingAnswers.Remove(sa);

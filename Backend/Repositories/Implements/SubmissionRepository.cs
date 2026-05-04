@@ -54,7 +54,13 @@ public class SubmissionRepository : ISubmissionRepository
 
     public async Task<int> GetPaperQuestionCountAsync(int paperId, CancellationToken ct = default)
     {
-        return await _context.Set<PaperQuestion>().CountAsync(pq => pq.PaperId == paperId, ct);
+        // Join entity được map dưới dạng shared-type Dictionary<string, object> (name "PaperQuestion"),
+        // không phải kiểu C# PaperQuestion → _context.Set<PaperQuestion>() throw "type not in model".
+        // Đếm qua skip-navigation Paper.Questions để EF tự sinh JOIN qua bảng nối.
+        return await _context.Papers
+            .Where(p => p.PaperId == paperId)
+            .Select(p => p.Questions.Count)
+            .FirstOrDefaultAsync(ct);
     }
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)

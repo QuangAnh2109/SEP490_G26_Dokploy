@@ -138,7 +138,6 @@
                 resultData = await apiClient.get(`/api/practice/result/${submissionId}`);
 
                 renderResult(resultData);
-                document.getElementById('resultLoading').classList.add('d-none');
                 document.getElementById('resultContent').classList.remove('d-none');
             } catch (error) {
                 if (error.xhr && error.xhr.status === 401) {
@@ -146,6 +145,8 @@
                     return;
                 }
                 showToast(error.message || 'Lỗi tải kết quả', 'error');
+            } finally {
+                document.getElementById('resultLoading').classList.add('d-none');
             }
         }
 

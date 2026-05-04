@@ -33,6 +33,11 @@ namespace Backend.Repositories.Interfaces
         Task<int> CountPracticeQuestionsAsync(int chapterId, int teacherId, List<int>? difficultyLevels = null);
 
         /// <summary>
+        /// Đếm số câu hỏi luyện tập theo từng (ChapterId, Difficulty) trong 1 query (tránh N+1).
+        /// </summary>
+        Task<List<PracticeQuestionCountRaw>> GetPracticeQuestionCountsAsync(List<int> chapterIds, int teacherId);
+
+        /// <summary>
         /// Tạo Paper (ExamId=null) + gắn câu hỏi.
         /// </summary>
         Task<Paper> CreatePracticePaperAsync(List<int> questionIds);
@@ -44,8 +49,9 @@ namespace Backend.Repositories.Interfaces
 
         /// <summary>
         /// Lấy Submission kèm Paper, Questions, QuestionAnswers cho submit/result.
+        /// Đặt <paramref name="tracked"/>=true khi cần ghi (Submit/Save) — mặc định AsNoTracking cho read paths.
         /// </summary>
-        Task<Submission?> GetPracticeSubmissionFullAsync(int submissionId, int studentId);
+        Task<Submission?> GetPracticeSubmissionFullAsync(int submissionId, int studentId, bool tracked = false);
 
         /// <summary>
         /// Lấy lịch sử luyện tập (Paper.ExamId == null).
@@ -77,6 +83,13 @@ namespace Backend.Repositories.Interfaces
         public int Difficulty { get; set; }
         public int TotalAttempted { get; set; }
         public int CorrectCount { get; set; }
+    }
+
+    public class PracticeQuestionCountRaw
+    {
+        public int ChapterId { get; set; }
+        public int Difficulty { get; set; }
+        public int Count { get; set; }
     }
 
     public class PracticeHistoryRaw

@@ -62,6 +62,7 @@
                         <i class="fas fa-paper-plane me-1"></i> Nộp bài
                     </button>
                 </div>
+                <div id="autoSaveStatus" class="form-note small text-muted mt-1" aria-live="polite"></div>
                 @await Html.PartialAsync("_InputLimitContainer")
             </div>
         </div>
@@ -77,6 +78,7 @@
         var practiceData = null;
         var examEngine;
         var isResumed = false;
+        var isSubmitting = false; // chặn auto-save trùng khi submit đang chạy
 
         document.addEventListener('DOMContentLoaded', async () => {
             await loadPracticeExam();
@@ -105,6 +107,14 @@
                     window.location.href = '/Auth/Login';
                     return;
                 }
+
+                // Nếu bài đã được nộp rồi → chuyển thẳng sang trang Result thay vì kẹt ở đây
+                const code = error.message || '';
+                if (code === 'PRACTICE_EXAM_ALREADY_SUBMITTED' || (error.xhr && error.xhr.status === 409)) {
+                    window.location.href = `/PracticeExam/Result?submissionId=${submissionId}`;
+                    return;
+                }
+
                 console.log('Resume failed, trying create response from sessionStorage');
             }
 
@@ -168,19 +178,39 @@
         }
 
         function confirmSubmit() {
+            if (!practiceData || !examEngine) {
+                showToast('Bài luyện tập chưa sẵn sàng. Vui lòng đợi tải xong.', 'error');
+                return;
+            }
+
+            // Validate format đáp án FillInBlank trước khi cho nộp.
+            // showToast dùng textContent → phải strip HTML khỏi error messages.
+            examEngine.saveCurrentAnswers();
+            const validation = examEngine.validateAllAnswers();
+            if (!validation.isValid) {
+                const stripHtml = s => s.replace(/<[^>]*>/g, '');
+                const first = stripHtml(validation.errors[0]);
+                const more = validation.errors.length > 1 ? ` (và ${validation.errors.length - 1} lỗi khác)` : '';
+                showToast(`Đáp án có lỗi định dạng. ${first}${more}`, 'error', 6000);
+                return;
+            }
+
             showConfirm('Bạn có chắc muốn nộp bài luyện tập?', 'Nộp bài', () => submitPractice());
         }
 
         async function submitPractice() {
-            if (examEngine) {
-                examEngine.saveCurrentAnswers();
+            if (!practiceData) {
+                showToast('Bài luyện tập chưa sẵn sàng.', 'error');
+                return;
             }
+            isSubmitting = true; // ngăn auto-save chen vào và "lưu nháp thất bại" sau khi đã nộp
+            examEngine.saveCurrentAnswers();
 
             const btn = document.getElementById('btnSubmitPractice');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang nộp...';
 
-            const studentAnswerDtos = examEngine ? examEngine.getStudentAnswerDtos() : [];
+            const studentAnswerDtos = examEngine.getStudentAnswerDtos();
 
             try {
                 const result = await apiClient.post('/api/practice/submit', {
@@ -195,25 +225,51 @@
                     window.location.href = `/PracticeExam/Result?submissionId=${practiceData.submissionId}`;
                 }, 1500);
             } catch (error) {
+                isSubmitting = false; // cho phép auto-save lại nếu user thử nộp lại
                 showToast(error.message || 'Lỗi nộp bài', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Nộp bài';
             }
         }
 
+        // Hiển thị trạng thái auto-save để học sinh không "gõ vào hư vô" khi save fail.
+        function setAutoSaveStatus(state, detail) {
+            const el = document.getElementById('autoSaveStatus');
+            if (!el) return;
+            const stamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            if (state === 'saving') {
+                el.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i> Đang lưu nháp...';
+                el.className = 'form-note small text-muted mt-1';
+            } else if (state === 'saved') {
+                el.innerHTML = `<i class="fas fa-check-circle me-1 text-success"></i> Đã lưu lúc ${stamp}`;
+                el.className = 'form-note small text-success mt-1';
+            } else if (state === 'error') {
+                el.innerHTML = `<i class="fas fa-exclamation-triangle me-1 text-danger"></i> Lưu nháp thất bại${detail ? ` (${detail})` : ''}`;
+                el.className = 'form-note small text-danger mt-1';
+            }
+        }
+
         async function submitPracticeDraft() {
-            if (!examEngine) return;
+            if (!practiceData || !examEngine) return;
+            if (isSubmitting) return; // submit đang chạy → bỏ qua auto-save tránh race
             examEngine.saveCurrentAnswers();
 
             const studentAnswerDtos = examEngine.getStudentAnswerDtos();
 
+            setAutoSaveStatus('saving');
             try {
                 await apiClient.post('/api/practice/save', {
                     submissionId: practiceData.submissionId,
                     studentAnswers: studentAnswerDtos
                 });
+                setAutoSaveStatus('saved');
             } catch (error) {
                 console.error('Lỗi tự động lưu nháp', error);
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+                setAutoSaveStatus('error', error.message || '');
             }
         }
     </script>

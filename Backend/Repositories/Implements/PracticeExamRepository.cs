@@ -159,6 +159,24 @@ namespace Backend.Repositories.Implements
             return await query.CountAsync();
         }
 
+        public async Task<List<PracticeQuestionCountRaw>> GetPracticeQuestionCountsAsync(List<int> chapterIds, int teacherId)
+        {
+            return await _context.Questions
+                .Where(q => chapterIds.Contains(q.ChapterId)
+                         && q.QuestionPurpose == QuestionPurpose.Practice
+                         && q.CreatedByUserId == teacherId
+                         && q.Status == QuestionStatus.Active)
+                .GroupBy(q => new { q.ChapterId, q.Difficulty })
+                .Select(g => new PracticeQuestionCountRaw
+                {
+                    ChapterId = g.Key.ChapterId,
+                    Difficulty = g.Key.Difficulty,
+                    Count = g.Count()
+                })
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         public async Task<Paper> CreatePracticePaperAsync(List<int> questionIds)
         {
             var paper = new Paper
@@ -196,9 +214,9 @@ namespace Backend.Repositories.Implements
             return submission;
         }
 
-        public async Task<Submission?> GetPracticeSubmissionFullAsync(int submissionId, int studentId)
+        public async Task<Submission?> GetPracticeSubmissionFullAsync(int submissionId, int studentId, bool tracked = false)
         {
-            return await _context.Submissions
+            var query = _context.Submissions
                 .Include(s => s.Paper)
                     .ThenInclude(p => p.Questions)
                         .ThenInclude(q => q.Chapter)
@@ -212,9 +230,12 @@ namespace Backend.Repositories.Implements
                 .Where(s => s.SubmissionId == submissionId
                          && s.StudentId == studentId
                          && s.Paper.ExamId == null) // Chỉ lấy bài luyện tập
-                .AsNoTracking()
-                .AsSplitQuery() // <-- Tránh Cartesian explosion
-                .FirstOrDefaultAsync();
+                .AsSplitQuery(); // <-- Tránh Cartesian explosion
+
+            if (!tracked)
+                query = query.AsNoTracking();
+
+            return await query.FirstOrDefaultAsync();
         }
 
         public async Task<Paper?> GetPracticePaperWithQuestionsAsync(int paperId)

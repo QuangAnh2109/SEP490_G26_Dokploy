@@ -14,12 +14,14 @@ namespace Backend.Services.Implements
         IPracticeExamRepository repo,
         ICurrentUserService currentUserService,
         ILogger<PracticeExamService> logger,
-        TimeProvider timeProvider) : IPracticeExamService
+        TimeProvider timeProvider,
+        IGradingService gradingService) : IPracticeExamService
     {
         private readonly IPracticeExamRepository _repo = repo;
         private readonly ICurrentUserService _currentUserService = currentUserService;
         private readonly ILogger<PracticeExamService> _logger = logger;
         private readonly TimeProvider _timeProvider = timeProvider;
+        private readonly IGradingService _gradingService = gradingService;
 
         private const int MinQuestions = 5;
         private const int MaxQuestions = 30;
@@ -44,18 +46,22 @@ namespace Backend.Services.Implements
 
             var chapterIds = chapters.Select(c => c.ChapterId).ToList();
             var profData = await _repo.GetStudentProficiencyAsync(studentId, chapterIds);
+            var counts = await _repo.GetPracticeQuestionCountsAsync(chapterIds, cls.TeacherId);
+
+            var countsByChapterDiff = counts.ToDictionary(c => (c.ChapterId, c.Difficulty), c => c.Count);
 
             var result = new List<ChapterProficiencyDto>();
             foreach (var chapter in chapters)
             {
                 var chapterProf = profData.Where(p => p.ChapterId == chapter.ChapterId).ToList();
-                var availableCount = await _repo.CountPracticeQuestionsAsync(chapter.ChapterId, cls.TeacherId);
 
                 var diffBreakdown = new List<DifficultyProficiencyDto>();
+                int availableCount = 0;
                 for (int diff = 1; diff <= 4; diff++)
                 {
                     var slot = chapterProf.FirstOrDefault(p => p.Difficulty == diff);
-                    var diffAvailable = await _repo.CountPracticeQuestionsAsync(chapter.ChapterId, cls.TeacherId, new List<int> { diff });
+                    var diffAvailable = countsByChapterDiff.TryGetValue((chapter.ChapterId, diff), out var n) ? n : 0;
+                    availableCount += diffAvailable;
                     diffBreakdown.Add(new DifficultyProficiencyDto
                     {
                         Difficulty = diff,
@@ -214,58 +220,45 @@ namespace Backend.Services.Implements
         }
 
         // ════════════════════════════════════════════════════════
-        //  NỘP BÀI LUYỆN TẬP (không check thời gian)
+        //  NỘP BÀI LUYỆN TẬP — chấm điểm đồng bộ qua GradingService (dùng chung với TakeExam)
         // ════════════════════════════════════════════════════════
         public async Task<Result<SubmitPracticeExamResponse>> SubmitPracticeExamAsync(SubmitPracticeExamRequest request)
         {
-            var studentId = _currentUserService.UserId;
-            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId!.Value, studentId);
-            if (submission == null)
-                return PracticeExamErrors.SubmissionNotFound;
+            var prep = await PrepareSubmissionForWriteAsync(request);
+            if (prep.IsFailure) return prep.Error;
 
-            if (submission.Status != SubmissionStatus.InProgress)
-                return PracticeExamErrors.AlreadySubmitted;
-
-            var paper = submission.Paper;
-            if (paper == null)
-                return PracticeExamErrors.PaperNotFound;
-
-            // Validate QuestionAnswerIds thuộc Paper
-            var validQAIds = paper.Questions
-                .SelectMany(q => q.QuestionAnswers)
-                .Select(qa => qa.QuestionAnswerId)
-                .ToHashSet();
-
-            foreach (var sa in request.StudentAnswers!)
-            {
-                if (!validQAIds.Contains(sa.QuestionAnswerId!.Value))
-                    return PracticeExamErrors.InvalidAnswer;
-            }
-
-            // Xử lý StudentAnswers: đồng bộ cũ mới
-            var incomingData = request.StudentAnswers!
-                .Where(sa => sa.QuestionAnswerId.HasValue)
-                .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
-
-            StudentAnswerSyncHelper.SyncAnswers(
-                submission.StudentAnswers, 
-                incomingData, 
-                submission.SubmissionId);
-
-            // Cập nhât submission
+            var submission = prep.Value;
             submission.Status = SubmissionStatus.Submitted;
-            submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
-
             await _repo.SaveChangesAsync();
 
-            var totalQuestions = paper.Questions.DistinctBy(q => q.QuestionId).Count();
+            // Chấm điểm đồng bộ — cùng cơ chế với bài kiểm tra (GradingService).
+            // GradingService persist StudentAnswer.IsCorrect/PointsEarned + Submission.TotalPoints.
+            await _gradingService.GradeSubmissionAsync(submission.SubmissionId);
+
+            // Khi grading thành công, GradingService set tracked submission.GradingStatus = Graded
+            // và save (PracticeExamService.cs caller share cùng DbContext scope).
+            // Khi grading throw, catch block dùng raw UPDATE → tracked entity vẫn = InProgress.
+            // Vì vậy check "!= Graded" bắt được mọi trạng thái không thành công.
+            if (submission.GradingStatus != GradingStatus.Graded)
+            {
+                _logger.LogError(
+                    "Practice grading did not complete for Submission {SubmissionId} (Student={StudentId}, TrackedGradingStatus={Status}).",
+                    submission.SubmissionId, _currentUserService.UserId, submission.GradingStatus);
+                return PracticeExamErrors.GradingFailed;
+            }
+
+            var results = ComputeQuestionResults(submission);
+            int correctCount = results.Count(r => r.IsCorrect);
+            int totalQuestions = results.Count;
 
             return new SubmitPracticeExamResponse
             {
                 SubmissionId = submission.SubmissionId,
                 TotalQuestions = totalQuestions,
-                CorrectCount = 0,
-                AccuracyRate = 0,
+                CorrectCount = correctCount,
+                AccuracyRate = totalQuestions > 0
+                    ? Math.Round((double)correctCount / totalQuestions * 100, 1)
+                    : 0,
                 SubmittedAtUtc = submission.UpdatedAtUtc
             };
         }
@@ -275,8 +268,20 @@ namespace Backend.Services.Implements
         // ════════════════════════════════════════════════════════
         public async Task<Result> SavePracticeAnswersAsync(SubmitPracticeExamRequest request)
         {
+            var prep = await PrepareSubmissionForWriteAsync(request);
+            if (prep.IsFailure) return prep.Error;
+
+            await _repo.SaveChangesAsync();
+            return Result.Success();
+        }
+
+        // Tải submission (tracked), validate, sync answers, set UpdatedAtUtc — KHÔNG SaveChanges.
+        // Caller quyết định set Status và khi nào commit.
+        private async Task<Result<Submission>> PrepareSubmissionForWriteAsync(SubmitPracticeExamRequest request)
+        {
             var studentId = _currentUserService.UserId;
-            var submission = await _repo.GetPracticeSubmissionFullAsync(request.SubmissionId!.Value, studentId);
+            var submission = await _repo.GetPracticeSubmissionFullAsync(
+                request.SubmissionId!.Value, studentId, tracked: true);
             if (submission == null)
                 return PracticeExamErrors.SubmissionNotFound;
 
@@ -287,7 +292,6 @@ namespace Backend.Services.Implements
             if (paper == null)
                 return PracticeExamErrors.PaperNotFound;
 
-            // Validate QuestionAnswerIds thuộc Paper
             var validQAIds = paper.Questions
                 .SelectMany(q => q.QuestionAnswers)
                 .Select(qa => qa.QuestionAnswerId)
@@ -299,21 +303,67 @@ namespace Backend.Services.Implements
                     return PracticeExamErrors.InvalidAnswer;
             }
 
-            // Xử lý StudentAnswers: đồng bộ cũ mới
             var incomingData = request.StudentAnswers!
                 .Where(sa => sa.QuestionAnswerId.HasValue)
                 .Select(sa => (sa.QuestionAnswerId!.Value, sa.Response));
 
             StudentAnswerSyncHelper.SyncAnswers(
-                submission.StudentAnswers, 
-                incomingData, 
+                submission.StudentAnswers,
+                incomingData,
                 submission.SubmissionId);
 
-            // Giữ nguyên Status = InProgress, chỉ cập nhật thời gian
             submission.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
+            return submission;
+        }
 
-            await _repo.SaveChangesAsync();
-            return Result.Success();
+        private record QuestionResult(Question Question, bool IsCorrect, List<PracticeOptionReviewDto> Options);
+
+        // Đọc kết quả chấm đã persisted bởi GradingService (cùng cơ chế với TakeExam).
+        // Câu đúng = mọi QuestionAnswer của câu đó đều khớp:
+        //   - QA có sa: sa.IsCorrect == true
+        //   - QA không có sa: qa.IsCorrect != true (option đúng mà bỏ → câu sai)
+        // Trả về cả option DTOs để Result endpoint reuse, tránh duplicate iteration.
+        private static List<QuestionResult> ComputeQuestionResults(Submission submission)
+        {
+            var questions = submission.Paper?.Questions?.DistinctBy(q => q.QuestionId).ToList()
+                            ?? new List<Question>();
+
+            // Dictionary lookup thay vì O(N²) FirstOrDefault.
+            var saByQaId = submission.StudentAnswers.ToDictionary(a => a.QuestionAnswerId);
+
+            var results = new List<QuestionResult>(questions.Count);
+            foreach (var question in questions)
+            {
+                bool questionCorrect = true;
+                var optionDtos = new List<PracticeOptionReviewDto>(question.QuestionAnswers.Count);
+                foreach (var qa in question.QuestionAnswers)
+                {
+                    saByQaId.TryGetValue(qa.QuestionAnswerId, out var sa);
+
+                    if (sa == null)
+                    {
+                        if (qa.IsCorrect == true) questionCorrect = false;
+                    }
+                    else if (sa.IsCorrect != true)
+                    {
+                        questionCorrect = false;
+                    }
+
+                    optionDtos.Add(new PracticeOptionReviewDto
+                    {
+                        QuestionAnswerId = qa.QuestionAnswerId,
+                        Content = qa.Content,
+                        StudentResponse = sa?.Response,
+                        IsSelected = sa != null,
+                        IsCorrect = qa.IsCorrect,
+                        CorrectAnswer = qa.CorrectAnswer
+                    });
+                }
+
+                results.Add(new QuestionResult(question, questionCorrect, optionDtos));
+            }
+
+            return results;
         }
 
         // ════════════════════════════════════════════════════════
@@ -365,45 +415,36 @@ namespace Backend.Services.Implements
             if (submission.Status != SubmissionStatus.Submitted)
                 return PracticeExamErrors.NotSubmitted;
 
-            var paper = submission.Paper;
-            var questions = paper?.Questions?.DistinctBy(q => q.QuestionId).ToList() ?? new();
+            var results = ComputeQuestionResults(submission);
+            int correctCount = results.Count(r => r.IsCorrect);
+            int totalQ = results.Count;
+            int wrongCount = totalQ - correctCount;
+
+            var answerReview = new List<PracticeAnswerReviewDto>(results.Count);
+            var chapterAgg = new Dictionary<int, (string Name, int Total, int Correct)>();
 
             int questionOrder = 0;
-            var answerReview = new List<PracticeAnswerReviewDto>();
-            var chapterStats = new List<(string ChapterName, int ChapterId, bool IsCorrect)>();
-
-            var evaluatedQuestions = AnalyticsHelper.EvaluateSubmission(questions, submission.StudentAnswers);
-
-            int correctCount = evaluatedQuestions.Count(q => q.IsCorrect);
-            int wrongCount = evaluatedQuestions.Count(q => !q.IsCorrect);
-
-            foreach (var eq in evaluatedQuestions)
+            foreach (var r in results)
             {
                 questionOrder++;
-                chapterStats.Add((eq.ChapterName, eq.ChapterId, eq.IsCorrect));
+                var chapterId = r.Question.Chapter?.ChapterId ?? 0;
+                var chapterName = r.Question.Chapter?.Name ?? "N/A";
+
+                var prev = chapterAgg.TryGetValue(chapterId, out var v) ? v : (chapterName, 0, 0);
+                chapterAgg[chapterId] = (chapterName, prev.Item2 + 1, prev.Item3 + (r.IsCorrect ? 1 : 0));
 
                 answerReview.Add(new PracticeAnswerReviewDto
                 {
-                    QuestionId = eq.QuestionId,
+                    QuestionId = r.Question.QuestionId,
                     QuestionOrder = questionOrder,
-                    QuestionContent = eq.QuestionContent,
-                    QuestionType = eq.QuestionType,
-                    ChapterName = eq.ChapterName,
-                    Difficulty = eq.Difficulty,
-                    IsCorrect = eq.IsCorrect,
-                    Options = eq.Options.Select(opt => new PracticeOptionReviewDto
-                    {
-                        QuestionAnswerId = opt.QuestionAnswerId,
-                        Content = opt.Content,
-                        StudentResponse = opt.StudentResponse,
-                        IsSelected = opt.IsSelected,
-                        IsCorrect = opt.IsCorrect,
-                        CorrectAnswer = opt.CorrectAnswer
-                    }).ToList()
+                    QuestionContent = r.Question.QuestionContent,
+                    QuestionType = r.Question.QuestionType,
+                    ChapterName = chapterName,
+                    Difficulty = r.Question.Difficulty,
+                    IsCorrect = r.IsCorrect,
+                    Options = r.Options
                 });
             }
-
-            int totalQ = questions.Count;
             return new PracticeExamResultDto
             {
                 SubmissionId = submission.SubmissionId,
@@ -414,15 +455,14 @@ namespace Backend.Services.Implements
                 CreatedAtUtc = submission.CreatedAtUtc,
                 SubmittedAtUtc = submission.UpdatedAtUtc,
                 AnswerReview = answerReview,
-                ChapterStats = chapterStats
-                    .GroupBy(x => new { x.ChapterName, x.ChapterId })
-                    .Select(g => new ChapterProficiencyDto
+                ChapterStats = chapterAgg
+                    .Select(kv => new ChapterProficiencyDto
                     {
-                        ChapterId = g.Key.ChapterId,
-                        ChapterName = g.Key.ChapterName,
-                        TotalAttempted = g.Count(),
-                        OverallAccuracyRate = g.Count() > 0
-                            ? Math.Round((double)g.Count(x => x.IsCorrect) / g.Count() * 100, 1) : 0
+                        ChapterId = kv.Key,
+                        ChapterName = kv.Value.Name,
+                        TotalAttempted = kv.Value.Total,
+                        OverallAccuracyRate = kv.Value.Total > 0
+                            ? Math.Round((double)kv.Value.Correct / kv.Value.Total * 100, 1) : 0
                     })
                     .OrderBy(c => c.OverallAccuracyRate)
                     .ToList()
