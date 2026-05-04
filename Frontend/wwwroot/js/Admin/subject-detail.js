@@ -72,7 +72,7 @@ $(function () {
                 } else {
                     listEl.innerHTML = data.chapters.map(c => `
                         <li class="chapter-row ${c.status === 0 ? 'row-deleted' : ''}" data-chapter-id="${c.chapterId}">
-                            <div class="drag-handle" title="Kéo để sắp xếp">
+                            <div class="drag-handle" title="Kéo để sắp xếp" ${isClosed ? 'style="visibility:hidden;"' : ''}>
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
                                 </svg>
