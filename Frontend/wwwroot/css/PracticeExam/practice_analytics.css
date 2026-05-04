@@ -1,0 +1,98 @@
+/* ═══════════════════════════════════════════
+   Practice Analytics — Dùng chung Teacher & Student
+   ═══════════════════════════════════════════ */
+
+/* ── Stat Cards ── */
+.pa-stat-card {
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.pa-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+
+.pa-stat-primary  { background: linear-gradient(135deg, #0d6efd22, #0d6efd11); border-left: 4px solid #0d6efd; }
+.pa-stat-success  { background: linear-gradient(135deg, #19875422, #19875411); border-left: 4px solid #198754; }
+.pa-stat-info     { background: linear-gradient(135deg, #0dcaf022, #0dcaf011); border-left: 4px solid #0dcaf0; }
+.pa-stat-warning  { background: linear-gradient(135deg, #ffc10722, #ffc10711); border-left: 4px solid #ffc107; }
+
+.pa-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #212529;
+}
+
+.pa-stat-label {
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6c757d;
+    margin-top: .25rem;
+}
+
+/* ── Progress bar ── */
+.pa-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.pa-progress {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    min-width: 60px;
+}
+
+.pa-progress-label {
+    font-size: .8rem;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+    color: #495057;
+}
+
+/* ── Recommendations ── */
+.pa-rec-item {
+    padding: .5rem .75rem;
+    margin-bottom: .5rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border-left: 3px solid #dee2e6;
+    font-size: .9rem;
+    line-height: 1.5;
+}
+
+.pa-rec-item:last-child { margin-bottom: 0; }
+
+/* ── Student expand row ── */
+.pa-detail-rows td { background: #f8f9fa; }
+
+.pa-expand-btn {
+    padding: .2rem .5rem;
+    font-size: .75rem;
+}
+
+.pa-student-row td { vertical-align: middle; }
+
+.pa-chapter-detail-row td { font-size: .85rem; }
+
+/* ── Chart containers ── */
+.card canvas { max-height: 400px; }
+
+/* ── Badge sm ── */
+.badge-sm { font-size: .7rem; padding: .25em .5em; }
+
+/* ── Responsive table on mobile ── */
+@media (max-width: 768px) {
+    .pa-stat-value { font-size: 1.5rem; }
+    .pa-progress { min-width: 40px; }
+}

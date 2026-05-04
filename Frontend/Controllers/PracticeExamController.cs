@@ -39,5 +39,23 @@ namespace Frontend.Controllers
             ViewBag.ClassId = classId;
             return View();
         }
+
+        // GET: /PracticeExam/ClassAnalytics?classId=5  (Giáo viên)
+        [HttpGet]
+        public IActionResult ClassAnalytics(int classId)
+        {
+            if (classId <= 0) return RedirectToAction("ClassList", "Class");
+            ViewBag.ClassId = classId;
+            return View();
+        }
+
+        // GET: /PracticeExam/StudentAnalytics?classId=5  (Học sinh)
+        [HttpGet]
+        public IActionResult StudentAnalytics(int classId)
+        {
+            if (classId <= 0) return RedirectToAction("ClassList", "Class");
+            ViewBag.ClassId = classId;
+            return View();
+        }
     }
 }

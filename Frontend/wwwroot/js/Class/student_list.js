@@ -31,12 +31,16 @@ async function loadStudents() {
             if (settingsMenu) settingsMenu.style.display = 'none';
             const pendingMenu = document.getElementById("pendingMenuItem");
             if (pendingMenu) pendingMenu.style.display = 'none';
+            const studentAnalyticsMenu = document.getElementById("studentAnalyticsMenuItem");
+            if (studentAnalyticsMenu) studentAnalyticsMenu.classList.remove("d-none");
         }
         if (role === RoleIds.Teacher) {
             const practiceMenu = document.getElementById("practiceMenuItem");
             if (practiceMenu) practiceMenu.style.display = 'none';
             const historyMenu = document.getElementById("practiceHistoryMenuItem");
             if (historyMenu) historyMenu.style.display = 'none';
+            const classAnalyticsMenu = document.getElementById("classAnalyticsMenuItem");
+            if (classAnalyticsMenu) classAnalyticsMenu.classList.remove("d-none");
         }
         if (role === RoleIds.Teacher && currentClassStatus !== 0) {
             document.querySelectorAll('.action-col').forEach(el => el.style.display = '');

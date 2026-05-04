@@ -6,6 +6,19 @@ namespace Backend.Repositories.Interfaces
     public interface IPracticeExamRepository
     {
         /// <summary>
+        /// Lấy class + subject + ClassMembers (kèm Student) để phân tích luyện tập lớp học.
+        /// teacherId=0 để bỏ qua kiểm tra ownership (dùng cho Student lookup).
+        /// </summary>
+        Task<(Class? Cls, List<ClassMember> Members)> GetClassWithMembersAsync(int classId, int teacherId);
+
+        /// <summary>
+        /// Lấy toàn bộ phiên luyện tập đã nộp của danh sách học sinh, lọc theo môn học.
+        /// Trả về per-session với danh sách câu hỏi đúng/sai đã được tính.
+        /// </summary>
+        Task<List<PracticeSessionRaw>> GetPracticeSessionsAsync(List<int> studentIds, int subjectId);
+
+
+        /// <summary>
         /// Lấy thông tin Class (SubjectId, TeacherId) + validate sinh viên thuộc lớp.
         /// </summary>
         Task<Class?> GetClassWithValidationAsync(int classId, int studentId);
