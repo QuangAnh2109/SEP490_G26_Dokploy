@@ -44,21 +44,33 @@ async function loadExams() {
         if (settingsMenu) settingsMenu.style.display = 'none';
         const pendingMenu = document.getElementById("pendingMenuItem");
         if (pendingMenu) pendingMenu.style.display = 'none';
-        
+
         if (currentClassStatus === 0) {
             const practiceMenu = document.getElementById("practiceMenuItem");
             if (practiceMenu) practiceMenu.style.display = 'none';
         }
+
+        // Hiện menu phân tích cá nhân dành cho học sinh
+        const studentAnalyticsMenu = document.getElementById("studentAnalyticsMenuItem");
+        if (studentAnalyticsMenu) studentAnalyticsMenu.classList.remove("d-none");
+        const classAnalyticsMenu = document.getElementById("classAnalyticsMenuItem");
+        if (classAnalyticsMenu) classAnalyticsMenu.style.display = 'none';
     }
     if (role === RoleIds.Teacher) {
         const btnCreate = document.getElementById("btnCreateExam");
         if (btnCreate && currentClassStatus !== 0) btnCreate.classList.remove("d-none");
-        
-        // Ẩn menu luyện tập cho giáo viên
+
+        // Ẩn menu luyện tập dành cho học sinh
         const practiceMenu = document.getElementById("practiceMenuItem");
         if (practiceMenu) practiceMenu.style.display = 'none';
         const practiceHistoryMenu = document.getElementById("practiceHistoryMenuItem");
         if (practiceHistoryMenu) practiceHistoryMenu.style.display = 'none';
+        const studentAnalyticsMenu = document.getElementById("studentAnalyticsMenuItem");
+        if (studentAnalyticsMenu) studentAnalyticsMenu.style.display = 'none';
+
+        // Hiện menu phân tích luyện tập dành cho giáo viên
+        const classAnalyticsMenu = document.getElementById("classAnalyticsMenuItem");
+        if (classAnalyticsMenu) classAnalyticsMenu.classList.remove("d-none");
     }
 
     await loadChapters();   // load chapter trước

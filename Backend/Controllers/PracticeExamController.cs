@@ -89,5 +89,27 @@ namespace Backend.Controllers
             var result = await _practiceService.GetPracticeHistoryAsync(classId);
             return result.ToActionResult(this);
         }
+
+        /// <summary>
+        /// Phân tích quá trình luyện tập toàn lớp — dành cho Giáo viên.
+        /// </summary>
+        [HttpGet("analytics/class/{classId}")]
+        [Authorize(Roles = RoleIds.Teacher)]
+        public async Task<IActionResult> GetClassPracticeAnalytics(int classId)
+        {
+            var result = await _practiceService.GetClassPracticeAnalyticsAsync(classId);
+            return result.ToActionResult(this);
+        }
+
+        /// <summary>
+        /// Phân tích quá trình luyện tập cá nhân — dành cho Học sinh.
+        /// </summary>
+        [HttpGet("analytics/me")]
+        [Authorize(Roles = RoleIds.Student)]
+        public async Task<IActionResult> GetStudentPracticeAnalytics([FromQuery] int classId)
+        {
+            var result = await _practiceService.GetStudentPracticeAnalyticsAsync(classId);
+            return result.ToActionResult(this);
+        }
     }
 }

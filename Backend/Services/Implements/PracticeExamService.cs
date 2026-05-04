@@ -597,6 +597,270 @@ namespace Backend.Services.Implements
             }).ToList();
         }
 
+        // ════════════════════════════════════════════════════════
+        //  GIÁO VIÊN — Phân tích luyện tập toàn lớp
+        // ════════════════════════════════════════════════════════
+        public async Task<Result<ClassPracticeAnalyticsDto>> GetClassPracticeAnalyticsAsync(int classId)
+        {
+            var teacherId = _currentUserService.UserId;
+            var (cls, members) = await _repo.GetClassWithMembersAsync(classId, teacherId);
+            if (cls == null)
+                return PracticeExamErrors.ClassNotFound;
+
+            var activeMembers = members.Where(m => m.MemberStatus == 1).ToList();
+            var studentIds = activeMembers.Select(m => m.StudentId).ToList();
+
+            var sessions = await _repo.GetPracticeSessionsAsync(studentIds, cls.SubjectId);
+
+            var studentStats = BuildStudentPracticeStats(activeMembers, sessions);
+            var chapterStats = BuildClassChapterStats(sessions);
+
+            int activeStuCount = studentStats.Count(s => s.TotalSessions > 0);
+            double avgAccuracy = activeStuCount > 0
+                ? Math.Round(studentStats.Where(s => s.TotalSessions > 0).Average(s => s.AccuracyRate), 1)
+                : 0;
+
+            return new ClassPracticeAnalyticsDto
+            {
+                ClassId = classId,
+                ClassName = cls.Name,
+                SubjectName = cls.Subject?.Name ?? string.Empty,
+                TotalStudents = activeMembers.Count,
+                ActiveStudents = activeStuCount,
+                TotalSessions = sessions.Count,
+                AverageAccuracyRate = avgAccuracy,
+                StudentStats = studentStats.OrderByDescending(s => s.AccuracyRate).ToList(),
+                ChapterStats = chapterStats,
+                Recommendations = GenerateClassRecommendations(chapterStats, studentStats, activeMembers.Count)
+            };
+        }
+
+        // ════════════════════════════════════════════════════════
+        //  HỌC SINH — Phân tích luyện tập cá nhân
+        // ════════════════════════════════════════════════════════
+        public async Task<Result<StudentPracticeAnalyticsDto>> GetStudentPracticeAnalyticsAsync(int classId)
+        {
+            var studentId = _currentUserService.UserId;
+            var cls = await _repo.GetClassWithValidationAsync(classId, studentId);
+            if (cls == null)
+                return PracticeExamErrors.ClassNotFound;
+
+            var sessions = await _repo.GetPracticeSessionsAsync(new List<int> { studentId }, cls.SubjectId);
+            var allAnswers = sessions.SelectMany(s => s.QuestionAnswers).ToList();
+
+            int totalAttempted = allAnswers.Count;
+            int correctCount = allAnswers.Count(a => a.IsCorrect);
+            double overallAccuracy = totalAttempted > 0
+                ? Math.Round((double)correctCount / totalAttempted * 100, 1) : 0;
+
+            var chapterStats = allAnswers
+                .GroupBy(a => new { a.ChapterId, a.ChapterName })
+                .Select(g =>
+                {
+                    int total = g.Count();
+                    int correct = g.Count(a => a.IsCorrect);
+                    return new StudentChapterPracticeStatDto
+                    {
+                        ChapterId = g.Key.ChapterId,
+                        ChapterName = g.Key.ChapterName,
+                        TotalAttempted = total,
+                        CorrectCount = correct
+                    };
+                })
+                .OrderBy(c => c.AccuracyRate)
+                .ToList();
+
+            var difficultyStats = allAnswers
+                .GroupBy(a => a.Difficulty)
+                .Select(g => new DifficultyPracticeStatDto
+                {
+                    Difficulty = g.Key,
+                    DifficultyName = DifficultyLevel.GetLabel(g.Key),
+                    TotalAttempted = g.Count(),
+                    CorrectCount = g.Count(a => a.IsCorrect)
+                })
+                .OrderBy(d => d.Difficulty)
+                .ToList();
+
+            // Trend: group completed sessions by date (giờ VN)
+            var trendData = sessions
+                .GroupBy(s => s.SubmittedAtUtc.AddHours(7).Date)
+                .OrderBy(g => g.Key)
+                .Select(g =>
+                {
+                    var dayAnswers = g.SelectMany(s => s.QuestionAnswers).ToList();
+                    int dayTotal = dayAnswers.Count;
+                    int dayCorrect = dayAnswers.Count(a => a.IsCorrect);
+                    return new PracticeTrendDto
+                    {
+                        DateLabel = g.Key.ToString("dd/MM"),
+                        AccuracyRate = dayTotal > 0 ? Math.Round((double)dayCorrect / dayTotal * 100, 1) : 0,
+                        QuestionsAttempted = dayTotal
+                    };
+                })
+                .ToList();
+
+            return new StudentPracticeAnalyticsDto
+            {
+                ClassId = classId,
+                SubjectName = cls.Subject?.Name ?? string.Empty,
+                TotalSessions = sessions.Count,
+                TotalQuestionsAttempted = totalAttempted,
+                CorrectCount = correctCount,
+                OverallAccuracyRate = overallAccuracy,
+                LastPracticeAt = sessions.Count > 0 ? sessions.Max(s => s.SubmittedAtUtc) : null,
+                ChapterStats = chapterStats,
+                DifficultyStats = difficultyStats,
+                TrendData = trendData,
+                Recommendations = GenerateStudentRecommendations(chapterStats, difficultyStats, sessions.Count)
+            };
+        }
+
+        // ── Analytics helpers ──
+
+        private static List<StudentPracticeStatDto> BuildStudentPracticeStats(
+            List<ClassMember> members, List<PracticeSessionRaw> sessions)
+        {
+            var sessionsByStudent = sessions.GroupBy(s => s.StudentId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            return members.Select(m =>
+            {
+                var student = m.Student;
+                var studentSessions = sessionsByStudent.GetValueOrDefault(m.StudentId) ?? new List<PracticeSessionRaw>();
+                var allAnswers = studentSessions.SelectMany(s => s.QuestionAnswers).ToList();
+
+                int totalAttempted = allAnswers.Count;
+                int correct = allAnswers.Count(a => a.IsCorrect);
+                double accuracy = totalAttempted > 0
+                    ? Math.Round((double)correct / totalAttempted * 100, 1) : 0;
+
+                string level = totalAttempted == 0 ? "Chưa luyện"
+                    : accuracy < 50 ? "Yếu"
+                    : accuracy < 80 ? "Trung bình" : "Mạnh";
+
+                var chapterBreakdown = allAnswers
+                    .GroupBy(a => new { a.ChapterId, a.ChapterName })
+                    .Select(g => new StudentChapterPracticeStatDto
+                    {
+                        ChapterId = g.Key.ChapterId,
+                        ChapterName = g.Key.ChapterName,
+                        TotalAttempted = g.Count(),
+                        CorrectCount = g.Count(a => a.IsCorrect)
+                    })
+                    .OrderBy(c => c.AccuracyRate)
+                    .ToList();
+
+                return new StudentPracticeStatDto
+                {
+                    StudentId = m.StudentId,
+                    StudentCode = student?.StudentId ?? $"#{m.StudentId}",
+                    StudentName = student?.FullName ?? student?.Email ?? $"Học sinh #{m.StudentId}",
+                    TotalSessions = studentSessions.Count,
+                    TotalQuestionsAttempted = totalAttempted,
+                    CorrectCount = correct,
+                    AccuracyRate = accuracy,
+                    LastPracticeAt = studentSessions.Count > 0 ? studentSessions.Max(s => s.SubmittedAtUtc) : null,
+                    ProficiencyLevel = level,
+                    ChapterBreakdown = chapterBreakdown
+                };
+            }).ToList();
+        }
+
+        private static List<PracticeChapterStatDto> BuildClassChapterStats(List<PracticeSessionRaw> sessions)
+        {
+            var allAnswers = sessions.SelectMany(s => s.QuestionAnswers).ToList();
+
+            return allAnswers
+                .GroupBy(a => new { a.ChapterId, a.ChapterName })
+                .Select(g =>
+                {
+                    int studentCount = sessions
+                        .Where(s => s.QuestionAnswers.Any(q => q.ChapterId == g.Key.ChapterId))
+                        .Select(s => s.StudentId)
+                        .Distinct()
+                        .Count();
+
+                    return new PracticeChapterStatDto
+                    {
+                        ChapterId = g.Key.ChapterId,
+                        ChapterName = g.Key.ChapterName,
+                        StudentPracticed = studentCount,
+                        TotalAttempts = g.Count(),
+                        CorrectCount = g.Count(a => a.IsCorrect)
+                    };
+                })
+                .OrderBy(c => c.AccuracyRate)
+                .ToList();
+        }
+
+        private static List<string> GenerateClassRecommendations(
+            List<PracticeChapterStatDto> chapterStats,
+            List<StudentPracticeStatDto> studentStats,
+            int totalStudents)
+        {
+            var recs = new List<string>();
+
+            int inactive = studentStats.Count(s => s.TotalSessions == 0);
+            if (inactive > 0)
+                recs.Add($"⚠️ {inactive}/{totalStudents} học sinh chưa luyện tập lần nào trong môn này.");
+
+            var weak = chapterStats.Where(c => c.Status == "Báo động").OrderBy(c => c.AccuracyRate).ToList();
+            var medium = chapterStats.Where(c => c.Status == "Cần chú ý").ToList();
+
+            if (weak.Any())
+            {
+                var worst = weak.First();
+                recs.Add($"🚨 Chương [{worst.ChapterName}] ở mức báo động — tỉ lệ đúng toàn lớp chỉ {worst.AccuracyRate}%. Cần tổ chức ôn tập lại.");
+                foreach (var ch in weak.Skip(1))
+                    recs.Add($"🚨 Chương [{ch.ChapterName}] cũng báo động ({ch.AccuracyRate}% đúng).");
+            }
+
+            foreach (var ch in medium)
+                recs.Add($"⚠️ Chương [{ch.ChapterName}] cần cải thiện ({ch.AccuracyRate}% đúng).");
+
+            if (!recs.Any())
+                recs.Add("✅ Lớp học đang luyện tập tốt. Tiếp tục duy trì!");
+
+            return recs;
+        }
+
+        private static List<string> GenerateStudentRecommendations(
+            List<StudentChapterPracticeStatDto> chapterStats,
+            List<DifficultyPracticeStatDto> difficultyStats,
+            int sessionCount)
+        {
+            var recs = new List<string>();
+
+            if (sessionCount == 0)
+            {
+                recs.Add("📚 Bạn chưa hoàn thành buổi luyện tập nào. Hãy bắt đầu ngay!");
+                return recs;
+            }
+
+            var weakChapters = chapterStats.Where(c => c.ProficiencyLevel == "Yếu").ToList();
+            var mediumChapters = chapterStats.Where(c => c.ProficiencyLevel == "Trung bình").ToList();
+            var strongChapters = chapterStats.Where(c => c.ProficiencyLevel == "Mạnh").ToList();
+
+            foreach (var ch in weakChapters)
+                recs.Add($"🚨 Cần ôn luyện nhiều hơn chương [{ch.ChapterName}] — tỉ lệ đúng chỉ {ch.AccuracyRate}%.");
+
+            foreach (var ch in mediumChapters)
+                recs.Add($"⚠️ Chương [{ch.ChapterName}] đang ở mức trung bình ({ch.AccuracyRate}%). Cần luyện thêm.");
+
+            foreach (var ch in strongChapters)
+                recs.Add($"🌟 Bạn làm tốt chương [{ch.ChapterName}] ({ch.AccuracyRate}%). Tiếp tục duy trì!");
+
+            var weakDiff = difficultyStats.Where(d => d.AccuracyRate < 50 && d.TotalAttempted > 0).ToList();
+            foreach (var d in weakDiff)
+                recs.Add($"📌 Cần luyện thêm câu hỏi [{d.DifficultyName}] — hiện tỉ lệ đúng {d.AccuracyRate}%.");
+
+            if (!recs.Any())
+                recs.Add("✅ Bạn đang luyện tập đều đặn và tốt. Tiếp tục phát huy!");
+
+            return recs;
+        }
+
         private PracticeExamProficiencySnapshot BuildProficiencySnapshot(
             List<int> chapterIds, List<Chapter> allChapters, List<StudentProficiencyRaw> profData)
         {

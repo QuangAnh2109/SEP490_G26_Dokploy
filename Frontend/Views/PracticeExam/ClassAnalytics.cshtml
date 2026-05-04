@@ -1,0 +1,179 @@
+@{
+    ViewData["Title"] = "Phân tích Luyện tập - Giáo viên";
+    var classId = ViewBag.ClassId ?? 0;
+    ViewBag.IsFullWidth = true;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/Class/class_sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/PracticeExam/practice_analytics.css" asp-append-version="true" />
+}
+
+<div class="class-wrapper">
+    <aside class="class-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Quản lý lớp học</h6>
+            <div class="text-muted small" id="sidebarClassName">---</div>
+        </div>
+
+        <div class="nav-section-title">Bài thi</div>
+        <a href="/Class/ExamListInClass/@classId" class="sidebar-link" id="examListMenuItem">
+            <i class="fas fa-list"></i> Danh sách đề
+        </a>
+        <a href="/PracticeExam/ClassAnalytics?classId=@classId" class="sidebar-link active" id="classAnalyticsMenuItem">
+            <i class="fas fa-chart-line"></i> Phân tích luyện tập
+        </a>
+
+        <div class="nav-section-title">Quản lý</div>
+        <a href="/Class/StudentList/@classId" class="sidebar-link">
+            <i class="fas fa-users"></i> Danh sách học sinh
+        </a>
+        <a href="/Class/PendingStudents/@classId" id="pendingMenuItem" class="sidebar-link">
+            <i class="fas fa-user-clock"></i> Phê duyệt học sinh
+        </a>
+        <a href="/Class/Settings/@classId" id="settingsMenuItem" class="sidebar-link">
+            <i class="fas fa-cog"></i> Cài đặt
+        </a>
+    </aside>
+
+    <main class="class-content" id="analyticsRoot" data-class-id="@classId">
+
+        <!-- Loading -->
+        <div id="analyticsLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Đang phân tích dữ liệu luyện tập...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="analyticsError" class="text-center py-5 d-none">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Không thể tải dữ liệu</h5>
+            <p id="errorMessage" class="text-muted"></p>
+        </div>
+
+        <!-- Content -->
+        <div id="analyticsContent" class="d-none">
+
+            <!-- Header -->
+            <section class="mb-4 d-flex justify-content-between align-items-start pt-4 pb-2 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-1 fw-bold">Phân tích Luyện tập</h2>
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-chalkboard-teacher me-1"></i>
+                        Chế độ Giáo viên — <span id="headerSubject"></span>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Stat Cards -->
+            <section class="row g-3 mb-4" id="statCards">
+                <div class="col-6 col-lg-3">
+                    <div class="pa-stat-card pa-stat-primary">
+                        <div class="pa-stat-value" id="statTotalStudents">—</div>
+                        <div class="pa-stat-label">Tổng học sinh</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="pa-stat-card pa-stat-success">
+                        <div class="pa-stat-value" id="statActiveStudents">—</div>
+                        <div class="pa-stat-label">Đã luyện tập</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="pa-stat-card pa-stat-info">
+                        <div class="pa-stat-value" id="statTotalSessions">—</div>
+                        <div class="pa-stat-label">Tổng buổi luyện</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="pa-stat-card pa-stat-warning">
+                        <div class="pa-stat-value" id="statAvgAccuracy">—</div>
+                        <div class="pa-stat-label">Tỉ lệ đúng TB</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recommendations -->
+            <section class="card mb-4" id="recommendationsCard">
+                <div class="card-header fw-semibold">
+                    <i class="fas fa-lightbulb me-2 text-warning"></i>Đề xuất cải thiện
+                </div>
+                <div class="card-body" id="recommendationsList"></div>
+            </section>
+
+            <!-- Chapter Stats -->
+            <section class="card mb-4">
+                <div class="card-header fw-semibold">
+                    <i class="fas fa-book me-2 text-primary"></i>Hiệu suất theo Chương
+                </div>
+                <div class="card-body p-0">
+                    <div id="chapterEmpty" class="text-center py-4 text-muted d-none">Chưa có dữ liệu.</div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="chapterTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Chương</th>
+                                    <th class="text-center">HS luyện tập</th>
+                                    <th class="text-center">Tổng câu</th>
+                                    <th class="text-center">Tỉ lệ đúng</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="chapterTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chapter Chart -->
+            <section class="card mb-4">
+                <div class="card-header fw-semibold">
+                    <i class="fas fa-chart-bar me-2 text-info"></i>Biểu đồ tỉ lệ đúng theo Chương
+                </div>
+                <div class="card-body">
+                    <canvas id="chapterChart" height="120"></canvas>
+                </div>
+            </section>
+
+            <!-- Student Table -->
+            <section class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="fw-semibold">
+                        <i class="fas fa-users me-2 text-success"></i>Thống kê từng Học sinh
+                    </span>
+                    <input id="studentSearch" class="form-control form-control-sm w-auto"
+                           placeholder="Tìm theo tên, MSSV..." style="min-width:180px;" />
+                </div>
+                <div class="card-body p-0">
+                    <div id="studentEmpty" class="text-center py-4 text-muted d-none">Chưa có dữ liệu học sinh.</div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="studentTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>MSSV</th>
+                                    <th>Họ tên</th>
+                                    <th class="text-center">Buổi</th>
+                                    <th class="text-center">Câu đã làm</th>
+                                    <th class="text-center">Tỉ lệ đúng</th>
+                                    <th class="text-center">Mức độ</th>
+                                    <th class="text-center">Luyện gần nhất</th>
+                                    <th class="text-center">Chi tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /analyticsContent -->
+    </main>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const classId = @classId;
+    </script>
+    <script src="~/js/PracticeExam/class_analytics.js" asp-append-version="true"></script>
+}

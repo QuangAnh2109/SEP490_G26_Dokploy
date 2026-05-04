@@ -26,6 +26,12 @@
         <a href="/PracticeExam/History?classId=@classId" class="sidebar-link" id="practiceHistoryMenuItem">
             <i class="fas fa-chart-bar"></i> Kết quả
         </a>
+        <a href="/PracticeExam/ClassAnalytics?classId=@classId" class="sidebar-link d-none" id="classAnalyticsMenuItem">
+            <i class="fas fa-chart-line"></i> Phân tích luyện tập
+        </a>
+        <a href="/PracticeExam/StudentAnalytics?classId=@classId" class="sidebar-link d-none" id="studentAnalyticsMenuItem">
+            <i class="fas fa-chart-line"></i> Phân tích của tôi
+        </a>
 
         <div class="nav-section-title">Quản lý</div>
         <a href="/Class/StudentList/@classId" class="sidebar-link">
@@ -135,6 +141,16 @@
                 if (settingsMenu) settingsMenu.style.display = 'none';
                 const pendingMenu = document.getElementById("pendingMenuItem");
                 if (pendingMenu) pendingMenu.style.display = 'none';
+                const studentAnalyticsMenu = document.getElementById("studentAnalyticsMenuItem");
+                if (studentAnalyticsMenu) studentAnalyticsMenu.classList.remove("d-none");
+            }
+            if (role === RoleIds.Teacher) {
+                const practiceMenu = document.getElementById("practiceMenuItem");
+                if (practiceMenu) practiceMenu.style.display = 'none';
+                const historyMenu = document.getElementById("practiceHistoryMenuItem");
+                if (historyMenu) historyMenu.style.display = 'none';
+                const classAnalyticsMenu = document.getElementById("classAnalyticsMenuItem");
+                if (classAnalyticsMenu) classAnalyticsMenu.classList.remove("d-none");
             }
 
             try {

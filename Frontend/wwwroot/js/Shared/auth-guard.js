@@ -26,15 +26,16 @@
 
     // Pages giới hạn theo role. Path không match rule nào và không thuộc ANON_ONLY → không enforce ở FE (BE sẽ chặn).
     const ROUTE_POLICY = [
-        { prefix: '/admin',         allow: ['3'] },
-        { prefix: '/question',      allow: ['1'] },
-        { prefix: '/examblueprint', allow: ['1'] },
-        { prefix: '/analytics',     allow: ['1'] },
-        { prefix: '/exam/',         allow: ['1'] },
-        { prefix: '/practiceexam',  allow: ['2'] },
-        { prefix: '/studentexam',   allow: ['2'] },
-        { prefix: '/class',        allow: ['1', '2'] },
-        { prefix: '/profile',       allow: ['1', '2'] }
+        { prefix: '/admin',                        allow: ['3'] },
+        { prefix: '/question',                     allow: ['1'] },
+        { prefix: '/examblueprint',                allow: ['1'] },
+        { prefix: '/analytics',                    allow: ['1'] },
+        { prefix: '/exam/',                        allow: ['1'] },
+        { prefix: '/practiceexam/classanalytics',  allow: ['1'] },
+        { prefix: '/practiceexam',                 allow: ['2'] },
+        { prefix: '/studentexam',                  allow: ['2'] },
+        { prefix: '/class',                        allow: ['1', '2'] },
+        { prefix: '/profile',                      allow: ['1', '2'] }
     ];
 
     function decideRedirect(path, role, authed) {

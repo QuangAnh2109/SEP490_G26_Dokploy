@@ -40,5 +40,15 @@ namespace Backend.Services.Interfaces
         /// Lấy lịch sử luyện tập.
         /// </summary>
         Task<Result<List<PracticeHistoryDto>>> GetPracticeHistoryAsync(int? classId);
+
+        /// <summary>
+        /// Phân tích quá trình luyện tập của toàn lớp — dành cho Giáo viên.
+        /// </summary>
+        Task<Result<ClassPracticeAnalyticsDto>> GetClassPracticeAnalyticsAsync(int classId);
+
+        /// <summary>
+        /// Phân tích quá trình luyện tập cá nhân của học sinh — dành cho Học sinh.
+        /// </summary>
+        Task<Result<StudentPracticeAnalyticsDto>> GetStudentPracticeAnalyticsAsync(int classId);
     }
 }
