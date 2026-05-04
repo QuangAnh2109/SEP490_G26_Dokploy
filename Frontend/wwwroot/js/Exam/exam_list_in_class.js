@@ -259,7 +259,7 @@ function renderExams(exams) {
                 const attemptsExhausted = maxAttempts > 0 && studentAttempts >= maxAttempts && !hasInProgress;
 
                 if (status === "open" && currentClassStatus !== 0 && !attemptsExhausted) {
-                    actionFragment.querySelector(".btn-take").href = `/StudentExam/TakeExam?examId=${exam.examId}`;
+                    actionFragment.querySelector(".btn-take").href = `/StudentExam/TakeExam?examId=${exam.examId}&classId=${classId}`;
                 } else {
                     actionFragment.querySelector(".btn-take").remove();
                 }

@@ -132,90 +132,12 @@ window.QuestionEditorUtils = (() => {
     };
 
     const renderLatexInElement = (previewBox, content, options = {}) => {
-        if (!content || !content.trim()) {
-            previewBox.innerHTML = options.placeholder || "<p style='color:#ccc; font-style: italic;'>Nội dung trống...</p>";
-            return;
-        }
-
-        let raw = content.trim();
-        // Robust strip \displaylines{ ... }
-        const dlMatch = raw.match(/^\\displaylines\s*\{([\s\S]*)\}\s*$/);
-        const s = dlMatch ? dlMatch[1].trim() : raw;
-
-        const mathRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\(.*?\\\)|\\\[.*?\\\])/g;
-        const hasDelimiters = mathRegex.test(s);
-
-        try {
-            if (window.katex) {
-                if (hasDelimiters) {
-                    let lastIdx = 0;
-                    let processed = "";
-                    let match;
-                    mathRegex.lastIndex = 0;
-
-                    while ((match = mathRegex.exec(s)) !== null) {
-                        let before = s.substring(lastIdx, match.index);
-                        processed += before.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
-                            .replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
-                                return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
-                            });
-
-                        let mathBlock = match[0];
-                        processed += mathBlock.replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
-                            return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
-                        });
-                        lastIdx = mathRegex.lastIndex;
-                    }
-
-                    let remaining = s.substring(lastIdx);
-                    processed += remaining.replace(/(\\[a-zA-Z]+\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+)/g, (m) => `$${m}$`)
-                        .replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (m, id) => {
-                            return `$\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}$`;
-                        });
-
-                    previewBox.innerHTML = processed;
-                    if (window.renderMathInElement) {
-                        window.renderMathInElement(previewBox, {
-                            delimiters: [
-                                { left: '$$', right: '$$', display: true },
-                                { left: '$', right: '$', display: false },
-                                { left: '\\(', right: '\\)', display: false },
-                                { left: '\\[', right: '\\]', display: true }
-                            ],
-                            trust: true,
-                            strict: false
-                        });
-                    } else {
-                        window.katex.render(processed, previewBox, { displayMode: true, trust: true, strict: false });
-                    }
-                } else {
-                    // Pure math mode or no delimiters (typical for old DB content)
-                    let processed = s.replace(/\\placeholder\[(\d+)\](?:\{\})?/g, (match, id) => {
-                        return `\\htmlId{field-${id}}{\\fbox{\\phantom{\\text{..}}[${id}]\\phantom{\\text{..}}}}`;
-                    });
-
-                    // If it contains \\, wrap in gathered to support multi-line in displayMode
-                    const finalLatex = processed.includes('\\\\') ? `\\begin{gathered}${processed}\\end{gathered}` : processed;
-
-                    window.katex.render(finalLatex, previewBox, {
-                        displayMode: true,
-                        trust: true,
-                        strict: false
-                    });
-                }
-
-                // Convert htmlId elements to actual inputs
-                const fields = previewBox.querySelectorAll('[id^="field-"]');
-                fields.forEach(f => {
-                    const id = f.id.replace('field-', '');
-                    f.innerHTML = `<input type="text" class="katex-input" placeholder="${id}" readonly>`;
-                });
-            } else {
-                previewBox.innerHTML = `<pre>${content}</pre>`;
-            }
-        } catch (e) {
-            previewBox.innerHTML = `<span style="color:red">Lỗi LaTeX: ${e.message}</span>`;
-        }
+        // Delegate xuống FibKatexRenderer (Shared/fib_katex_renderer.js).
+        // Behavior teacher giữ nguyên (mode='teacher' → blank = <input readonly>).
+        window.FibKatexRenderer.render(previewBox, content, {
+            mode: 'teacher',
+            placeholder: options.placeholder
+        });
     };
 
     const setupTabbedEditor = (container, { onChange, onInsertPlaceholder } = {}) => {

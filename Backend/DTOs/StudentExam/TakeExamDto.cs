@@ -19,7 +19,7 @@ namespace Backend.DTOs.StudentExam
 
     public class TakeExamQuestionDto
     {
-        public string QuestionId { get; set; } = null!;
+        public int QuestionId { get; set; }
         public string QuestionType { get; set; } = null!;
         public string QuestionContent { get; set; } = null!;
         public string? Hint { get; set; }
@@ -29,16 +29,17 @@ namespace Backend.DTOs.StudentExam
 
     public class TakeExamAnswerDto
     {
-        public string QuestionAnswerId { get; set; } = null!;
+        public int QuestionAnswerId { get; set; }
         public string Content { get; set; } = null!;
-        public string? GroupAnswerId { get; set; }
+        public int? GroupAnswerId { get; set; }
         public List<TakeExamInputTypeDto> InputTypes { get; set; } = new();
     }
 
     public class TakeExamInputTypeDto
     {
-        public string InputTypeId { get; set; } = null!;
+        public int InputTypeId { get; set; }
         public string Name { get; set; } = null!;
+        public string Regex { get; set; } = null!;
         public string? GroupType { get; set; }
     }
 }

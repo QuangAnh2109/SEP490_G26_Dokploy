@@ -283,13 +283,16 @@ function showConfirm(message, title = 'XÃ¡c nháº­n', onConfirm) {
     modal.show();
 }
 
+// Keys phải khớp đúng `dbo.InputTypes.Name` từ DB (case-sensitive, kèm space/colon).
+// Xem .plan/fib-katex-student/input-types-reference.md để biết bảng tổng hợp.
 const inputTypeMathMapping = {
     'Số vô tỉ': ['\\sqrt{\\placeholder[1]{}}', '\\pi', 'e', '\\phi'],
     'Số hữu tỉ': ['/', '\\frac{\\placeholder[1]{}}{\\placeholder[2]{}}', '.'],
+    'Số thực': ['/', '.', '\\frac{\\placeholder[1]{}}{\\placeholder[2]{}}', '\\sqrt{\\placeholder[1]{}}', '\\pi', 'e', '\\phi'],
     'Ký hiệu toán học cơ bản': ['+', '-', '\\times', '\\cdot', '\\div', '^\\placeholder[1]{}', '\\sqrt{\\placeholder[1]{}}', '(', ')', '[', ']', '\\{', '\\}', '!', '\\pm', '\\mp'],
     'Giải tích & Vi phân': ['\\partial', '\\nabla', '\\iint', '\\iiint', '\\oint', '\\infty', '-\\infty', '+\\infty'],
     'Biểu thức so sánh': ['<', '>', '\\ge', '\\le', '=', '\\approx', '\\neq', '\\equiv'],
-    'Hàm lượng giác/Logarit': ['\\sin', '\\cos', '\\tan', '\\cot', '\\log', '\\ln', '^\\circ'],
+    'Hàm lượng giác/Logarit:': ['\\sin', '\\cos', '\\tan', '\\cot', '\\log', '\\ln', '^\\circ'],
     'Hàm lim': ['\\lim_{x \\to \\infty}'],
     'Ma trận': [
         '\\begin{bmatrix} \\placeholder[1]{} & \\placeholder[2]{} \\\\ \\placeholder[3]{} & \\placeholder[4]{} \\end{bmatrix}',
@@ -300,5 +303,5 @@ const inputTypeMathMapping = {
     'Toán rời rạc (Modulo/Trần/Sàn)': ['\\equiv', '\\bmod', '\\pmod{\\placeholder[1]{}}', '\\lceil \\placeholder[1]{} \\rceil', '\\lfloor \\placeholder[1]{} \\rfloor'],
     'Xác suất (Tổ hợp/Kỳ vọng/Phương sai)': ['\\binom{n}{k}', 'E()', '\\text{Var}()', '\\mu', '\\sigma', '\\sigma^2'],
     'Biến đổi Laplace/Fourier': ['\\mathcal{L}', '\\mathcal{F}'],
-    'Số phức': ['i', 'j']
+    ' Số phức': ['i', 'j']
 };

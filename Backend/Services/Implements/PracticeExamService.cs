@@ -591,6 +591,7 @@ namespace Backend.Services.Implements
                     {
                         InputTypeId = bi.InputTypeId,
                         Name = bi.InputType?.Name ?? string.Empty,
+                        Regex = bi.InputType?.Regex ?? string.Empty,
                         GroupType = bi.InputType?.GroupType
                     }).ToList()
                 }).ToList()

@@ -94,22 +94,21 @@ public class StudentExamService(
             // Map answers
             var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
             {
-                QuestionAnswerId = qa.QuestionAnswerId.ToString(),
+                QuestionAnswerId = qa.QuestionAnswerId,
                 Content = qa.Content,
-                GroupAnswerId = qa.GroupAnswerId.HasValue
-                    ? qa.GroupAnswerId.Value.ToString()
-                    : null,
+                GroupAnswerId = qa.GroupAnswerId,
                 InputTypes = qa.BlankInputs.Select(bi => new TakeExamInputTypeDto
                 {
-                    InputTypeId = bi.InputTypeId.ToString(),
+                    InputTypeId = bi.InputTypeId,
                     Name = bi.InputType.Name,
+                    Regex = bi.InputType.Regex,
                     GroupType = bi.InputType.GroupType
                 }).ToList()
             }).ToList();
 
             return new TakeExamQuestionDto
             {
-                QuestionId = q.QuestionId.ToString(),
+                QuestionId = q.QuestionId,
                 QuestionType = q.QuestionType,
                 QuestionContent = q.QuestionContent,
                 Difficulty = q.Difficulty,

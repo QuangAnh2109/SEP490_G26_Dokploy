@@ -7,18 +7,61 @@
 </div>
 
 <div class="col-12 col-xl-8" id="question-area" hidden>
-    <div id="question-header" hidden>
-        <div id="question-title"></div>
-        <div class="mb-3">
-            <math-span id="question-stem" style="vertical-align:middle; font-size:1.1rem; border:none; padding:0; min-height:auto;"></math-span>
+    <div class="question-block">
+        <div id="question-header" hidden>
+            <div class="question-title" id="question-title"></div>
+            <div class="question-stem-wrap">
+                <math-span id="question-stem" style="vertical-align:middle; border:none; padding:0; min-height:auto;"></math-span>
+            </div>
+        </div>
+
+        @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
+        <ul id="question-block-mcq" hidden></ul>
+
+        @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
+        <div hidden id="question-block-fib">
+            <p class="fib-instruction">
+                <i class="bi bi-hand-index-thumb text-primary"></i>
+                Nhấn vào <strong>ô trống</strong> để nhập đáp án:
+            </p>
+
+            @* KaTeX frame — render qua window.FibKatexRenderer *@
+            <div id="fib-katex-frame" class="fib-katex-frame"></div>
+
+            @* Input panel — control qua window.FibInputPanel *@
+            <div id="fib-input-panel" class="fib-input-panel" hidden>
+                <div class="fib-panel-header">
+                    <span id="fib-panel-label">
+                        <i class="bi bi-pencil-fill text-primary me-1"></i>
+                        Đang nhập: Ô trống số <strong id="fib-active-blank-num">1</strong>
+                    </span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="fib-btn-clear">
+                            <i class="bi bi-x-lg me-1"></i>Xóa
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm" id="fib-btn-cancel">
+                            <i class="bi bi-arrow-left me-1"></i>Hủy
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="fib-btn-confirm">
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận
+                        </button>
+                    </div>
+                </div>
+                <div class="fib-panel-body">
+                    <math-field id="fib-student-input" style="min-height:50px;"></math-field>
+                    <div id="fib-custom-keyboard" class="fib-custom-keyboard"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    @* ══════ Câu hỏi trắc nghiệm (MCQ) ══════ *@
-    <ul id="question-block-mcq" hidden></ul>
-
-    @* ══════ Câu hỏi điền chỗ trống (Fill in Blank) ══════ *@
-    <div class="d-flex align-items-center gap-2" hidden id="question-block-fib">
-        <math-field hidden read-only id="question-block-fib-field"></math-field>
+    @* Nav footer — Câu trước / Câu sau *@
+    <div class="question-nav-footer d-flex justify-content-between gap-2">
+        <button type="button" class="btn btn-outline-secondary px-4" id="btnPrev" disabled>
+            <i class="bi bi-chevron-left me-1"></i>Câu trước
+        </button>
+        <button type="button" class="btn btn-outline-primary px-4" id="btnNext" disabled>
+            Câu sau<i class="bi bi-chevron-right ms-1"></i>
+        </button>
     </div>
 </div>

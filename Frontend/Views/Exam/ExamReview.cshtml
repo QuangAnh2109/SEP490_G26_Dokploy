@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <link rel="stylesheet" href="~/css/Exam/exam_review.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/fib_katex.css" asp-append-version="true" />
 }
 
 <div class="review-wrapper">
@@ -356,7 +357,8 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-    <script src="~/js/Question/question_utils.js"></script>
+    <script src="~/js/Shared/fib_katex_renderer.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_utils.js" asp-append-version="true"></script>
     <script src="~/js/Exam/exam_review.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

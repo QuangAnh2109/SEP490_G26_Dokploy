@@ -69,6 +69,7 @@
     {
         public int InputTypeId { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Regex { get; set; } = string.Empty;
         public string? GroupType { get; set; }
     }
 
