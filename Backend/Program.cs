@@ -149,6 +149,7 @@ namespace Backend
             builder.Services.AddScoped<IQuestionService, QuestionService>();
             builder.Services.AddScoped<IStudentExamService, StudentExamService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IGradingService, GradingService>();
             builder.Services.AddScoped<IProfileService, ProfileService>();
             builder.Services.AddScoped<ISemesterService, SemesterService>();
             builder.Services.AddScoped<ISubjectService, SubjectService>();
