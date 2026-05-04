@@ -37,7 +37,7 @@ async function loadSettings() {
         currentClassStatus = data.status ?? 1;
         document.getElementById("classNameInput").value = data.className;
         document.getElementById("subjectInput").value = (data.subjectCode ? data.subjectCode + ' - ' : '') + data.subjectName;
-        document.getElementById("semesterInput").value = data.semester;
+        document.getElementById("semesterInput").value = data.semesterCode ?? "";
         document.getElementById("inviteCodeInput").value = data.invitationCode;
 
         // Generate link

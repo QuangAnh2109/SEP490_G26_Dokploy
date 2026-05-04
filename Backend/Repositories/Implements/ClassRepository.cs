@@ -82,6 +82,7 @@ namespace Backend.Repositories.Implements
                     InvitationCode = c.InvitationCode,
                     InvitationCodeStatus = c.InvitationCodeStatus,
                     SemesterId = c.SemesterId,
+                    SemesterCode = c.Semester != null ? c.Semester.Code : null,
                     Status = c.Status,
                     Chapters = c.Subject != null ? c.Subject.Chapters
                         .Where(ch => ch.Status == ChapterStatus.Active)
