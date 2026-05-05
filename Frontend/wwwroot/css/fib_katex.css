@@ -16,8 +16,19 @@
     text-align: center;
 }
 
+/* KaTeX struts/pstruts là layout-only (vô hình, không nội dung) — không được capture click,
+   nếu không sẽ phủ lên blank ở dòng dưới khi câu hỏi có '\\' (gathered multi-row). */
+.fib-katex-frame .katex .strut,
+.fib-katex-frame .katex .pstrut,
+.fib-katex-frame .katex .vlist-s,
+.fib-katex-frame .katex .vlist-r > .vlist-s {
+    pointer-events: none;
+}
+
 /* Empty state — học sinh chưa nhập */
 .fib-blank {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
