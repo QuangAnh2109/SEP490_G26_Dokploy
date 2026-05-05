@@ -1,6 +1,9 @@
 @{
     ViewData["Title"] = "Luyện tập";
     var submissionId = ViewBag.SubmissionId ?? 0;
+    ViewBag.HideHeader = true;
+    ViewBag.HideSidebar = true;
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
@@ -9,23 +12,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <link rel="stylesheet" href="~/css/fib_katex.css" asp-append-version="true">
     <style>
-        math-field::part(virtual-keyboard-toggle) {
-            display: none;
-        }
-
-        math-field::part(menu-toggle) {
-            display: none;
-        }
-
-        #question-block-mcq {
-            list-style-type: upper-alpha;
-        }
-
-        math-field {
-            max-width: 100%;
-            overflow-x: auto;
-            display: block;
-        }
+        math-field::part(virtual-keyboard-toggle) { display: none; }
+        math-field::part(menu-toggle) { display: none; }
+        math-field { max-width: 100%; overflow-x: auto; display: block; }
     </style>
 }
 
@@ -215,7 +204,7 @@
                 return;
             }
 
-            // Validate format đáp án FillInBlank trước khi cho nộp.
+            // Validate chỉ để cảnh báo UX — KHÔNG chặn nộp.
             // showToast dùng textContent → phải strip HTML khỏi error messages.
             examEngine.saveCurrentAnswers();
             const validation = examEngine.validateAllAnswers();
@@ -223,8 +212,7 @@
                 const stripHtml = s => s.replace(/<[^>]*>/g, '');
                 const first = stripHtml(validation.errors[0]);
                 const more = validation.errors.length > 1 ? ` (và ${validation.errors.length - 1} lỗi khác)` : '';
-                showToast(`Đáp án có lỗi định dạng. ${first}${more}`, 'error', 6000);
-                return;
+                showToast(`Có ô đáp án không đúng định dạng. ${first}${more}`, 'warning', 6000);
             }
 
             showConfirm('Bạn có chắc muốn nộp bài luyện tập?', 'Nộp bài', () => submitPractice());

@@ -77,7 +77,8 @@ class ExamEngine {
             this._renderFibQuestion(question, questionContent);
         }
         else if (question.questionType === this.multipleChoice) {
-            this.dom.questionStem.textContent = question.questionContent;
+            // BE serialize đồng nhất {stem, frame} cho mọi loại câu (QuestionService.cs).
+            this.dom.questionStem.textContent = this._extractStem(question.questionContent);
             this.dom.questionStem.render?.();
             this.dom.questionTitle.textContent = "Câu " + this.questionNumber;
             this.dom.questionMcq.hidden = false;
@@ -90,11 +91,15 @@ class ExamEngine {
                 const answerId = String(answer.questionAnswerId);
                 checkbox.value = answerId;
 
-                if (this.studentAnswers.has(answerId)) checkbox.checked = true;
+                const initiallySelected = this.studentAnswers.has(answerId);
+                checkbox.checked = initiallySelected;
+                li.classList.toggle('mcq-option-selected', initiallySelected);
 
                 checkbox.addEventListener('change', e => {
-                    if (e.target.checked) this.studentAnswers.set(answerId, '');
+                    const selected = e.target.checked;
+                    if (selected) this.studentAnswers.set(answerId, '');
                     else this.studentAnswers.delete(answerId);
+                    li.classList.toggle('mcq-option-selected', selected);
                 });
 
                 const mathSpan = li.querySelector("math-span");
@@ -111,15 +116,32 @@ class ExamEngine {
         this.onQuestionRendered();
     }
 
+    // BE luôn serialize QuestionContent thành {stem, frame} (QuestionService.cs).
+    // Helper handle cả JSON lẫn legacy plain string nếu DB còn record cũ.
+    _extractStem(rawContent) {
+        if (!rawContent) return '';
+        try {
+            const parsed = JSON.parse(rawContent);
+            if (parsed && typeof parsed.stem === 'string') return parsed.stem;
+        } catch (_) { /* not JSON — legacy plain text */ }
+        return rawContent;
+    }
+
     _renderFibQuestion(question, questionContent) {
         if (!this.dom.fibKatexFrame) return;
 
         const answeredMap = new Map();
+        const errorMap = new Map();
         question.answers.forEach(answer => {
             const stored = this.studentAnswers.get(String(answer.questionAnswerId));
             if (stored && stored.trim()) {
                 const blankId = this._extractBlankId(answer.content);
-                if (blankId) answeredMap.set(blankId, stored);
+                if (blankId) {
+                    answeredMap.set(blankId, stored);
+                    if (!this._matchesInputTypes(answer, stored)) {
+                        errorMap.set(blankId, true);
+                    }
+                }
             }
         });
 
@@ -127,8 +149,43 @@ class ExamEngine {
             mode: 'student',
             onBlankClick: blankId => this._onBlankClick(blankId, question),
             answeredMap,
+            errorMap,
         });
         this.dom.questionBlockFib.hidden = false;
+    }
+
+    // Token-union validation: strip anchor ^/$ từ mỗi inputType regex, OR-join,
+    // wrap '^(?:t1|t2|...)+$'. Cho phép học sinh ghép token từ NHIỀU loại nhập liệu
+    // khác nhau (vd ô trống có [Số nguyên, Chữ cái] → '2x' pass, '2x@' fail).
+    // Empty/no-types → pass. Regex hỏng → fail-open (không block học sinh).
+    _matchesInputTypes(answer, latex) {
+        if (!answer.inputTypes?.length) return true;
+        const trimmed = (latex || '').trim();
+        if (!trimmed) return true;
+
+        const alternatives = [];
+        for (const it of answer.inputTypes) {
+            const inner = this._stripAnchors(it.regex);
+            if (inner === null) {
+                console.warn(`[FIB] Bad regex from DB inputTypeId=${it.inputTypeId}: ${it.regex}`);
+                return true;
+            }
+            alternatives.push(`(?:${inner})`);
+        }
+        try {
+            return new RegExp('^(?:' + alternatives.join('|') + ')+$').test(trimmed);
+        } catch (e) {
+            console.warn('[FIB] Combined regex compile error', e);
+            return true;
+        }
+    }
+
+    _stripAnchors(regex) {
+        if (typeof regex !== 'string' || !regex) return null;
+        let s = regex;
+        if (s.startsWith('^')) s = s.slice(1);
+        if (s.endsWith('$')) s = s.slice(0, -1);
+        return s;
     }
 
     _extractBlankId(answerContent) {
@@ -240,16 +297,7 @@ class ExamEngine {
                 const latex = (this.studentAnswers.get(String(answer.questionAnswerId)) || '').trim();
                 if (!latex) return;
 
-                // BE trả mảng inputTypes — match ÍT NHẤT 1 regex là pass.
-                const ok = answer.inputTypes.some(it => {
-                    try { return new RegExp(it.regex).test(latex); }
-                    catch (e) {
-                        console.warn(`[FIB] Bad regex from DB inputTypeId=${it.inputTypeId}: ${it.regex}`, e);
-                        return true; // fail-open: KHÔNG block submit khi DB regex hỏng
-                    }
-                });
-
-                if (!ok) {
+                if (!this._matchesInputTypes(answer, latex)) {
                     const names = answer.inputTypes.map(it => it.name).join(', ');
                     const qNum = index + 1;
                     errors.push(`Câu ${qNum}: Yêu cầu <b>${names}</b> nhưng nhập '${latex}' không khớp.`);

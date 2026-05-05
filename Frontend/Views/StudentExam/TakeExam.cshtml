@@ -1,5 +1,8 @@
 @{
     ViewData["Title"] = "Làm bài thi";
+    ViewBag.HideHeader = true;
+    ViewBag.HideSidebar = true;
+    ViewBag.IsFullWidth = true;
 }
 
 @section Styles {
@@ -7,23 +10,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <link rel="stylesheet" href="~/css/fib_katex.css" asp-append-version="true">
     <style>
-        math-field::part(virtual-keyboard-toggle) {
-            display: none;
-        }
-
-        math-field::part(menu-toggle) {
-            display: none;
-        }
-
-        #question-block-mcq {
-            list-style-type: upper-alpha;
-        }
-
-        math-field {
-            max-width: 100%;
-            overflow-x: auto;
-            display: block;
-        }
+        math-field::part(virtual-keyboard-toggle) { display: none; }
+        math-field::part(menu-toggle) { display: none; }
+        math-field { max-width: 100%; overflow-x: auto; display: block; }
     </style>
 }
 
@@ -84,6 +73,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script defer src="~/js/Shared/fib_katex_renderer.js" asp-append-version="true"></script>
     <script defer src="~/js/Shared/fib_input_panel.js" asp-append-version="true"></script>
+    <script defer src="~/js/Shared/fullscreen_on_first_gesture.js" asp-append-version="true"></script>
     <script defer src="~/js/exam_engine.js" asp-append-version="true"></script>
     <script>
         var examEngine;
@@ -94,6 +84,11 @@
         var remainingSeconds = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Đợi auth-guard pass rồi vào fullscreen ngay. Nếu browser block (no gesture),
+            // helper tự arm fallback ở gesture đầu tiên của học sinh.
+            if (window.userReady) await window.userReady;
+            window.enterFullscreenForExam?.();
+
             //Lấy giá trị examId
             const examId = new URLSearchParams(window.location.search).get('examId');
 
@@ -265,8 +260,23 @@
 
         /**
          * Xác nhận trước khi nộp bài (cho nút Nộp bài).
+         * Validate chỉ để cảnh báo UX — KHÔNG chặn nộp. Học sinh vẫn submit dù có lỗi định dạng.
          */
         function confirmSubmit() {
+            if (!examEngine) {
+                showToast('Bài thi chưa sẵn sàng. Vui lòng đợi tải xong.', 'error');
+                return;
+            }
+
+            examEngine.saveCurrentAnswers();
+            const validation = examEngine.validateAllAnswers();
+            if (!validation.isValid) {
+                const stripHtml = s => s.replace(/<[^>]*>/g, '');
+                const first = stripHtml(validation.errors[0]);
+                const more = validation.errors.length > 1 ? ` (và ${validation.errors.length - 1} lỗi khác)` : '';
+                showToast(`Có ô đáp án không đúng định dạng. ${first}${more}`, 'warning', 6000);
+            }
+
             showConfirm('Bạn có chắc chắn muốn nộp bài?', 'Xác nhận nộp bài', () => submitExam(true));
         }
 

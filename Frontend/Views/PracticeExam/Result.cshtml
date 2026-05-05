@@ -209,16 +209,17 @@
 
                 const diffBadge = getDifficultyBadge(q.difficulty);
 
-                // Nếu là dạng điền khuyết (FillInBlank) thì parse JSON, nếu không thì hiển thị thường
+                // BE serialize đồng nhất {stem, frame} cho mọi loại câu (QuestionService.cs).
+                // FIB hiển thị stem + frame; MCQ chỉ hiển thị stem (frame = null cho MCQ).
                 let contentDisplayHtml = q.questionContent;
-                if (q.questionType === "FillInBlank") {
-                    try {
-                        const parsed = JSON.parse(q.questionContent);
-                        contentDisplayHtml = `${parsed.stem}<br/>${parsed.frame}`;
-                    } catch (e) {
-                         console.error("Lỗi parse JSON câu hỏi FIB:", e);
+                try {
+                    const parsed = JSON.parse(q.questionContent);
+                    if (parsed && typeof parsed.stem === 'string') {
+                        contentDisplayHtml = q.questionType === "FillInBlank"
+                            ? `${parsed.stem}<br/>${parsed.frame || ''}`
+                            : parsed.stem;
                     }
-                }
+                } catch (e) { /* legacy plain string — giữ nguyên */ }
 
                 const optionsHtml = q.options.map(opt => {
                     let className = 'answer-option not-selected';
@@ -275,14 +276,8 @@
                         } else {
                             contentDisplay += ` <span class="text-muted">(Chưa điền)</span>`;
                         }
-                    } else {
-                        if (opt.studentResponse) {
-                            contentDisplay += ` → <strong>Đáp án bạn: ${escapeHtml(opt.studentResponse)}</strong>`;
-                        }
-                        if (opt.correctAnswer && !opt.isCorrect) {
-                            contentDisplay += ` <span class="text-success">(Đáp án đúng: ${escapeHtml(opt.correctAnswer)})</span>`;
-                        }
                     }
+                    // MCQ: icon ✓/✗ trên option đã đủ chỉ rõ đúng/sai — không thêm annotation gây nhiễu.
 
                     // Dùng div hay math-span để render
                     if (q.questionType === "FillInBlank") {

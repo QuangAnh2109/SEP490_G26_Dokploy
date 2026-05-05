@@ -35,15 +35,15 @@ public class SubmissionService(
         if (exam == null)
             return SubmissionErrors.NotFound;
 
-        // ── 2. Kiểm tra thời gian (TimeProvider) ──────────
+        // ── 2. Tính cờ nộp trễ (TimeProvider) ──────────
+        // Vẫn lưu submission khi quá giờ — auto-submit FE bắn đúng lúc hết giờ
+        // luôn đến BE trễ vài ms; nếu reject, submission kẹt InProgress mãi mãi.
+        // FE đọc IsLate trong response để hiện toast "Nộp bài trễ".
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var startTime = submission.CreatedAtUtc;             // thời gian bắt đầu làm bài
-        var deadline = startTime.AddMinutes(exam.Duration);  // hết giờ theo duration
+        var startTime = submission.CreatedAtUtc;
+        var deadline = startTime.AddMinutes(exam.Duration);
 
         bool isLate = now > deadline || (exam.CloseAt.HasValue && now > exam.CloseAt.Value);
-
-        if (isLate)
-            return SubmissionErrors.Late;
 
         // ── 3. Validate QuestionAnswerIds thuộc Paper ────────────────────
         var validIds = await submissionRepo.GetValidQuestionAnswerIdsAsync(
