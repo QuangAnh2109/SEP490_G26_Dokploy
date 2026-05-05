@@ -6,6 +6,7 @@
 //     options.mode: 'teacher' | 'student'    (REQUIRED)
 //     options.onBlankClick: (blankId) => void (REQUIRED khi mode='student')
 //     options.answeredMap: Map<string,string> (optional, student)
+//     options.errorMap: Map<string,true>      (optional, student — blank không khớp inputType)
 //     options.activeBlankId: string           (optional, student)
 //     options.placeholder: string             (optional, HTML khi frame rỗng)
 
@@ -103,7 +104,7 @@ window.FibKatexRenderer = (() => {
     };
 
     const replaceFieldsStudent = (container, options) => {
-        const { onBlankClick, answeredMap, activeBlankId } = options;
+        const { onBlankClick, answeredMap, errorMap, activeBlankId } = options;
         container.querySelectorAll('[id^="field-"]').forEach(span => {
             const blankId = span.id.replace('field-', '');
             const btn = document.createElement('button');
@@ -130,6 +131,11 @@ window.FibKatexRenderer = (() => {
             } else {
                 btn.className = 'fib-blank';
                 btn.textContent = blankId;
+            }
+
+            if (errorMap?.has(blankId)) {
+                btn.classList.add('fib-blank-error');
+                btn.title = 'Đáp án không đúng định dạng yêu cầu';
             }
 
             if (activeBlankId === blankId) {

@@ -14,10 +14,6 @@ public static class SubmissionErrors
         ErrorCodes.SubmissionAlreadySubmitted,
         ErrorType.Conflict);
 
-    public static readonly Error Late = new(
-        ErrorCodes.SubmissionLate,
-        ErrorType.Conflict);
-
     public static readonly Error InvalidAnswer = new(
         ErrorCodes.SubmissionInvalidAnswer,
         ErrorType.Validation);

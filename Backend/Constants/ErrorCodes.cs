@@ -134,7 +134,6 @@ public static class ErrorCodes
     // Submission
     public const string SubmissionNotFound = "SUBMISSION_NOT_FOUND";
     public const string SubmissionAlreadySubmitted = "SUBMISSION_ALREADY_SUBMITTED";
-    public const string SubmissionLate = "SUBMISSION_LATE";
     public const string SubmissionInvalidAnswer = "SUBMISSION_INVALID_ANSWER";
 
     // PracticeExam
