@@ -1,0 +1,153 @@
+@{
+    ViewData["Title"] = "Xem trước đề thi";
+    var examId = ViewBag.ExamId;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/Exam/exam_preview.css" asp-append-version="true" />
+}
+
+<main class="page-shell py-4">
+    <div class="container-fluid px-3 px-md-4">
+
+        <section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <h1 class="page-title d-flex align-items-center flex-wrap gap-2" id="exam-title">
+                    <span id="title-text">Đang tải...</span>
+                    <span class="meta-badge" id="status-badge"></span>
+                </h1>
+                <p class="page-subtitle">Thông tin chi tiết cấu trúc và ma trận đề thi.</p>
+            </div>
+            <div class="page-actions d-flex gap-2">
+                <button class="btn btn-outline-secondary" onclick="history.back()">Quay lại</button>
+                <button class="btn btn-primary" id="btn-take-exam" disabled>Làm bài</button>
+            </div>
+        </section>
+
+        <div id="loading-state" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+            <p class="mt-2 text-muted">Đang tải thông tin đề thi...</p>
+        </div>
+
+        <div id="error-state" class="d-none">
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span id="error-message">Không thể tải thông tin đề thi.</span>
+            </div>
+        </div>
+
+        <div id="content-state" class="row g-3 d-none">
+
+
+            <div class="col-12 col-xl-8">
+
+
+                <section class="panel-card mb-3">
+                    <h2 class="panel-title">Thông tin tổng quan đề thi</h2>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Mã môn</p>
+                                <p class="summary-value mb-0" id="subject-code">—</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Tên đề thi</p>
+                                <p class="summary-value mb-0" id="exam-title-card">—</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Số câu</p>
+                                <p class="summary-value mb-0" id="total-questions">—</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Thời gian làm bài</p>
+                                <p class="summary-value mb-0" id="duration">—</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Bắt đầu vào làm</p>
+                                <p class="summary-value mb-0" id="open-at">—</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="summary-card">
+                                <p class="summary-label mb-1">Kết thúc kỳ thi</p>
+                                <p class="summary-value mb-0" id="close-at">—</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <section class="panel-card">
+                    <h2 class="panel-title">Ma trận đề thi</h2>
+
+                    <div id="matrix-wrapper">
+                        <div class="table-responsive mb-3">
+                            <table class="table table-soft align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Chương</th>
+                                        <th>Nhận biết</th>
+                                        <th>Thông hiểu</th>
+                                        <th>Vận dụng</th>
+                                        <th>Vận dụng cao</th>
+                                        <th>Tổng</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matrix-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="no-matrix" class="d-none text-muted fst-italic mb-3">
+                        Đề thi này không có ma trận cấu trúc.
+                    </div>
+
+                    <h3 class="section-title">Hướng dẫn làm bài</h3>
+                    <ul class="mb-0 muted">
+                        <li>Đọc kỹ từng câu hỏi trước khi chọn đáp án.</li>
+                        <li>Hệ thống tự nộp khi hết thời gian làm bài.</li>
+                        <li>Không đóng trình duyệt trong quá trình làm bài.</li>
+                    </ul>
+                </section>
+            </div>
+
+
+            <div class="col-12 col-xl-4">
+                <aside class="panel-card">
+                    <h2 class="panel-title">Thông tin bổ sung</h2>
+                    <div class="info-card mb-2">
+                        <p class="info-label mb-1">Giáo viên</p>
+                        <p class="info-value mb-0" id="teacher-name">—</p>
+                    </div>
+                    <div class="info-card mb-2">
+                        <p class="info-label mb-1">Ngày cập nhật</p>
+                        <p class="info-value mb-0" id="updated-at">—</p>
+                    </div>
+                    <div class="info-card" id="note-card">
+                        <p class="info-label mb-1">Ghi chú</p>
+                        <p class="info-value mb-0" id="description">—</p>
+                    </div>
+                </aside>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    <script>
+        const EXAM_ID = @examId;
+    </script>
+    <script src="~/js/StudentExam/exam_preview.js" asp-append-version="true"></script>
+}

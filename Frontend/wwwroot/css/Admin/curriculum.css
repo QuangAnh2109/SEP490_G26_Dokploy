@@ -1,0 +1,144 @@
+/* Quick reference — phase 6 */
+.form-cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-cols-2>.form-row+.form-row {
+    margin-top: 0;
+}
+
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background: var(--bg-hover);
+}
+
+.icon-btn i {
+    font-size: 16px;
+}
+
+.modal-confirm .modal-head .title {
+    color: var(--color-warning);
+}
+
+.modal-success .modal-head .title {
+    color: var(--color-success);
+}
+
+.modal-error .modal-head .title {
+    color: var(--color-danger);
+}
+
+.warn {
+    color: var(--color-warning);
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+input[type="date"],
+select,
+textarea {
+    font-family: var(--font-sans);
+}
+
+.table th.text-right,
+.table td.text-right {
+    text-align: right;
+}
+
+.pill-soft {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+}
+
+/* ============================================================================
+ * Chapter list (SubjectDetail) — drag-drop sắp xếp chương
+ * ========================================================================== */
+.chapter-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.chapter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    transition: box-shadow .12s, background .12s;
+}
+
+.chapter-row:hover {
+    background: var(--ink-100);
+}
+
+.chapter-row.row-deleted {
+    opacity: .6;
+    background: var(--ink-100);
+}
+
+.chapter-row .drag-handle {
+    width: 24px;
+    height: 24px;
+    color: var(--ink-400);
+    cursor: grab;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+}
+
+.chapter-row .drag-handle:active {
+    cursor: grabbing;
+}
+
+.chapter-list-locked .drag-handle {
+    cursor: default;
+    opacity: .35;
+    pointer-events: none;
+}
+
+.chapter-row .order-badge {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 var(--s-2);
+    border-radius: var(--r-sm);
+    background: var(--ink-100);
+    color: var(--ink-700);
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+/* Khi đang kéo chương, giữ kích thước & nền card */
+.chapter-row.sortable-ghost {
+    opacity: .35;
+    background: var(--navy-100);
+}
+
+.chapter-row.sortable-chosen,
+.chapter-row.sortable-drag {
+    box-shadow: var(--sh-pop);
+    background: var(--surface);
+}

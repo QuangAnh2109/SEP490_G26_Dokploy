@@ -1,0 +1,61 @@
+<div class="page-header">
+    <div>
+        <h1>Tài khoản người dùng</h1>
+        <div class="meta"><strong id="totalCount">0</strong> tài khoản</div>
+    </div>
+    <div class="actions">
+        <a href="/Admin/CreateUser" class="btn btn-primary">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Tạo tài khoản
+        </a>
+    </div>
+</div>
+
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<div id="page-content" class="card is-hidden">
+    <div class="filter-bar">
+        <div class="form-row">
+            <label>Tìm kiếm</label>
+            <input type="text" id="userQ" placeholder="Tên, email, mã SV...">
+        </div>
+        <div class="form-row">
+            <label>Vai trò</label>
+            <select id="userRole">
+                <option value="">Tất cả</option>
+                <option value="1">Giáo viên</option>
+                <option value="2">Học sinh</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Trạng thái</label>
+            <select id="userStatus">
+                <option value="">Tất cả</option>
+                <option value="1">Đang hoạt động</option>
+                <option value="0">Đã khóa</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tài khoản</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Kích hoạt</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="pager-users"></div>
+</div>
+
+@section Scripts {
+    <script src="~/js/Admin/users-list.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,308 @@
+@{
+    ViewData["Title"] = "Luyện tập";
+    var submissionId = ViewBag.SubmissionId ?? 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/Exam/exam_taking.css" />
+    <link rel="stylesheet" href="~/css/PracticeExam/practice_exam.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="~/css/fib_katex.css" asp-append-version="true">
+    <style>
+        math-field::part(virtual-keyboard-toggle) {
+            display: none;
+        }
+
+        math-field::part(menu-toggle) {
+            display: none;
+        }
+
+        #question-block-mcq {
+            list-style-type: upper-alpha;
+        }
+
+        math-field {
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
+    </style>
+}
+
+<main class="page-shell py-4" id="practiceWorkspace">
+    <div class="container-fluid px-3 px-md-4">
+
+        @* ── Header ── *@
+        <section class="practice-header mb-4">
+            <div>
+                <h1 class="page-title">Luyện tập</h1>
+                <span class="practice-badge">
+                    <i class="fas fa-brain me-1"></i> Không giới hạn thời gian
+                </span>
+            </div>
+            <div class="soft-card">
+                <div class="summary-label">Số câu</div>
+                <div class="countdown" id="questionProgress" style="color: #0d6efd;">0/0</div>
+            </div>
+        </section>
+
+        <div class="row g-3">
+            @await Html.PartialAsync("_QuestionArea")
+
+            @* ── Sidebar ── *@
+            <div class="col-12 col-xl-4 exam-sidebar">
+                <aside class="panel-card mb-3">
+                    <h2 class="panel-title">Điều hướng câu hỏi</h2>
+                    <div class="question-nav mb-2" id="questionNav"></div>
+                    <div class="nav-legend small text-muted mt-2 mb-3">
+                        <span class="legend-item"><span class="legend-dot dot-current"></span>Đang xem</span>
+                        <span class="legend-item"><span class="legend-dot dot-answered"></span>Đã làm</span>
+                        <span class="legend-item"><span class="legend-dot dot-unanswered"></span>Chưa làm</span>
+                        <span class="legend-item"><span class="legend-dot dot-error"></span>Lỗi định dạng</span>
+                    </div>
+                    <p class="form-note mb-0 text-muted small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Không giới hạn thời gian — làm bài thoải mái
+                    </p>
+                </aside>
+                <div class="toolbar d-flex gap-2 mt-3 mb-3">
+                    <button class="btn btn-danger flex-grow-1" id="btnSubmitPractice" onclick="confirmSubmit()">
+                        <i class="fas fa-paper-plane me-1"></i> Nộp bài
+                    </button>
+                </div>
+                <div id="autoSaveStatus" class="form-note small text-muted mt-1" aria-live="polite"></div>
+                @await Html.PartialAsync("_InputLimitContainer")
+            </div>
+        </div>
+    </div>
+</main>
+
+@await Html.PartialAsync("_ExamTemplates")
+
+@section Scripts {
+    <script defer src="https://unpkg.com/mathlive"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script defer src="~/js/Shared/fib_katex_renderer.js" asp-append-version="true"></script>
+    <script defer src="~/js/Shared/fib_input_panel.js" asp-append-version="true"></script>
+    <script defer src="~/js/exam_engine.js" asp-append-version="true"></script>
+    <script>
+        var practiceData = null;
+        var examEngine;
+        var isResumed = false;
+        var isSubmitting = false; // chặn auto-save trùng khi submit đang chạy
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPracticeExam();
+        });
+
+        async function loadPracticeExam() {
+            const submissionId = @submissionId;
+            let answersMap = new Map();
+
+            // Thử resume trước (bài đang làm dở)
+            try {
+                practiceData = await apiClient.get(`/api/practice/resume/${submissionId}`);
+                isResumed = true;
+
+                // Khôi phục câu trả lời đã lưu
+                if (practiceData.savedAnswers && practiceData.savedAnswers.length > 0) {
+                    practiceData.savedAnswers.forEach(sa => {
+                        answersMap.set(String(sa.questionAnswerId), sa.response || '');
+                    });
+                }
+
+                initExam(answersMap);
+                return;
+            } catch (error) {
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+
+                // Nếu bài đã được nộp rồi → chuyển thẳng sang trang Result thay vì kẹt ở đây
+                const code = error.message || '';
+                if (code === 'PRACTICE_EXAM_ALREADY_SUBMITTED' || (error.xhr && error.xhr.status === 409)) {
+                    window.location.href = `/PracticeExam/Result?submissionId=${submissionId}`;
+                    return;
+                }
+
+                console.log('Resume failed, trying create response from sessionStorage');
+            }
+
+            // Nếu không resume được, kiểm tra sessionStorage (vừa tạo)
+            const cached = sessionStorage.getItem('practiceData_' + submissionId);
+            if (cached) {
+                practiceData = JSON.parse(cached);
+                sessionStorage.removeItem('practiceData_' + submissionId);
+                initExam(answersMap);
+                return;
+            }
+
+            showToast('Không tìm thấy bài luyện tập. Vui lòng tạo mới.', 'error');
+        }
+
+        function initExam(answersMap) {
+            document.getElementById('questionProgress').textContent = `0/${practiceData.questions.length}`;
+            
+            examEngine = new ExamEngine({
+                data: practiceData,
+                studentAnswers: answersMap,
+                onNavUpdated: function(qNum, questions, stdAnswers) {
+                    const validation = examEngine.validateAllAnswers();
+                    const invalidQNums = validation.invalidQNums || [];
+
+                    document.querySelectorAll('#questionNav button').forEach((btn, idx) => {
+                        const questionNum = idx + 1;
+                        const question = questions[idx];
+                        const hasAnswer = question.answers.some(a => stdAnswers.has(String(a.questionAnswerId)));
+
+                        btn.classList.remove('btn-primary', 'btn-success', 'btn-outline-primary', 'btn-danger');
+                        if (questionNum === qNum) {
+                            btn.classList.add('btn-primary');
+                        } else if (invalidQNums.includes(questionNum)) {
+                            btn.classList.add('btn-danger');
+                            btn.title = "Có lỗi định dạng ở câu này";
+                        } else if (hasAnswer) {
+                            btn.classList.add('btn-success');
+                            btn.removeAttribute('title');
+                        } else {
+                            btn.classList.add('btn-outline-primary');
+                            btn.removeAttribute('title');
+                        }
+                    });
+
+                    // Update prev/next button disabled state
+                    const total = questions.length;
+                    const btnPrev = document.getElementById('btnPrev');
+                    const btnNext = document.getElementById('btnNext');
+                    if (btnPrev) btnPrev.disabled = qNum <= 1;
+                    if (btnNext) btnNext.disabled = qNum >= total;
+                },
+                onProgressUpdated: function(questions, stdAnswers) {
+                    let answered = 0;
+                    questions.forEach(q => {
+                        if (q.answers.some(a => stdAnswers.has(String(a.questionAnswerId)))) answered++;
+                    });
+                    document.getElementById('questionProgress').textContent = `${answered}/${questions.length}`;
+                    
+                    // Tự động lưu nháp
+                    if (typeof submitPracticeDraft === 'function') {
+                        submitPracticeDraft();
+                    }
+                }
+            });
+            
+            examEngine.init();
+
+            // Bind nav footer prev/next
+            document.getElementById('btnPrev')?.addEventListener('click', () => {
+                if (examEngine && examEngine.questionNumber > 1) {
+                    examEngine.goToQuestion(examEngine.questionNumber - 1);
+                }
+            });
+            document.getElementById('btnNext')?.addEventListener('click', () => {
+                const total = practiceData?.questions?.length || 0;
+                if (examEngine && examEngine.questionNumber < total) {
+                    examEngine.goToQuestion(examEngine.questionNumber + 1);
+                }
+            });
+        }
+
+        function confirmSubmit() {
+            if (!practiceData || !examEngine) {
+                showToast('Bài luyện tập chưa sẵn sàng. Vui lòng đợi tải xong.', 'error');
+                return;
+            }
+
+            // Validate format đáp án FillInBlank trước khi cho nộp.
+            // showToast dùng textContent → phải strip HTML khỏi error messages.
+            examEngine.saveCurrentAnswers();
+            const validation = examEngine.validateAllAnswers();
+            if (!validation.isValid) {
+                const stripHtml = s => s.replace(/<[^>]*>/g, '');
+                const first = stripHtml(validation.errors[0]);
+                const more = validation.errors.length > 1 ? ` (và ${validation.errors.length - 1} lỗi khác)` : '';
+                showToast(`Đáp án có lỗi định dạng. ${first}${more}`, 'error', 6000);
+                return;
+            }
+
+            showConfirm('Bạn có chắc muốn nộp bài luyện tập?', 'Nộp bài', () => submitPractice());
+        }
+
+        async function submitPractice() {
+            if (!practiceData) {
+                showToast('Bài luyện tập chưa sẵn sàng.', 'error');
+                return;
+            }
+            isSubmitting = true; // ngăn auto-save chen vào và "lưu nháp thất bại" sau khi đã nộp
+            examEngine.saveCurrentAnswers();
+
+            const btn = document.getElementById('btnSubmitPractice');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang nộp...';
+
+            const studentAnswerDtos = examEngine.getStudentAnswerDtos();
+
+            try {
+                const result = await apiClient.post('/api/practice/submit', {
+                    submissionId: practiceData.submissionId,
+                    studentAnswers: studentAnswerDtos
+                });
+
+                showToast(`Nộp bài thành công! Đúng ${result.correctCount}/${result.totalQuestions} (${result.accuracyRate}%)`, 'success', 5000);
+
+                // Chuyển sang trang kết quả
+                setTimeout(() => {
+                    window.location.href = `/PracticeExam/Result?submissionId=${practiceData.submissionId}`;
+                }, 1500);
+            } catch (error) {
+                isSubmitting = false; // cho phép auto-save lại nếu user thử nộp lại
+                showToast(error.message || 'Lỗi nộp bài', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Nộp bài';
+            }
+        }
+
+        // Hiển thị trạng thái auto-save để học sinh không "gõ vào hư vô" khi save fail.
+        function setAutoSaveStatus(state, detail) {
+            const el = document.getElementById('autoSaveStatus');
+            if (!el) return;
+            const stamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            if (state === 'saving') {
+                el.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i> Đang lưu nháp...';
+                el.className = 'form-note small text-muted mt-1';
+            } else if (state === 'saved') {
+                el.innerHTML = `<i class="fas fa-check-circle me-1 text-success"></i> Đã lưu lúc ${stamp}`;
+                el.className = 'form-note small text-success mt-1';
+            } else if (state === 'error') {
+                el.innerHTML = `<i class="fas fa-exclamation-triangle me-1 text-danger"></i> Lưu nháp thất bại${detail ? ` (${detail})` : ''}`;
+                el.className = 'form-note small text-danger mt-1';
+            }
+        }
+
+        async function submitPracticeDraft() {
+            if (!practiceData || !examEngine) return;
+            if (isSubmitting) return; // submit đang chạy → bỏ qua auto-save tránh race
+            examEngine.saveCurrentAnswers();
+
+            const studentAnswerDtos = examEngine.getStudentAnswerDtos();
+
+            setAutoSaveStatus('saving');
+            try {
+                await apiClient.post('/api/practice/save', {
+                    submissionId: practiceData.submissionId,
+                    studentAnswers: studentAnswerDtos
+                });
+                setAutoSaveStatus('saved');
+            } catch (error) {
+                console.error('Lỗi tự động lưu nháp', error);
+                if (error.xhr && error.xhr.status === 401) {
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+                setAutoSaveStatus('error', error.message || '');
+            }
+        }
+    </script>
+}

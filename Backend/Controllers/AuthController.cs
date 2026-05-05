@@ -1,139 +1,66 @@
+using Backend.Common;
+using Backend.Common.Errors;
+using Backend.Common.Models;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Backend.Constants;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
-namespace Backend.Controllers
+namespace Backend.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class AuthController(IAuthService authService, ICurrentUserService currentUser) : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController : ControllerBase
+    [HttpGet("me")]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
+    public IActionResult GetMe() =>
+        Ok(new
+        {
+            userId = currentUser.UserId,
+            email = currentUser.Email,
+            role = currentUser.Role,
+            authProvider = User.FindFirstValue("auth_provider")
+        });
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request) =>
+        (await authService.LoginAsync(request)).ToActionResult(this);
+
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request) =>
+        (await authService.GoogleLoginAsync(request)).ToActionResult(this);
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken() =>
+        (await authService.RefreshTokenAsync()).ToActionResult(this);
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request) =>
+        (await authService.ForgotPasswordAsync(request)).ToActionResult(this);
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request) =>
+        (await authService.ResetPasswordAsync(request)).ToActionResult(this);
+
+    [HttpPost("logout")]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
+    [AllowPasswordChange]
+    public async Task<IActionResult> Logout()
     {
-        private readonly IAuthService _authService;
+        var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        if (string.IsNullOrEmpty(jti))
+            return Result.Failure(AuthErrors.MissingJti).ToActionResult(this);
 
-        public AuthController(IAuthService authService)
-        {
-            _authService = authService;
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            try
-            {
-                var response = await _authService.LoginAsync(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ErrorMessages.LoginProcessingError, details = ex.Message });
-            }
-        }
-
-        [HttpPost("google-login")]
-        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
-        {
-            try
-            {
-                var response = await _authService.GoogleLoginAsync(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ErrorMessages.GoogleLoginProcessingError, details = ex.Message });
-            }
-        }
-
-        [HttpPost("google-register")]
-        public async Task<IActionResult> GoogleRegister([FromBody] GoogleRegisterRequest request)
-        {
-            try
-            {
-                var response = await _authService.GoogleRegisterAsync(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ErrorMessages.GoogleRegistrationProcessingError, details = ex.Message });
-            }
-        }
-
-        [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOtp([FromBody] RegisterRequest request)
-        {
-            try
-            {
-                await _authService.SendOtpAsync(request);
-                return Ok(new { message = SuccessMessages.OtpSentSuccess });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ErrorMessages.SendOtpError, details = ex.Message });
-            }
-        }
-
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
-        {
-            try
-            {
-                var response = await _authService.VerifyOtpAndRegisterAsync(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ErrorMessages.AccountCreationError, details = ex.Message });
-            }
-        }
-        [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] TokenModel request)
-        {
-            try
-            {
-                var response = await _authService.RefreshTokenAsync(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (ArgumentNullException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while refreshing the token.", details = ex.Message });
-            }
-        }
+        return (await authService.LogoutAsync(currentUser.UserId, jti)).ToActionResult(this);
     }
+
+    [HttpPost("change-password-first-login")]
+    [Authorize(Roles = RoleIds.Teacher + "," + RoleIds.Student + "," + RoleIds.Admin)]
+    [AllowPasswordChange]
+    public async Task<IActionResult> ChangePasswordFirstLogin([FromBody] ChangePasswordFirstLoginRequest request) =>
+        (await authService.ChangePasswordFirstLoginAsync(currentUser.UserId, request)).ToActionResult(this);
 }

@@ -28,5 +28,11 @@ namespace Frontend.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        // Redirect /Home/ClassList to /Class/ClassList (the action that fetches from backend)
+        public IActionResult ClassList()
+        {
+            return RedirectToAction("ClassList", "Class");
+        }
     }
 }

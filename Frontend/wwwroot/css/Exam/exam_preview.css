@@ -1,0 +1,234 @@
+﻿/* =========================================================
+   exam_preview.css  –  Exam Preview Page Styles
+   ========================================================= */
+
+/* ---------- Page shell ---------- */
+.page-shell {
+    min-height: calc(100vh - 56px);
+    background-color: #f8f9fb;
+}
+
+/* ---------- Page header ---------- */
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.page-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.page-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ---------- Status badge ---------- */
+.meta-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.badge-public {
+    background-color: #e6f4ea;
+    color: #1e7e34;
+    border: 1px solid #b7dfbe;
+}
+
+.badge-private {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffd97d;
+}
+
+.badge-closed {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+.badge-unknown {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+/* ---------- Panel card ---------- */
+.panel-card {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.panel-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+/* ---------- Summary cards (info grid) ---------- */
+.summary-card {
+    background: #f8f9fb;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    padding: 12px 14px;
+    height: 100%;
+}
+
+.summary-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9aa0ab;
+}
+
+.summary-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1d23;
+}
+
+/* ---------- Aside info cards ---------- */
+.info-card {
+    background: #f8f9fb;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9aa0ab;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1a1d23;
+}
+
+/* ---------- Section title (below table) ---------- */
+.section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0 0 8px;
+}
+
+/* ---------- Table ---------- */
+.table-soft {
+    font-size: 0.875rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .table-soft thead tr th {
+        background-color: #f4f5f7;
+        color: #6c757d;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 10px 14px;
+        border-bottom: 1px solid #e8eaed;
+        white-space: nowrap;
+    }
+
+        .table-soft thead tr th:first-child {
+            border-top-left-radius: 8px;
+        }
+
+        .table-soft thead tr th:last-child {
+            border-top-right-radius: 8px;
+        }
+
+    .table-soft tbody tr td,
+    .table-soft tbody tr th {
+        padding: 10px 14px;
+        border-bottom: 1px solid #f0f1f3;
+        color: #2d3139;
+        font-weight: 500;
+        vertical-align: middle;
+    }
+
+    .table-soft tbody tr:last-child td,
+    .table-soft tbody tr:last-child th {
+        border-bottom: none;
+        font-weight: 700;
+        background-color: #f8f9fb;
+        color: #1a1d23;
+    }
+
+.interactive-row {
+    transition: background-color 0.15s ease;
+    cursor: default;
+}
+
+    .interactive-row:hover {
+        background-color: #f4f6ff;
+    }
+
+/* ---------- Instruction list ---------- */
+ul.muted {
+    color: #6c757d;
+    font-size: 0.875rem;
+    padding-left: 1.25rem;
+    line-height: 1.9;
+}
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+    background-color: #4361ee;
+    border-color: #4361ee;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 20px;
+}
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: #3451d1;
+        border-color: #3451d1;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+.btn-outline-secondary {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 20px;
+}
+
+/* ---------- Loading skeleton pulse ---------- */
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}

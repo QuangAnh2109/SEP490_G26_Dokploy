@@ -1,0 +1,122 @@
+﻿@{
+    ViewData["Title"] = "Danh sách lớp học";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+    <link rel="stylesheet" href="~/css/Class/Class.css">
+}
+
+<main class="page-shell py-4">
+    <div class="container-fluid px-3 px-md-4">
+
+        <section class="page-header d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h1 id="pageTitle"></h1>
+                <p class="page-subtitle" id="pageSubtitle"></p>
+            </div>
+
+            <div id="actionButtonContainer"></div>
+        </section>
+
+        <section class="panel-card mb-3">
+            <div class="row g-2">
+                <div class="col-12 col-lg-4">
+                    <input type="text"
+                           class="form-control"
+                           id="classSearchInput"
+                           placeholder="Tìm theo tên lớp hoặc giảng viên">
+                </div>
+                <div class="col-6 col-lg-3">
+                    <select class="form-select" id="classSemesterFilter">
+                        <option value="">Tất cả học kỳ</option>
+                    </select>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <select class="form-select" id="classSubjectFilter">
+                        <option value="">Tất cả môn học</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="card-grid" id="classGrid"></section>
+
+    </div>
+</main>
+
+<!-- JOIN CLASS MODAL -->
+<div class="modal fade" id="joinClassModal" tabindex="-1"
+     aria-labelledby="joinClassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="joinClassForm">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="joinClassModalLabel">
+                    Nhập mã mời vào lớp
+                </h2>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="joinClassCodeInput">
+                    Mã mời *
+                </label>
+                <input class="form-control"
+                       id="joinClassCodeInput"
+                       placeholder="Nhập mã mời (ví dụ: SE1711)"
+                       autocomplete="off"
+                       required>
+                <p class="mt-2 mb-0">
+                    Nhập mã mời do giảng viên cung cấp để tham gia lớp học.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    Hủy
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Xác nhận tham gia
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Templates cho các thành phần động -->
+<template id="class-card-template">
+    <article class="class-card">
+        <h2>
+            <span class="class-name"></span>
+            <span class="badge bg-warning fs-6 align-middle ms-2 d-none pending-badge">Chờ duyệt</span>
+            <span class="badge bg-secondary fs-6 align-middle ms-2 d-none closed-badge">Đã đóng</span>
+        </h2>
+        <p class="class-teacher"></p>
+        <small class="class-subject"></small><br>
+        <small class="class-semester"></small>
+        <div class="mt-2 class-stats"></div>
+        <div class="mt-2 card-actions">
+            <!-- Nút hành động sẽ được chèn vào đây -->
+        </div>
+    </article>
+</template>
+
+<template id="teacher-btn-template">
+    <a href="/Class/Create" class="btn btn-primary">+ Tạo lớp</a>
+</template>
+
+<template id="student-btn-template">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#joinClassModal">
+        + Tham gia lớp
+    </button>
+</template>
+
+@section Scripts {
+    <script>
+        const API_BASE = window.API_BASE_URL;
+    </script>
+    <script src="~/js/Class/class_list.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,103 @@
+@{
+	ViewData["Title"] = "Tạo ma trận đề";
+	var editId = ViewBag.EditId as int?;
+}
+
+@section Styles {
+	<link rel="stylesheet" href="~/css/ExamBlueprint/create.css" asp-append-version="true" />
+}
+
+<div class="exam-blueprint-page">
+	<div class="page-shell py-4">
+		<div class="container-fluid px-2 px-md-3">
+			<section class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+				<div>
+					<h1 class="page-title">@(editId.HasValue ? "Sửa ma trận đề" : "Thêm ma trận đề")</h1>
+					<p class="page-subtitle">@(editId.HasValue ? "Cập nhật cấu trúc ma trận đề theo chương và mức độ." : "Tạo ma trận đề mới theo chương và mức độ.")</p>
+				</div>
+				<div class="page-actions">
+					<button class="btn btn-outline-secondary" type="button" disabled title="Sẽ triển khai sau">Nhập</button>
+					<a class="btn btn-outline-secondary" href="/ExamBlueprint">Quay lại danh sách</a>
+					<button class="btn btn-outline-primary" type="button" id="btnSaveDraft">Lưu nháp</button>
+					<button class="btn btn-primary" type="button" id="btnPublish">Xuất bản</button>
+				</div>
+			</section>
+
+			<div id="createSuccess" class="alert alert-success d-none mt-3"></div>
+			<div id="createWarnings" class="alert alert-warning d-none mt-3">
+				<strong id="warningTitle">Cảnh báo khi lưu nháp:</strong>
+				<ul class="mb-0 ps-3 mt-1" id="warningList"></ul>
+			</div>
+
+			<section class="panel-card mb-3">
+				<div class="row g-2">
+					<div class="col-12 col-md-8">
+						<label class="form-label" for="blueprintName">Tên ma trận</label>
+						<input id="blueprintName" class="form-control" maxlength="200" />
+					</div>
+					<div class="col-12 col-md-4">
+						<label class="form-label" for="blueprintSubject">Môn học</label>
+						<select id="blueprintSubject" class="form-select">
+							<option value="">Chọn môn học</option>
+						</select>
+					</div>
+					<div class="col-12">
+						<label class="form-label" for="blueprintDescription">Mô tả</label>
+						<textarea id="blueprintDescription" class="form-control" rows="2" maxlength="1000"></textarea>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel-card">
+				<div class="d-flex justify-content-between align-items-center mb-2">
+					<h2 class="panel-title mb-0">Cấu trúc ma trận</h2>
+					<button class="btn btn-outline-secondary btn-sm" type="button" id="btnAddRow">Thêm dòng</button>
+				</div>
+
+				<div id="matrixRowArea">
+					<div class="matrix-row fw-semibold form-note mb-2 matrix-header">
+						<span>Chương</span>
+						<span>Mức độ</span>
+						<span>Số câu</span>
+						<span></span>
+					</div>
+					<div id="matrixRowList"></div>
+					<div id="emptyMatrixHint" class="text-muted small py-2">Chưa có dòng ma trận nào. Bạn có thể lưu nháp hoặc bấm "Thêm dòng".</div>
+				</div>
+
+				<template id="matrixRowTemplate">
+					<div class="matrix-row matrix-item" data-matrix-item>
+						<select class="form-select matrix-chapter">
+							<option value="">Chọn chương</option>
+						</select>
+						<select class="form-select matrix-difficulty">
+							<option value="1">Nhận biết</option>
+							<option value="2">Thông hiểu</option>
+							<option value="3">Vận dụng</option>
+							<option value="4">Vận dụng cao</option>
+						</select>
+						<input class="form-control matrix-count" type="number" min="0" value="0" />
+						<button class="btn btn-outline-danger" type="button" data-remove-row>Xóa</button>
+						<div class="row-warning text-danger small d-none mt-1 w-100" style="grid-column: span 3;"></div>
+					</div>
+				</template>
+
+				<hr class="section-divider">
+				<div class="matrix-total align-items-center">
+					<label class="form-label mb-0" for="blueprintTargetQuestionCount">Tổng số câu mục tiêu</label>
+					<input id="blueprintTargetQuestionCount" type="number" class="form-control form-control-sm" value="0" min="0" style="max-width: 140px;">
+					<span class="text-muted small">Tổng từ các dòng: <strong id="computedMatrixTotal">0</strong></span>
+				</div>
+			</section>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+	<script>
+		window.ExamBlueprintEditId = @(editId.HasValue ? editId.Value : 0);
+	</script>
+	<script src="~/js/Shared/validation_shared.js" asp-append-version="true"></script>
+	<script src="~/js/Validations/blueprint_val.js" asp-append-version="true"></script>
+	<script src="~/js/ExamBlueprint/create.js" asp-append-version="true"></script>
+}

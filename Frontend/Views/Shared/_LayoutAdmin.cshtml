@@ -1,0 +1,54 @@
+@{
+    var hideHeader = ViewBag.HideHeader == true;
+    var hideSidebar = ViewBag.HideSidebar == true;
+}
+<!DOCTYPE html>
+<html lang="vi" class="auth-pending">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin Console</title>
+    <style>html.auth-pending body { visibility: hidden; }</style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/shells/shell-admin.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+    @await Html.PartialAsync("_ApiConfig")
+</head>
+<body>
+    <div class="shell">
+        @if (!hideSidebar)
+        {
+            @await Html.PartialAsync("_SidebarAdmin")
+        }
+
+        <main>
+            @if (!hideHeader)
+            {
+                @await Html.PartialAsync("_HeaderAdmin")
+            }
+
+            <div class="page">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    @await Html.PartialAsync("_AdminNoticeModal")
+
+    <!-- Libs -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Modal Scripts & Helpers -->
+    <script src="~/js/Shared/modal.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/auth-guard.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/validation_shared.js" asp-append-version="true"></script>
+    <script src="~/js/Admin/admin-ui.js" asp-append-version="true"></script>
+    <script src="~/js/Admin/admin-pager.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

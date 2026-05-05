@@ -1,0 +1,202 @@
+/* ═══════════════════════════════════════════
+   Teacher Analytics — Chế độ Giáo viên
+   ═══════════════════════════════════════════ */
+
+:root {
+    --h-primary: 230; --s-primary: 80%; --l-primary: 60%;
+    --h-success: 145; --s-success: 65%; --l-success: 50%;
+    --h-danger:  0;   --s-danger:  75%; --l-danger:  60%;
+    --h-warning: 35;  --s-warning: 90%; --l-warning: 55%;
+    --h-info:    200; --s-info:    75%; --l-info:    55%;
+
+    --clr-primary: hsl(var(--h-primary), var(--s-primary), var(--l-primary));
+    --clr-success: hsl(var(--h-success), var(--s-success), var(--l-success));
+    --clr-danger:  hsl(var(--h-danger),  var(--s-danger),  var(--l-danger));
+    --clr-warning: hsl(var(--h-warning), var(--s-warning), var(--l-warning));
+    --clr-info:    hsl(var(--h-info),    var(--s-info),    var(--l-info));
+    --clr-bg-main: #f8fafc;
+    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+}
+
+body { background-color: var(--clr-bg-main); }
+
+.page-title {
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.025em;
+    margin-bottom: 2rem;
+    position: relative;
+    padding-left: 1rem;
+    border-left: 5px solid var(--clr-primary);
+}
+
+/* ── Stat Cards ── */
+.stat-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
+    padding: 1.5rem;
+    text-align: left;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 4px; height: 100%;
+}
+
+.stat-card.stat-primary::before { background: var(--clr-primary); }
+.stat-card.stat-success::before { background: var(--clr-success); }
+.stat-card.stat-danger::before  { background: var(--clr-danger); }
+.stat-card.stat-info::before    { background: var(--clr-info); }
+
+.stat-card .stat-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ── Section Cards ── */
+.analytics-card {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid #f1f5f9;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.analytics-card .card-header {
+    background: transparent;
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.analytics-card .card-body { padding: 1.75rem; }
+
+/* ── Recommendation Box ── */
+.rec-item {
+    padding: 1rem 1.25rem;
+    border-radius: 16px;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.rec-item.rec-danger  { background: hsl(var(--h-danger), 100%, 98%); border-color: hsla(var(--h-danger), 100%, 90%, 0.5); color: hsl(var(--h-danger), 100%, 35%); }
+.rec-item.rec-warning { background: hsl(var(--h-warning), 100%, 98%); border-color: hsla(var(--h-warning), 100%, 90%, 0.5); color: hsl(var(--h-warning), 100%, 30%); }
+.rec-item.rec-success { background: hsl(var(--h-success), 100%, 97%); border-color: hsla(var(--h-success), 100%, 90%, 0.5); color: hsl(var(--h-success), 100%, 25%); }
+.rec-item.rec-info    { background: hsl(var(--h-info), 100%, 98%); border-color: hsla(var(--h-info), 100%, 90%, 0.5); color: hsl(var(--h-info), 100%, 30%); }
+
+/* ── Score & Highlight Badges ── */
+.score-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.score-badge.score-good   { background: hsl(var(--h-success), 100%, 97%); color: hsl(var(--h-success), 100%, 25%); border: 1px solid hsla(var(--h-success), 100%, 90%, 0.5); }
+.score-badge.score-medium { background: hsl(var(--h-warning), 100%, 98%); color: hsl(var(--h-warning), 100%, 30%); border: 1px solid hsla(var(--h-warning), 100%, 90%, 0.5); }
+.score-badge.score-bad    { background: hsl(var(--h-danger), 100%, 98%);  color: hsl(var(--h-danger), 100%, 35%); border: 1px solid hsla(var(--h-danger), 100%, 90%, 0.5); }
+
+/* ── Analytics Table (Teacher) ── */
+.analytics-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.analytics-table thead th {
+    background: #f8fafc;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #f1f5f9;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.analytics-table tbody td {
+    padding: 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.analytics-table tbody tr:hover { background-color: #f8fafc; }
+
+/* ── Loading / Empty States ── */
+.analytics-loading {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: white;
+    border-radius: 24px;
+    box-shadow: var(--card-shadow);
+}
+
+.analytics-empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: white;
+    border-radius: 24px;
+    box-shadow: var(--card-shadow);
+    color: #64748b;
+}
+
+.analytics-empty i {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    display: block;
+    opacity: 0.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .page-title { font-size: 1.5rem; }
+    .stat-card .stat-value { font-size: 1.75rem; }
+    .analytics-card .card-body { padding: 1rem; }
+    .analytics-table thead { display: none; }
+    .analytics-table tbody td { display: block; padding: 0.75rem 1rem; border: none; }
+    .analytics-table tbody tr { display: block; padding: 1rem 0; border-bottom: 1px solid #f1f5f9; }
+}
+
+.stat-quick-label {
+    font-size: 0.65rem;
+}

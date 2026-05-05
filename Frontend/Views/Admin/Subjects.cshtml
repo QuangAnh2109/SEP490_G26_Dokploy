@@ -1,0 +1,114 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Môn học";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/Admin/curriculum.css" asp-append-version="true" />
+}
+
+<header class="page-header">
+    <div>
+        <h1>Môn học</h1>
+        <p class="meta">Quản lý các môn học của hệ thống</p>
+    </div>
+    <div class="actions">
+        <button class="btn btn-primary" id="btn-create">+ Tạo môn học</button>
+    </div>
+</header>
+
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<section id="page-content" class="card is-hidden">
+    <div class="filter-bar">
+        <div class="form-row">
+            <label>Tìm kiếm</label>
+            <input id="filter-q" type="search" placeholder="Mã hoặc tên..." />
+        </div>
+        <div class="form-row">
+            <label>Trạng thái</label>
+            <select id="filter-status">
+                <option value="">Tất cả trạng thái</option>
+                <option value="1">Đang hoạt động</option>
+                <option value="0">Đã đóng</option>
+            </select>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên môn</th>
+                    <th>Trạng thái</th>
+                    <th>Chương</th>
+                    <th>Lớp</th>
+                    <th class="text-right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-subjects"></tbody>
+        </table>
+    </div>
+    <div id="pager-subjects"></div>
+</section>
+
+<!-- Modal Create -->
+<div class="modal-stage" id="modal-stage-create">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Tạo môn học mới</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-create" class="form-grid">
+                <div class="form-row full">
+                    <label>Mã môn học <span class="req">*</span></label>
+                    <input type="text" name="code" class="uppercase" placeholder="VD: PRF192" autocomplete="off">
+                    <div class="help help-error"></div>
+                    <div class="help">Chữ cái và số, không khoảng trắng. Tối đa 20 ký tự. Không thể sửa sau khi tạo.</div>
+                </div>
+                <div class="form-row full">
+                    <label>Tên môn học <span class="req">*</span></label>
+                    <input type="text" name="name" placeholder="VD: Lập trình cơ bản" autocomplete="off">
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-row full">
+                    <label>Mô tả</label>
+                    <textarea name="description" placeholder="Mô tả tóm tắt về môn học..." rows="3"></textarea>
+                    <div class="help help-error"></div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-create">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-create">Tạo môn học</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Close -->
+<div class="modal-stage" id="modal-stage-close">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Đóng môn học</div>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn đóng môn học <strong id="close-name"></strong>?</p>
+            <div class="alert alert-warning" style="margin-top:var(--s-3);">
+                <strong>Lưu ý:</strong>
+                <ul style="margin:4px 0 0; padding-left:20px;">
+                    <li>Môn học này sẽ không xuất hiện khi tạo lớp mới.</li>
+                    <li>Sẽ KHÔNG thể tạo/sửa/xóa chương bên trong môn học này.</li>
+                    <li>Lớp và đề thi đang chạy <strong>KHÔNG</strong> bị ảnh hưởng.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-close">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-close">Đóng môn học</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ApiConfig" />
+    <script src="~/js/Admin/subjects-list.js" asp-append-version="true"></script>
+}

@@ -1,119 +1,226 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+using Backend.Constants;
 using Backend.DTOs.StudentExam;
+using Backend.Common;
+using Backend.Common.Models;
+using Backend.Common.Errors;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 
-namespace Backend.Services.Implements
+namespace Backend.Services.Implements;
+
+public class StudentExamService(
+    IStudentExamRepository studentExamRepository,
+    ICurrentUserService currentUserService,
+    TimeProvider timeProvider) : IStudentExamService
 {
-    public class StudentExamService : IStudentExamService
+    public async Task<Result<TakeExamDto>> TakeExamInClass(int examId)
     {
-        private readonly IStudentExamRepository _studentExamRepository;
+        var studentId = currentUserService.UserId;
 
-        public StudentExamService(IStudentExamRepository studentExamRepository)
+        // 0. Tự động nộp bài cho các submission đã quá thời gian
+        await studentExamRepository.ForceSubmitOverdueExamsAsync(examId);
+
+        // 1. Kiểm tra exam tồn tại, student thuộc lớp, thời gian hợp lệ
+        var examInfo = await studentExamRepository.GetExamInfoForStudentAsync(examId, studentId);
+        if (examInfo == null)
         {
-            _studentExamRepository = studentExamRepository;
+            return StudentExamErrors.NotFound;
         }
 
-        public async Task<ExamPaperDto?> GetExamPaperAsync(int studentId, int examId, int paperId)
-        {
-            // Optional: verify that the student is actually assigned to the class of the exam
-            var paper = await _studentExamRepository.GetPaperWithQuestionsAsync(examId, paperId);
-            if (paper == null || paper.Exam == null) return null;
+        // 2. Kiểm tra submission hiện tại của học sinh
+        Submission? activeSubmission = null;
+        var anyActiveSubmission = await studentExamRepository.GetAnyActiveSubmissionAsync(studentId);
 
-            return new ExamPaperDto
-            {
-                ExamId = paper.Exam.ExamId,
-                Title = paper.Exam.Title ?? string.Empty,
-                Description = paper.Exam.Description,
-                MaxAttempts = paper.Exam.MaxAttempts,
-                Duration = paper.Exam.Duration,
-                PaperId = paper.PaperId,
-                Code = paper.Code,
-                Questions = paper.PaperQuestions.Select(pq => new QuestionDto
-                {
-                    QuestionId = pq.Question.QuestionId,
-                    ContentLatex = pq.Question.ContentLatex,
-                    QuestionType = pq.Question.QuestionType,
-                    Difficulty = pq.Question.Difficulty,
-                    Answer = pq.Question.Answer
-                }).ToList()
-            };
-        }
-
-        public async Task<Submission> StartExamAsync(int studentId, StartSubmissionRequest request)
+        if (anyActiveSubmission != null)
         {
-            // If PaperId is not provided, pick a random one for this exam
-            int assignedPaperId;
-            if (request.PaperId.HasValue && request.PaperId.Value > 0)
+            if (anyActiveSubmission.Paper != null && anyActiveSubmission.Paper.ExamId == examId)
             {
-                assignedPaperId = request.PaperId.Value;
+                // Đang làm bài cùng examId → cho phép tiếp tục
+                activeSubmission = anyActiveSubmission;
             }
             else
             {
-                var randomPaper = await _studentExamRepository.GetRandomPaperForExamAsync(request.ExamId);
-                if (randomPaper == null)
-                {
-                    throw new InvalidOperationException("No papers found for this exam.");
-                }
-                assignedPaperId = randomPaper.PaperId;
+                // Đang làm bài khác examId → từ chối
+                return StudentExamErrors.AnotherActiveSubmission;
             }
+        }
 
-            // Check if already active
-            var active = await _studentExamRepository.GetActiveSubmissionAsync(studentId, assignedPaperId);
-            if (active != null)
+        // 3. Nếu không có submission active → tạo mới
+        if (activeSubmission == null)
+        {
+            // Kiểm tra MaxAttempts  
+            if (examInfo.MaxAttempts > 0 && examInfo.StudentAttempts >= examInfo.MaxAttempts)
             {
-                return active; // Return existing submission to continue
+                return StudentExamErrors.MaxAttemptsReached;
             }
 
-            // Check if student has reached MaxAttempts for this exam
-            var paper = await _studentExamRepository.GetPaperWithExamAsync(assignedPaperId);
-            if (paper != null && paper.Exam != null)
+            // Random chọn PaperId
+            if (examInfo.PaperIds == null || examInfo.PaperIds.Count == 0)
             {
-                var attemptCount = await _studentExamRepository.GetExamSubmissionCountAsync(studentId, paper.ExamId);
-                if (paper.Exam.MaxAttempts > 0 && attemptCount >= paper.Exam.MaxAttempts)
-                {
-                    throw new InvalidOperationException("Maximum attempts reached for this exam.");
-                }
+                return StudentExamErrors.NoPapers;
             }
 
-            var submission = new Submission
+            var random = new Random();
+            int randomIndex = random.Next(examInfo.PaperIds.Count);
+            int selectedPaperId = examInfo.PaperIds[randomIndex];
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            var newSubmission = new Submission
             {
                 StudentId = studentId,
-                PaperId = assignedPaperId,
-                Status = 1, 
-                CreatedAtUtc = DateTime.UtcNow
+                PaperId = selectedPaperId,
+                Status = SubmissionStatus.InProgress,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
             };
 
-            return await _studentExamRepository.CreateSubmissionAsync(submission);
+            activeSubmission = await studentExamRepository.CreateSubmissionAsync(newSubmission);
         }
 
-        public async Task SaveAnswerAsync(int studentId, int submissionId, SubmitAnswerRequest request)
+        // 4. Lấy paper với questions, answers, input types
+        var paper = await studentExamRepository.GetPaperWithQuestionsAsync(examId, activeSubmission.PaperId);
+        if (paper == null || paper.Exam == null)
         {
-            var answer = new StudentAnswer
+            return StudentExamErrors.NotFound;
+        }
+
+        // 5. Map sang TakeExamQuestionDto
+        var questions = paper.Questions.Select(q =>
+        {
+            // Map answers
+            var answers = q.QuestionAnswers.Select(qa => new TakeExamAnswerDto
             {
-                SubmissionId = submissionId,
-                QuestionIndex = request.QuestionIndex,
-                ResponseText = request.ResponseText
+                QuestionAnswerId = qa.QuestionAnswerId,
+                Content = qa.Content,
+                GroupAnswerId = qa.GroupAnswerId,
+                InputTypes = qa.BlankInputs.Select(bi => new TakeExamInputTypeDto
+                {
+                    InputTypeId = bi.InputTypeId,
+                    Name = bi.InputType.Name,
+                    Regex = bi.InputType.Regex,
+                    GroupType = bi.InputType.GroupType
+                }).ToList()
+            }).ToList();
+
+            return new TakeExamQuestionDto
+            {
+                QuestionId = q.QuestionId,
+                QuestionType = q.QuestionType,
+                QuestionContent = q.QuestionContent,
+                Difficulty = q.Difficulty,
+                Answers = answers
             };
+        }).ToList();
 
-            await _studentExamRepository.AddOrUpdateStudentAnswerAsync(answer);
+        // 6. Shuffle questions
+        if (paper.Exam.ShuffleQuestion)
+        {
+            questions.Shuffle();
         }
 
-        public async Task SaveBulkAnswersAsync(int studentId, int submissionId, IEnumerable<SubmitAnswerRequest> requests)
-        {
-            var answers = requests.Select(r => new StudentAnswer
+        // 7. Lấy câu trả lời đã lưu trước đó (nếu có)
+        var savedAnswers = activeSubmission.StudentAnswers?
+            .Select(sa => new TakeExamSavedAnswerDto
             {
-                SubmissionId = submissionId,
-                QuestionIndex = r.QuestionIndex,
-                ResponseText = r.ResponseText
-            });
+                QuestionAnswerId = sa.QuestionAnswerId,
+                Response = sa.Response
+            }).ToList() ?? new List<TakeExamSavedAnswerDto>();
 
-            await _studentExamRepository.AddOrUpdateBulkStudentAnswersAsync(answers);
-        }
-
-        public async Task SubmitExamAsync(int studentId, int submissionId)
+        // 8. Trả về TakeExamDto
+        return new TakeExamDto
         {
-            await _studentExamRepository.CompleteSubmissionAsync(submissionId);
+            ExamId = paper.Exam.ExamId.ToString(),
+            SubmissionId = activeSubmission.SubmissionId.ToString(),
+            Duration = paper.Exam.Duration,
+            Code = paper.Code ?? 0,
+            CreatedAtUtc = activeSubmission.CreatedAtUtc,
+            Questions = questions,
+            SavedAnswers = savedAnswers
+        };
+    }
+
+    public async Task<Result<ExamPreviewDto>> GetExamPreviewAsync(int examId)
+    {
+        var userId = currentUserService.UserId;
+        var isTeacher = currentUserService.Role == RoleIds.Teacher;
+
+        if (!isTeacher)
+        {
+            var canTake = await studentExamRepository.CanStudentTakeExamAsync(userId, examId);
+            if (!canTake)
+            {
+                return StudentExamErrors.NotAllowed;
+            }
         }
+
+        var data = await studentExamRepository.GetExamPreviewAsync(examId);
+        if (data == null) return StudentExamErrors.NotFound;
+
+        var statusLabel = data.Status switch
+        {
+            1 => "public",
+            2 => "private",
+            3 => "closed",
+            _ => "unknown"
+        };
+
+        var matrixRows = data.BlueprintChapters
+            .GroupBy(x => x.ChapterName)
+            .Select(g => new BlueprintRowDto
+            {
+                ChapterName = g.Key,
+                Recognize = g.Where(x => x.Difficulty == 1).Sum(x => x.TotalOfQuestions),
+                Understand = g.Where(x => x.Difficulty == 2).Sum(x => x.TotalOfQuestions),
+                Apply = g.Where(x => x.Difficulty == 3).Sum(x => x.TotalOfQuestions),
+                AdvancedApply = g.Where(x => x.Difficulty == 4).Sum(x => x.TotalOfQuestions),
+                Total = g.Sum(x => x.TotalOfQuestions)
+            })
+            .ToList();
+
+        return new ExamPreviewDto
+        {
+            ExamId = data.ExamId,
+            SubjectCode = data.SubjectCode,
+            Title = data.Title,
+            TotalQuestions = data.TotalQuestions,
+            Duration = data.Duration,
+            OpenAt = data.OpenAt,
+            CloseAt = data.CloseAt,
+            Status = statusLabel,
+            TeacherName = data.TeacherName,
+            UpdatedAtUtc = data.UpdatedAtUtc,
+            Description = data.Description,
+            BlueprintMatrix = matrixRows
+        };
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  LỊCH SỬ BÀI NỘP TỔNG HỢP (Kiểm tra + Luyện tập)
+    // ════════════════════════════════════════════════════════
+    public async Task<Result<List<StudentSubmissionHistoryDto>>> GetAllSubmissionHistoryAsync(int? classId = null)
+    {
+        var studentId = currentUserService.UserId;
+        var rawList = await studentExamRepository.GetSubmissionHistoryRawAsync(studentId, classId);
+
+        var result = rawList.Select(r => new StudentSubmissionHistoryDto
+        {
+            SubmissionId = r.SubmissionId,
+            Type = r.IsExam ? "Kiểm tra" : "Luyện tập",
+            Title = r.Title,
+            ClassName = r.ClassName,
+            SubjectName = r.SubjectName,
+            TotalQuestions = r.TotalQuestions,
+            TotalPoints = r.TotalPoints,
+            Status = r.Status == SubmissionStatus.Submitted ? "Đã nộp" : "Đang làm",
+            CreatedAtUtc = r.CreatedAtUtc,
+            CompletedAtUtc = r.Status == SubmissionStatus.Submitted ? r.UpdatedAtUtc : null,
+            ExamId = r.ExamId
+        }).ToList();
+
+        return result;
     }
 }

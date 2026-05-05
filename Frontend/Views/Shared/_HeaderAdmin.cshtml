@@ -1,0 +1,24 @@
+<header class="topbar">
+    @if (ViewBag.HideSidebar != true)
+    {
+        <button class="menu-btn" onclick="document.body.classList.toggle('drawer-open')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+    }
+
+    @await Component.InvokeAsync("Breadcrumb")
+
+    <div class="spacer"></div>
+
+    <div class="user">
+        <div class="avatar">A</div>
+        <div class="name">Admin</div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:var(--s-2); padding: 0 var(--s-2);" onclick="logout()" title="Đăng xuất">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+        </button>
+    </div>
+</header>

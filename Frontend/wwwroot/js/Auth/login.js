@@ -1,4 +1,12 @@
+﻿// Chỉ chấp nhận same-origin path tương đối, tránh open redirect (`?returnUrl=https://evil.com`).
+function safeReturnUrl(raw) {
+    if (!raw) return null;
+    return (raw.startsWith('/') && !raw.startsWith('//')) ? raw : null;
+}
+
 $(document).ready(function () {
+    // Password show/hide is handled by Shared/passwordToggle.js (delegated).
+
     // 1. Handle traditional login form submission
     $('#loginForm').on('submit', function (e) {
         e.preventDefault(); // Prevent standard POST
@@ -12,6 +20,11 @@ $(document).ready(function () {
             $('#EmailError').text("Vui lòng nhập Email");
             return;
         }
+        var emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+        if (!emailPattern.test(email)) {
+            $('#EmailError').text("Vui lòng nhập địa chỉ Email hợp lệ.");
+            return;
+        }
         if (!password) {
             $('#PasswordError').text("Vui lòng nhập Mật khẩu");
             return;
@@ -19,19 +32,21 @@ $(document).ready(function () {
 
         const requestData = {
             Email: email,
-            Password: password
+            Password: password,
+            RememberMe: $('#rememberMe').is(':checked')
         };
 
         apiClient.post("/api/auth/login", requestData)
-            .then(function (response) {
-                if (response.token) {
-                    setToken(response.token);
-                    const returnUrl = $('#returnUrl').val();
-                    window.location.href = returnUrl ? returnUrl : '/';
-                }
+            .then(function () {
+                const safe = safeReturnUrl($('#returnUrl').val());
+                window.location.href = safe || '/Class/ClassList';
             })
             .catch(function (err) {
-                $('#formError').text("Email hoặc mật khẩu không chính xác.");
+                if (err.xhr && err.xhr.status === 403 && err.xhr.responseJSON?.code === 'AUTH_ACCOUNT_LOCKED') {
+                    $('#formError').text('Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên.');
+                } else {
+                    $('#formError').text("Email hoặc mật khẩu không chính xác.");
+                }
             });
     });
 });
@@ -39,26 +54,24 @@ $(document).ready(function () {
 // 2. Handle Google Login callback
 function handleCredentialResponse(response) {
     const requestData = {
-        IdToken: response.credential
+        IdToken: response.credential,
+        RememberMe: $('#rememberMe').is(':checked')
     };
 
     apiClient.post("/api/auth/google-login", requestData)
-        .then(function (data) {
-            if (data.needsRegistration) {
-                localStorage.setItem('tempGoogleToken', requestData.IdToken);
-                localStorage.setItem('tempGoogleEmail', data.email);
-                window.location.href = '/Auth/GoogleRegister';
-            } else if (data.token) {
-                setToken(data.token);
-                const returnUrl = $('#returnUrl').val();
-                window.location.href = returnUrl ? returnUrl : '/';
-            } else {
-                alert('Đăng nhập Google thất bại');
-            }
+        .then(function () {
+            const safe = safeReturnUrl($('#returnUrl').val());
+            window.location.href = safe || '/Class/ClassList';
         })
         .catch(function (err) {
-            console.error('Error:', err);
-            alert('Có lỗi xảy ra khi xác thực với Google.');
+            const code = err && err.xhr && err.xhr.responseJSON ? err.xhr.responseJSON.code : null;
+            if (code === 'AUTH_INVALID_CREDENTIALS') {
+                showToast('Tài khoản Google chưa được đăng ký. Vui lòng liên hệ quản trị viên.', 'error');
+            } else if (code === 'AUTH_ACCOUNT_LOCKED') {
+                showToast('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.', 'error');
+            } else {
+                showToast('Có lỗi xảy ra khi xác thực với Google.', 'error');
+            }
         });
 }
 

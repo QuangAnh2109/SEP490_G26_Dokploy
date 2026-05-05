@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Lớp Học Mới</title>
+    <!-- Common Bootstrap -->
+    <link rel="stylesheet" href="~/vendor/bootstrap-5.3.8/css/bootstrap.min.css">
+    <!-- Optional: Use existing CSS from Class.css -->
+    <link rel="stylesheet" href="~/css/Class/Class.css">
+    <style>
+        .create-class-card {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell py-4">
+        <div class="container-fluid px-3 px-md-4">
+            <!-- Header -->
+            <section class="page-header d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1>Tạo Lớp Học Mới</h1>
+                    <p class="page-subtitle">Nhập thông tin lớp học bạn muốn giảng dạy.</p>
+                </div>
+                <div>
+                    <a href="/Class/ClassList" class="btn btn-outline-secondary">Quy lại Danh Sách Lớp</a>
+                </div>
+            </section>
+
+            <!-- Form -->
+            <section class="create-class-card">
+                <form id="createClassForm">
+                    <div class="mb-3">
+                        <label for="classNameInput" class="form-label">Tên Lớp (VD: SE1709) *</label>
+                        <input type="text" class="form-control" id="classNameInput" required placeholder="Nhập tên lớp">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="semesterSelect" class="form-label">Kỳ học *</label>
+                        <select class="form-select" id="semesterSelect" required>
+                            <option value="">-- Đang tải danh sách kỳ học --</option>
+                        </select>
+                        <p class="text-muted small mt-1" id="semester-help"></p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="subjectSelect" class="form-label">Môn Học *</label>
+                        <select class="form-select" id="subjectSelect" required>
+                            <option value="">-- Đang tải danh sách môn học --</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">Tạo Lớp Học</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success" id="successModalLabel">Tạo Lớp Thành Công!</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <p>Lớp học của bạn đã được tạo thành công với mã mời:</p>
+                    <h2 class="display-6 fw-bold text-primary" id="inviteCodeDisplay">XXXXXX</h2>
+                    
+                    <div class="mt-4">
+                        <input type="text" id="inviteLinkInput" class="form-control text-center mb-2" readonly>
+                        <button type="button" class="btn btn-outline-primary w-100" id="copyLinkBtn">
+                            Copy Link Mời
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <a href="/Class/ClassList" class="btn btn-primary">Đến trang Lớp học của tôi</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/Class/create_class.js" asp-append-version="true"></script>
+</body>
+</html>

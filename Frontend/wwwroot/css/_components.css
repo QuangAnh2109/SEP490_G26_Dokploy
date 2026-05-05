@@ -1,0 +1,280 @@
+@import './_tokens.css';
+
+/* ============================================================================
+ * Forms
+ * ========================================================================== */
+.form-grid {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: 1fr 1fr;
+}
+.form-row { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.form-row.full { grid-column: 1 / -1; }
+.form-row label {
+  font-size: 12px; font-weight: 600; color: var(--ink-700);
+}
+.form-row label .req { color: var(--danger); margin-left: 2px; }
+.form-row input, .form-row select, .form-row textarea {
+  height: 38px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 13px; font-family: inherit;
+  background: var(--surface);
+  color: var(--ink-900);
+}
+.form-row textarea { height: auto; padding: var(--s-2) var(--s-3); min-height: 80px; resize: vertical; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  outline: none; border-color: var(--navy-700);
+  box-shadow: 0 0 0 3px rgba(28,44,79,.1);
+}
+.form-row .help { font-size: 11px; color: var(--ink-500); }
+.form-actions {
+  display: flex; gap: var(--s-2); justify-content: flex-end;
+  padding: var(--s-4) var(--s-6);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ============================================================================
+ * Buttons
+ * ========================================================================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--s-2);
+  height: 36px;
+  padding: 0 var(--s-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.btn-primary  { background: var(--navy-700); color: #fff; }
+.btn-primary:hover  { background: var(--navy-600); }
+.btn-secondary { background: var(--surface); color: var(--ink-900); border-color: var(--line); }
+.btn-secondary:hover { background: var(--ink-100); }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-danger:hover   { background: #b91c1c; }
+.btn-warn     { background: var(--warn-bg); color: var(--warn); border-color: rgba(217,119,6,.3); }
+.btn-warn:hover     { background: #fde68a; }
+.btn-ghost    { background: transparent; color: var(--ink-700); border-color: transparent; }
+.btn-ghost:hover    { background: var(--ink-100); }
+.btn-sm { height: 30px; padding: 0 var(--s-3); font-size: 12px; }
+
+/* ============================================================================
+ * Filter bar (inline with table inside same card)
+ * ========================================================================== */
+.filter-bar {
+  display: grid;
+  grid-template-columns: 1fr 200px 200px auto;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6);
+  border-bottom: 1px solid var(--line-soft);
+  align-items: end;
+}
+
+/* ============================================================================
+ * Table
+ * ========================================================================== */
+.table-wrap { overflow-x: auto; }
+.table {
+  width: 100%;
+  border-collapse: separate; border-spacing: 0;
+  font-size: 13px;
+}
+.table th, .table td {
+  padding: var(--s-3) var(--s-5);
+  text-align: left; vertical-align: middle;
+  border-bottom: 1px solid var(--line-soft);
+}
+.table th {
+  font-size: 11px;
+  text-transform: uppercase; letter-spacing: .8px;
+  color: var(--ink-500);
+  background: var(--ink-100);
+  font-weight: 600;
+}
+.table thead th:first-child { border-top-left-radius: 0; }
+.table tbody tr {
+  cursor: pointer;
+  transition: background .12s;
+}
+.table tbody tr:hover { background: var(--navy-100); }
+.table tbody tr:last-child td { border-bottom: none; }
+
+.user-cell {
+  display: flex; align-items: center; gap: var(--s-3);
+}
+.user-cell .avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--ink-100); color: var(--ink-700);
+  display: grid; place-items: center;
+  font-weight: 600; font-size: 12px;
+  flex: 0 0 32px;
+}
+.user-cell .meta { min-width: 0; }
+.user-cell .name { color: var(--ink-900); font-weight: 600; line-height: 1.2; }
+.user-cell .email { color: var(--ink-500); font-size: 12px; line-height: 1.2; margin-top: 2px; }
+
+.empty-state { padding: var(--s-12); text-align: center; color: var(--ink-500); }
+.empty-state .title { font-weight: 600; color: var(--ink-700); margin-bottom: var(--s-1); }
+
+/* ============================================================================
+ * Status pill (with leading dot)
+ * ========================================================================== */
+.pill {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  height: 22px;
+  padding: 0 var(--s-2);
+  border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  background: var(--ink-100); color: var(--ink-700);
+  white-space: nowrap;
+}
+.pill .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.pill-success { background: var(--success-bg); color: #15803d; }
+.pill-danger  { background: var(--danger-bg);  color: #b91c1c; }
+.pill-warn    { background: var(--warn-bg);    color: #92400e; }
+.pill-info    { background: var(--info-bg);    color: #1d4ed8; }
+.pill-violet  { background: var(--violet-bg);  color: #5b21b6; }
+.pill-soft    { background: var(--ink-100);    color: var(--ink-700); }
+.pill-stack { display: inline-flex; gap: var(--s-1); flex-wrap: wrap; }
+.muted { color: var(--ink-400); }
+
+/* ============================================================================
+ * Pagination
+ * ========================================================================== */
+.pager {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--s-3) var(--s-6);
+  font-size: 12px; color: var(--ink-500);
+  border-top: 1px solid var(--line-soft);
+  gap: var(--s-3);
+}
+.pager .ctrls { display: flex; align-items: center; gap: var(--s-1); }
+.pager button {
+  height: 32px; min-width: 32px;
+  padding: 0 var(--s-2);
+  background: var(--surface); color: var(--ink-700);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  cursor: pointer; font-size: 12px; font-weight: 500;
+}
+.pager button:hover { background: var(--ink-100); }
+.pager button.active { background: var(--navy-700); color: #fff; border-color: var(--navy-700); }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ============================================================================
+ * Detail
+ * ========================================================================== */
+.detail-banner {
+  display: flex; align-items: center; gap: var(--s-5);
+  padding: var(--s-5) var(--s-6);
+}
+.detail-banner .avatar-lg {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--ink-100); color: var(--ink-700);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 22px;
+  flex: 0 0 64px;
+}
+.detail-banner .ident { flex: 1; min-width: 0; }
+.detail-banner .name { font-size: 17px; font-weight: 700; color: var(--ink-900); }
+.detail-banner .email { font-size: 13px; color: var(--ink-500); margin-top: 2px; }
+.detail-banner .badges { display: flex; gap: var(--s-2); margin-top: var(--s-2); flex-wrap: wrap; }
+.detail-banner .actions { display: flex; gap: var(--s-2); flex: 0 0 auto; }
+
+.kv-list { list-style: none; padding: 0; margin: 0; }
+.kv-list li {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+.kv-list li:last-child { border-bottom: none; }
+.kv-list .k { color: var(--ink-500); }
+.kv-list .v { color: var(--ink-900); font-weight: 500; word-break: break-word; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--s-5);
+}
+
+.audit-list { list-style: none; padding: 0; margin: 0; }
+.audit-list li {
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.audit-list li:last-child { border-bottom: none; }
+.audit-list .stem {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--navy-100);
+  border: 2px solid var(--navy-700);
+  margin-top: 6px;
+}
+.audit-list .when { font-size: 11px; color: var(--ink-500); }
+.audit-list .what { font-size: 13px; color: var(--ink-900); margin-top: 2px; }
+
+/* ============================================================================
+ * Modal — overlay trong cùng page (production: hiển thị trên page hiện tại,
+ * không navigate sang URL khác). Mặc định ẩn; thêm class .is-open để hiện.
+ * ========================================================================== */
+.modal-stage {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(15,23,42,.45);
+  backdrop-filter: blur(2px);
+  padding: var(--s-6);
+}
+.modal-stage.is-open {
+  display: grid;
+  place-items: center;
+}
+body.modal-open { overflow: hidden; }
+.modal {
+  width: 100%; max-width: 480px;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-elev);
+  overflow: hidden;
+}
+.modal-head { padding: var(--s-5) var(--s-6) 0; }
+.modal-head .title { font-size: 16px; font-weight: 700; color: var(--ink-900); }
+.modal-body { padding: var(--s-3) var(--s-6) var(--s-5); color: var(--ink-700); font-size: 13px; }
+.modal-foot {
+  padding: var(--s-3) var(--s-6) var(--s-5);
+  display: flex; justify-content: flex-end; gap: var(--s-2);
+}
+
+.password-box {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--ink-100);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-900);
+  margin: var(--s-3) 0 var(--s-2);
+}
+.password-box code { flex: 1; }
+.password-box .copy {
+  height: 26px; padding: 0 var(--s-3);
+  font-size: 11px; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); cursor: pointer;
+  color: var(--ink-700);
+}
+.password-box .copy:hover { background: var(--ink-100); }

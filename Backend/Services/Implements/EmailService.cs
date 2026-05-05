@@ -21,9 +21,12 @@ namespace Backend.Services.Implements
             var senderEmail = _configuration["EmailSettings:SenderEmail"];
             var senderPassword = _configuration["EmailSettings:SenderPassword"];
 
-            if (string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+            var isPlaceholder = string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword)
+                || (senderEmail?.Contains("YOUR_GMAIL_HERE", StringComparison.OrdinalIgnoreCase) == true)
+                || (senderPassword?.Contains("YOUR_APP_PASSWORD_HERE", StringComparison.OrdinalIgnoreCase) == true);
+
+            if (isPlaceholder)
             {
-                // Fallback for development if not configured yet
                 Console.WriteLine($"[DEV MODE] Email to {toEmail}: {subject}");
                 Console.WriteLine($"Message: {htmlMessage}");
                 return;
@@ -31,7 +34,7 @@ namespace Backend.Services.Implements
 
             var message = new MailMessage
             {
-                From = new MailAddress(senderEmail, "Math Test Creator"),
+                From = new MailAddress(senderEmail!, "Math Test Creator"),
                 Subject = subject,
                 Body = htmlMessage,
                 IsBodyHtml = true

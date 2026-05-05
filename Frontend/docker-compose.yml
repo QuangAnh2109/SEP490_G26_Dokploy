@@ -1,0 +1,27 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sep490_frontend
+    ports:
+      - "5124:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://+:8080}
+      - Backend__BaseUrl=${BACKEND_API_URL}
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    restart: unless-stopped
+
+networks:
+  dokploy-network:
+    external: true

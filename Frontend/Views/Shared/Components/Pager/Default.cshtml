@@ -1,0 +1,11 @@
+@model dynamic
+<div class="pager" id="pagerContainer">
+    <div class="info">
+        Hiển thị <span id="pagerCurrent">@Model.Current</span> / <span id="pagerTotalPages">@Model.TotalPages</span> trang (<span id="pagerTotal">@Model.Total</span> dòng)
+    </div>
+    <div class="ctrls">
+        <button id="btnPrev" class="btn-pager" @(Model.Current <= 1 ? "disabled" : "")>&larr;</button>
+        <button class="active" id="btnCurrentPage">@Model.Current</button>
+        <button id="btnNext" class="btn-pager" @(Model.Current >= Model.TotalPages ? "disabled" : "")>&rarr;</button>
+    </div>
+</div>

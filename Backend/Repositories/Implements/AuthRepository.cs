@@ -13,18 +13,18 @@ namespace Backend.Repositories.Implements
             _context = context;
         }
 
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == id);
+        }
+
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == email);
-        }
-
-        public async Task<Role?> GetDefaultRoleAsync()
-        {
-            // E.g., looking up "User" or "Student"
-            return await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User" || r.Name == "Student")
-                   ?? await _context.Roles.FirstOrDefaultAsync();
         }
 
         public async Task<User> AddUserAsync(User user)

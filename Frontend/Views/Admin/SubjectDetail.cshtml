@@ -1,0 +1,194 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Chi tiết Môn học";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/Admin/curriculum.css" asp-append-version="true" />
+}
+
+<main data-subject-id="@ViewBag.SubjectId">
+
+<a href="/Admin/Subjects" class="back-link" style="display:inline-block; margin-bottom:var(--s-4); font-size:12px; font-weight:600; color:var(--ink-500); text-transform:uppercase; letter-spacing:1px;">&larr; Danh sách môn học</a>
+
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<div id="page-content" class="is-hidden">
+
+<header class="page-header" style="margin-bottom:var(--s-4);">
+    <div>
+        <h1 id="subject-name" style="margin-bottom:var(--s-2);"></h1>
+        <p class="page-subtitle"><code id="subject-code"></code> &middot; <span id="subject-status"></span></p>
+    </div>
+    <div class="actions">
+        <button class="btn btn-ghost"  id="btn-edit-subject" style="display:none;">Sửa môn</button>
+        <button class="btn btn-danger" id="btn-close-subject" style="display:none;">Đóng môn</button>
+    </div>
+</header>
+
+<!-- Banner D5 -->
+<div class="alert alert-warning is-hidden" id="banner-subject-closed" style="margin-bottom:var(--s-5);">
+    <strong>Môn này đã đóng.</strong> Mọi thao tác trên chương bị khoá.
+</div>
+
+<section class="card" style="margin-bottom:var(--s-5);">
+    <div class="card-section">
+        <h2 class="with-meta">Mô tả</h2>
+        <p id="subject-description" style="color:var(--ink-500); white-space:pre-wrap;"></p>
+    </div>
+    <div class="card-section" style="background:var(--ink-100); font-size:12px;">
+        <div class="audit-list">
+            <div>Tạo bởi <strong id="created-by"></strong> lúc <span id="created-at"></span></div>
+            <div>Sửa lần cuối bởi <strong id="updated-by"></strong> lúc <span id="updated-at"></span></div>
+        </div>
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-section" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line-soft);">
+        <h2 style="margin:0;">Danh sách chương <span class="pill pill-soft" id="chapter-stats" style="margin-left:var(--s-2);">0</span></h2>
+        <div class="actions" style="display:flex; gap:var(--s-2);">
+            <button class="btn btn-ghost"   id="btn-save-order" disabled>Lưu thứ tự</button>
+            <button class="btn btn-primary" id="btn-create-chapter">+ Thêm chương</button>
+        </div>
+    </div>
+    <div class="card-section" style="padding:var(--s-4) var(--s-6);">
+        <ul class="chapter-list" id="chapter-list"></ul>
+    </div>
+</section>
+
+</div>
+
+</main>
+
+<!-- Modal Edit Subject -->
+<div class="modal-stage" id="modal-stage-edit-subject">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Sửa môn học</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-edit-subject" class="form-grid">
+                <input type="hidden" name="concurrencyStamp" />
+                <div class="form-row full">
+                    <label>Mã môn học</label>
+                    <input type="text" id="edit-subject-code" disabled style="background:var(--ink-100); cursor:not-allowed;">
+                    <div class="help">Không thể sửa mã môn học sau khi tạo.</div>
+                </div>
+                <div class="form-row full">
+                    <label>Tên môn học <span class="req">*</span></label>
+                    <input type="text" name="name" autocomplete="off">
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-row full">
+                    <label>Mô tả</label>
+                    <textarea name="description" rows="3"></textarea>
+                    <div class="help help-error"></div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-edit-subject">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-edit-subject">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Close Subject -->
+<div class="modal-stage" id="modal-stage-close-subject">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Đóng môn học</div>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn đóng môn học này?</p>
+            <div class="alert alert-warning" style="margin-top:var(--s-3);">
+                <strong>Lưu ý:</strong>
+                <ul style="margin:4px 0 0; padding-left:20px;">
+                    <li>Môn học sẽ không xuất hiện khi tạo lớp mới.</li>
+                    <li>Sẽ KHÔNG thể thao tác trên các chương của môn học này.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-close-subject">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-close-subject">Đóng môn học</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create Chapter -->
+<div class="modal-stage" id="modal-stage-create-chapter">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Thêm chương mới</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-create-chapter" class="form-grid">
+                <div class="form-row full">
+                    <label>Tên chương <span class="req">*</span></label>
+                    <input type="text" name="name" placeholder="VD: Chương 1: Giới thiệu" autocomplete="off">
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-row full">
+                    <label>Mô tả</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-create-chapter">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-create-chapter">Thêm chương</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Chapter -->
+<div class="modal-stage" id="modal-stage-edit-chapter">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Sửa chương</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-edit-chapter" class="form-grid">
+                <input type="hidden" name="chapterId" />
+                <input type="hidden" name="concurrencyStamp" />
+                <div class="form-row full">
+                    <label>Tên chương <span class="req">*</span></label>
+                    <input type="text" name="name" autocomplete="off">
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-row full">
+                    <label>Mô tả</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-edit-chapter">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-edit-chapter">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Delete Chapter -->
+<div class="modal-stage" id="modal-stage-delete-chapter">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Xóa chương</div>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn xóa chương <strong id="delete-chapter-name"></strong>?</p>
+            <p class="text-muted" style="margin-top:var(--s-2); font-size:12px;">Hành động này chỉ đánh dấu chương là "Đã xóa" và không làm mất dữ liệu câu hỏi bên trong.</p>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-delete-chapter">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-delete-chapter">Xóa chương</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ApiConfig" />
+    <script src="~/lib/sortablejs/Sortable.min.js" asp-append-version="true"></script>
+    <script src="~/js/Admin/subject-detail.js" asp-append-version="true"></script>
+}

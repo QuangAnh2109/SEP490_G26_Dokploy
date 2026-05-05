@@ -416,3 +416,14 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# AI Agent Rules
+.agents/
+.claude/
+.plan/
+docs
+CLAUDE.md
+
+database/
+.playwright-mcp
+.review

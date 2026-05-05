@@ -1,22 +1,322 @@
+:root {
+    --primary-ink: 221.2 83.2% 53.3%; /* Blue ink */
+    --primary-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --secondary-ink: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --grid-size: 30px;
+    --grid-color: rgba(37, 99, 235, 0.05);
+
+    /* Typography — keep in sync with _tokens.css */
+    --font-sans:  'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-mono:  'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+
+    /* Bootstrap variable overrides — apply to .toast, .modal-content, etc. */
+    --bs-body-font-family: var(--font-sans);
+    --bs-font-sans-serif:  var(--font-sans);
+    --bs-font-monospace:   var(--font-mono);
+}
+
 html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    font-size: 14px;
+    scroll-behavior: smooth;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: var(--font-sans);
+    background-color: hsl(var(--secondary-ink));
+    color: hsl(var(--card-foreground));
+    margin-bottom: 0; /* Remove old margin */
+}
+
+/* Math Hero Typography */
+h1, h2, h3, .math-serif {
+    font-family: var(--font-serif);
+}
+
+/* Graph Paper Background */
+.graph-bg {
+    background-color: hsl(var(--paper-white));
+    background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+}
+
+.toast-container {
+    padding: 1rem;
+}
+
+.toast-body {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+}
+
+/* Classroom-like header */
+.app-header {
+    min-height: 64px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.app-icon-btn {
+    border: 0;
+    background: transparent;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .app-icon-btn:hover {
+        background-color: rgba(15, 23, 42, 0.06);
+    }
+
+.app-hamburger {
+    width: 18px;
+    height: 12px;
+    display: inline-block;
+    position: relative;
+}
+
+    .app-hamburger::before,
+    .app-hamburger::after,
+    .app-hamburger {
+        background: transparent;
+    }
+
+        .app-hamburger::before,
+        .app-hamburger::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #374151;
+            border-radius: 999px;
+        }
+
+        .app-hamburger::before {
+            top: 0;
+            box-shadow: 0 5px 0 #374151;
+        }
+
+        .app-hamburger::after {
+            bottom: 0;
+        }
+
+.app-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+    .app-brand-logo svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+    }
+
+.app-brand-title {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #111827;
+}
+
+/* Breadcrumb (Classroom-style) */
+.app-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.app-breadcrumb a {
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.app-breadcrumb a:hover {
+    color: #111827;
+    text-decoration: underline;
+}
+
+.app-breadcrumb .breadcrumb-current {
+    color: #111827;
+    font-weight: 500;
+}
+
+.app-breadcrumb .breadcrumb-sep {
+    color: #9ca3af;
+    user-select: none;
+}
+
+.app-header .nav-link {
+    color: #374151 !important;
+    font-weight: 500;
+}
+
+    .app-header .nav-link:hover {
+        color: #111827 !important;
+    }
+
+/* Sidebar + content shell */
+.app-shell {
+    display: flex;
+    min-height: calc(100vh - 64px);
+    position: relative;
+    overflow-x: hidden;
+}
+
+.app-shell.app-shell-noheader {
+    min-height: 100vh;
+}
+
+.app-shell::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.6;
+}
+
+.app-sidebar {
+    width: 280px;
+    padding: 12px;
+    border-right: 1px solid hsl(var(--border));
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 999px;
+    color: #111827;
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+    .app-sidebar-link:hover {
+        background-color: rgba(37, 99, 235, 0.08);
+        color: #111827;
+    }
+
+.app-sidebar-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eff6ff;
+    color: #2563eb;
+    flex: 0 0 auto;
+}
+
+    .app-sidebar-icon svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+.app-content {
+    flex: 1;
+    padding-top: 16px;
+}
+
+/* Collapsed sidebar on desktop */
+body.sidebar-collapsed .app-sidebar {
+    width: 76px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+body.sidebar-collapsed .app-sidebar-link {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+    body.sidebar-collapsed .app-sidebar-link span:not(.app-sidebar-icon) {
+        display: none;
+    }
+
+body.sidebar-collapsed .app-sidebar-icon {
+    margin-right: 0;
+}
+
+@media (max-width: 575.98px) {
+    .app-sidebar {
+        padding-top: 10px;
+    }
 }

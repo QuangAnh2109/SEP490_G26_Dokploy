@@ -1,0 +1,183 @@
+/* ───────────────────────────────────────────────────────────
+   Shared FIB KaTeX styles — dùng cho cả teacher (preview readonly)
+   lẫn student (interactive blanks).
+
+   Lưu ý: .katex-input đã được định nghĩa riêng ở question_add.css
+   và exam_review.css; file này KHÔNG override để giữ behavior cũ.
+   ─────────────────────────────────────────────────────────── */
+
+.fib-katex-frame {
+    padding: 22px 28px;
+    background: #f8f9ff;
+    border: 1.5px solid #dee2e6;
+    border-radius: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    text-align: center;
+}
+
+/* Empty state — học sinh chưa nhập */
+.fib-blank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 28px;
+    padding: 2px 10px;
+    border: 2px dashed #86b7fe;
+    background: #f8f9ff;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #6c757d;
+    transition: border-color 0.15s ease, background-color 0.15s ease,
+                box-shadow 0.15s ease;
+    vertical-align: middle;
+    margin: 0 3px;
+    line-height: 1.4;
+    font-family: inherit;
+}
+
+.fib-blank:hover {
+    border-color: #0d6efd;
+    background: #e8f1ff;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.10);
+}
+
+/* Active — blank đang được mở trong input panel */
+.fib-blank.fib-blank-active {
+    border: 2px solid #0d6efd !important;
+    background: #e8f1ff !important;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15) !important;
+    color: #0d6efd;
+}
+
+/* Đã nhập đáp án */
+.fib-blank.fib-blank-answered {
+    border: 2px solid #198754 !important;
+    background: #f0fff4 !important;
+    color: #198754;
+    font-weight: 600;
+}
+
+/* Lỗi định dạng */
+.fib-blank.fib-blank-error {
+    border: 2px solid #dc3545 !important;
+    background: #fff5f5 !important;
+    color: #dc3545;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Input panel (Phase 3 — student-side editor)
+   ═══════════════════════════════════════════════════════════ */
+
+.fib-instruction {
+    font-size: 0.9rem;
+    color: #495057;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fib-input-panel {
+    margin-top: 16px;
+    border: 1.5px solid #86b7fe;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(13, 110, 253, 0.09);
+    animation: fibPanelSlideDown 0.18s ease;
+}
+
+@keyframes fibPanelSlideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fib-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #f0f6ff 0%, #f8f9ff 100%);
+    border-bottom: 1px solid #e0eaff;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.fib-panel-body {
+    padding: 14px 16px 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Custom keyboard
+   ═══════════════════════════════════════════════════════════ */
+
+.fib-custom-keyboard {
+    margin-top: 12px;
+    border-top: 1px solid #f0f2f5;
+    padding-top: 12px;
+}
+
+.fib-keyboard-type-label {
+    font-size: 0.8rem;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.fib-keyboard-group-label {
+    font-size: 0.72rem;
+    color: #6c757d;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.fib-keyboard-row {
+    margin-bottom: 12px;
+}
+
+.fib-key-btn {
+    min-width: 40px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 6px;
+    margin: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s ease;
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+.fib-key-btn:active {
+    transform: scale(0.92);
+}
+
+.fib-numpad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    max-width: 280px;
+}
+
+.fib-numpad .fib-key-btn {
+    width: 100%;
+    margin: 0;
+}
+
+.fib-numpad-extra {
+    display: flex;
+    gap: 5px;
+    margin-top: 6px;
+    max-width: 280px;
+}
+
+.fib-numpad-extra .fib-key-btn {
+    flex: 1;
+    margin: 0;
+}

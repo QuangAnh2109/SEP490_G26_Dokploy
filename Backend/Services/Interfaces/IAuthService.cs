@@ -1,15 +1,16 @@
+using Backend.Common.Models;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 
-namespace Backend.Services.Interfaces
+namespace Backend.Services.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<LoginResponse> LoginAsync(LoginRequest request);
-        Task<LoginResponse> GoogleLoginAsync(GoogleLoginRequest request);
-        Task<LoginResponse> GoogleRegisterAsync(GoogleRegisterRequest request);
-        Task SendOtpAsync(RegisterRequest request);
-        Task<LoginResponse> VerifyOtpAndRegisterAsync(VerifyOtpRequest request);
-        Task<TokenModel> RefreshTokenAsync(TokenModel request);
-    }
+    Task<Result<LoginResponse>> LoginAsync(LoginRequest request);
+    Task<Result<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest request);
+    Task<Result> RefreshTokenAsync();
+    Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task<Result> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<Result> LogoutAsync(int userId, string jti);
+    Task<Result> ChangePasswordFirstLoginAsync(int userId, ChangePasswordFirstLoginRequest request);
 }

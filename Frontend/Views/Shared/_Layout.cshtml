@@ -1,84 +1,124 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@{
+	var hideHeader = ViewBag.HideHeader == true;
+	var hideSidebar = ViewBag.HideSidebar == true;
+}
+<!DOCTYPE html>
+<html lang="vi" class="auth-pending">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Frontend</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Frontend.styles.css" asp-append-version="true" />
-    @await RenderSectionAsync("Styles", required: false)
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Frontend</title>
+	<style>html.auth-pending body { visibility: hidden; }</style>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:wght@500;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+	@await RenderSectionAsync("Styles", required: false)
+	@await Html.PartialAsync("_ApiConfig")
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Frontend</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1" id="main-nav">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                        </li>
-                        <li class="nav-item role-dependent role-student d-none">
-                            <a class="nav-link text-dark" href="#">Làm Bài Tập (Học Sinh)</a>
-                        </li>
-                        <li class="nav-item role-dependent role-teacher d-none">
-                            <a class="nav-link text-dark" href="#">Quản lý Lớp (Giáo Viên)</a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav" id="auth-nav">
-                        <li class="nav-item auth-guest">
-                            <a class="nav-link text-dark" href="/Auth/Login">Đăng nhập</a>
-                        </li>
-                        <li class="nav-item auth-user d-none dropdown">
-                            <a class="nav-link text-dark dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Tài khoản
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+	@if (!hideHeader)
+	{
+		@await Html.PartialAsync("_Header")
+	}
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Frontend - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    <script>
-        $(document).ready(function() {
-            if (isAuthenticated()) {
-                $('.auth-guest').addClass('d-none');
-                $('.auth-user').removeClass('d-none');
-                
-                const role = getUserRole();
-                if (role === 'Student' || role === 'Học sinh') {
-                    $('.role-student').removeClass('d-none');
-                } else if (role === 'Teacher' || role === 'Giáo viên') {
-                    $('.role-teacher').removeClass('d-none');
-                }
-            } else {
-                $('.auth-guest').removeClass('d-none');
-                $('.auth-user').addClass('d-none');
-            }
-        });
-    </script>
-    @await RenderSectionAsync("Scripts", required: false)
+	<div class="app-shell @(hideHeader ? "app-shell-noheader" : "")">
+		@if (!hideSidebar)
+		{
+			@await Html.PartialAsync("_Sidebar")
+		}
+		<div class="app-content @(ViewBag.IsFullWidth == true ? "pt-0" : "")">
+			<div class="@(ViewBag.IsFullWidth == true ? "container-fluid p-0" : "container mt-4")">
+				<main role="main" class="pb-3 w-100">
+					@RenderBody()
+				</main>
+			</div>
+		</div>
+	</div>
+	<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999">
+		<template id="toastTemplate">
+			<div class="toast align-items-center text-white border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+				<div class="d-flex">
+					<div class="toast-body" data-message></div>
+					<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+				</div>
+			</div>
+		</template>
+	</div>
+
+	<!-- Global Confirmation Modal -->
+	<div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content border-0 shadow-lg">
+				<div class="modal-header border-0 pb-0">
+					<h5 class="modal-title fw-bold" id="globalConfirmTitle">Xác nhận</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body p-4">
+					<p class="mb-0 text-muted" id="globalConfirmMessage"></p>
+				</div>
+				<div class="modal-footer border-0 pt-0">
+					<button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" id="globalConfirmCancelBtn">Hủy</button>
+					<button type="button" class="btn btn-primary px-4" id="globalConfirmBtn">Đồng ý</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="~/lib/jquery/dist/jquery.min.js"></script>
+	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="~/js/Shared/time_utils.js" asp-append-version="true"></script>
+	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script src="~/js/Shared/auth-guard.js" asp-append-version="true"></script>
+	<script src="~/js/Shared/passwordToggle.js" asp-append-version="true"></script>
+	<script>
+		$(document).ready(async function() {
+			// Sidebar: collapsed by default, persisted in localStorage
+			(function () {
+				const storageKey = 'sidebarExpanded';
+				const saved = localStorage.getItem(storageKey);
+				const expanded = saved === null ? false : saved === 'true';
+
+				document.body.classList.toggle('sidebar-expanded', expanded);
+				document.body.classList.toggle('sidebar-collapsed', !expanded);
+
+				const toggleBtn = document.getElementById('appSidebarToggle');
+				if (toggleBtn) {
+					toggleBtn.addEventListener('click', function (e) {
+						e.preventDefault();
+						const willExpand = !document.body.classList.contains('sidebar-expanded');
+						document.body.classList.toggle('sidebar-expanded', willExpand);
+						document.body.classList.toggle('sidebar-collapsed', !willExpand);
+						localStorage.setItem(storageKey, String(willExpand));
+					});
+				}
+			})();
+
+			await window.userReady;
+
+			if (isAuthenticated()) {
+				$('.auth-guest').addClass('d-none');
+				$('.auth-user').removeClass('d-none');
+
+				const email = getUserEmail();
+				if (email) {
+					$('#navbarUserDropdown').text(email);
+				}
+
+				const role = getUserRole();
+				if (role === RoleIds.Student) {
+					$('.role-student').removeClass('d-none');
+				} else if (role === RoleIds.Teacher) {
+					$('.role-teacher').removeClass('d-none');
+				}
+			} else {
+				$('.auth-guest').removeClass('d-none');
+				$('.auth-user').addClass('d-none');
+			}
+		});
+	</script>
+	@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

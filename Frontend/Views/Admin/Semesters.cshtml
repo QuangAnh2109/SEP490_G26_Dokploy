@@ -1,0 +1,156 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Kỳ học";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/Admin/curriculum.css" asp-append-version="true" />
+}
+
+<header class="page-header">
+    <div>
+        <h1>Kỳ học</h1>
+        <p class="meta">Quản lý các kỳ học của hệ thống</p>
+    </div>
+    <div class="actions">
+        <button class="btn btn-primary" id="btn-create">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Tạo kỳ học
+        </button>
+    </div>
+</header>
+
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<section id="page-content" class="card is-hidden">
+    <div class="filter-bar">
+        <div class="form-row">
+            <label>Tìm kiếm</label>
+            <input id="filter-q" type="search" placeholder="Mã hoặc tên..." />
+        </div>
+        <div class="form-row">
+            <label>Trạng thái</label>
+            <select id="filter-status">
+                <option value="">Tất cả trạng thái</option>
+                <option value="1">Đang hoạt động</option>
+                <option value="0">Đã đóng</option>
+            </select>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên kỳ học</th>
+                    <th>Bắt đầu</th>
+                    <th>Kết thúc</th>
+                    <th>Trạng thái</th>
+                    <th>Lớp/Đề thi</th>
+                    <th class="text-right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-semesters"></tbody>
+        </table>
+    </div>
+    <div id="pager-semesters"></div>
+</section>
+
+<!-- Modals -->
+<div id="modal-stage-create" class="modal-stage">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Tạo kỳ học mới</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-create" novalidate>
+                <div class="form-row">
+                    <label>Mã kỳ học <span class="req">*</span></label>
+                    <input name="code" maxlength="20" required />
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-row">
+                    <label>Tên kỳ học <span class="req">*</span></label>
+                    <input name="name" maxlength="100" required />
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-cols-2">
+                    <div class="form-row">
+                        <label>Ngày bắt đầu <span class="req">*</span></label>
+                        <input type="date" name="startDate" required />
+                        <div class="help help-error"></div>
+                    </div>
+                    <div class="form-row">
+                        <label>Ngày kết thúc <span class="req">*</span></label>
+                        <input type="date" name="endDate" required />
+                        <div class="help help-error"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-create">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-create">Tạo</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-stage-edit" class="modal-stage">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Sửa kỳ học</div>
+        </div>
+        <div class="modal-body">
+            <form id="form-edit" novalidate>
+                <input type="hidden" name="id" />
+                <input type="hidden" name="concurrencyStamp" />
+                <div class="form-row">
+                    <label>Mã kỳ học</label>
+                    <input name="code" disabled />
+                </div>
+                <div class="form-row">
+                    <label>Tên kỳ học <span class="req">*</span></label>
+                    <input name="name" maxlength="100" required />
+                    <div class="help help-error"></div>
+                </div>
+                <div class="form-cols-2">
+                    <div class="form-row">
+                        <label>Ngày bắt đầu <span class="req">*</span></label>
+                        <input type="date" name="startDate" required />
+                        <div class="help help-error"></div>
+                    </div>
+                    <div class="form-row">
+                        <label>Ngày kết thúc <span class="req">*</span></label>
+                        <input type="date" name="endDate" required />
+                        <div class="help help-error"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-edit">Hủy</button>
+            <button type="button" class="btn btn-primary" id="btn-submit-edit">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-stage-close" class="modal-stage">
+    <div class="modal modal-confirm">
+        <div class="modal-head">
+            <div class="title">Đóng kỳ học</div>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc muốn đóng kỳ học <strong id="close-name"></strong>?</p>
+            <p class="warn">Sẽ đóng theo <strong id="close-class-count">0</strong> lớp đang hoạt động và <strong id="close-exam-count">0</strong> đề thi đang sẵn sàng.</p>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" data-close="modal-stage-close">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-close">Đóng kỳ</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/Admin/semesters-list.js" asp-append-version="true"></script>
+}

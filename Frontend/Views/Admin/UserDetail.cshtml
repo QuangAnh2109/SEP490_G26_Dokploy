@@ -1,0 +1,102 @@
+<div class="page-header">
+    <div>
+        <a href="/Admin/Users" class="btn btn-ghost btn-sm" style="margin-left: -12px; margin-bottom: 8px;">&larr; Quay lại</a>
+        <h1>Chi tiết tài khoản</h1>
+    </div>
+</div>
+
+<div id="page-loading" class="page-loading"><div class="spinner"></div></div>
+
+<div id="page-content" class="detail-grid is-hidden">
+    <div class="main-col">
+        <div class="card" style="margin-bottom: var(--s-5);">
+            <div class="detail-banner" id="userBanner"></div>
+
+            <div class="card-section">
+                <ul class="kv-list" id="userKvList"></ul>
+            </div>
+        </div>
+    </div>
+    <div class="side-col">
+        <div class="card">
+            <div class="card-section">
+                <h2>Hoạt động gần đây</h2>
+                <ul class="audit-list">
+                    <li>
+                        <div class="stem"></div>
+                        <div class="content">
+                            <div class="when">Hôm nay</div>
+                            <div class="what">Tính năng Audit Log đang được phát triển.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-stage" id="lockModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Khóa tài khoản</div>
+        </div>
+        <div class="modal-body">
+            Bạn có chắc chắn muốn khóa tài khoản này? Người dùng sẽ bị đăng xuất và không thể đăng nhập lại.
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-secondary" onclick="closeModal('lockModal')">Hủy</button>
+            <button class="btn btn-danger" id="btnConfirmLock">Khóa tài khoản</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-stage" id="unlockModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Mở khóa tài khoản</div>
+        </div>
+        <div class="modal-body">
+            Bạn có chắc chắn muốn mở khóa tài khoản này? Người dùng có thể đăng nhập trở lại ngay sau khi mở khóa.
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-secondary" onclick="closeModal('unlockModal')">Hủy</button>
+            <button class="btn btn-primary" id="btnConfirmUnlock">Mở khóa</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-stage" id="resetModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Cấp lại mật khẩu</div>
+        </div>
+        <div class="modal-body">
+            Bạn có chắc chắn muốn cấp lại mật khẩu cho tài khoản này? Mật khẩu tạm thời sẽ được gửi qua email của người dùng.
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-secondary" onclick="closeModal('resetModal')">Hủy</button>
+            <button class="btn btn-primary" id="btnConfirmReset">Cấp lại mật khẩu</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-stage" id="emailSentModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="title">Đã cấp lại mật khẩu</div>
+        </div>
+        <div class="modal-body">
+            Mật khẩu mới đã được gửi đến email của người dùng.
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-primary" onclick="closeModal('emailSentModal')">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="hdnUserId" value="@ViewBag.UserId" />
+
+@section Scripts {
+    <script src="~/js/Admin/user-detail.js" asp-append-version="true"></script>
+}

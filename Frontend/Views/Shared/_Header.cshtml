@@ -1,0 +1,130 @@
+<header>
+    <nav class="navbar navbar-expand-md navbar-light bg-white border-bottom app-header">
+        <div class="container-fluid">
+            @if (ViewBag.HideSidebar != true)
+            {
+                <button id="appSidebarToggle" class="btn app-icon-btn me-2" type="button" aria-label="Mở menu">
+                    <span class="app-hamburger" aria-hidden="true"></span>
+                </button>
+            }
+            <a class="navbar-brand app-brand" asp-area="" asp-controller="Home" asp-action="Index" aria-label="Math Test Creator">
+                <span class="app-brand-logo" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M7.5 3.5h9A2.5 2.5 0 0 1 19 6v12a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7.5 3.5Z" />
+                        <path d="M8 8h8M8 12h8M8 16h5" />
+                    </svg>
+                </span>
+                <span class="app-brand-title math-serif fw-bold" style="font-size: 1.25rem;">Math Test Creator</span>
+            </a>
+            <nav id="header-breadcrumb" class="app-breadcrumb ms-3" aria-label="Breadcrumb">
+                <!-- Populated by setBreadcrumb() -->
+            </nav>
+            <ul class="navbar-nav ms-auto" id="auth-nav">
+                <li class="nav-item auth-guest">
+                    <a class="nav-link text-dark" href="/Auth/Login">Đăng nhập</a>
+                </li>
+                <li class="nav-item auth-user d-none dropdown">
+                    <a class="nav-link text-dark dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Tài khoản
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                Thông tin cá nhân
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="logout()">Đăng xuất</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+
+            <!-- HEADER -->
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thông tin cá nhân</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body pt-2">
+
+                <!-- TAB -->
+                <ul class="nav nav-pills mb-3 justify-content-center" id="profileTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tabProfileBtn">Thông tin</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tabPasswordBtn">Mật khẩu</button>
+                    </li>
+                </ul>
+
+                <!-- PROFILE -->
+                <div id="profileTab">
+                    <form id="profileForm">
+
+                        <div class="form-row">
+                            <label>Họ và tên</label>
+                            <input id="fullName" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Email</label>
+                            <input id="email" class="form-control bg-light" readonly>
+                        </div>
+
+                        <div class="form-row">
+                            <label>SĐT</label>
+                            <input id="phoneNumber" class="form-control">
+                        </div>
+
+                        <div class="form-row" id="studentIdGroup" hidden>
+                            <label>MSSV</label>
+                            <input id="studentId" class="form-control">
+                        </div>
+
+                        <button type="submit" id="saveProfileBtn" class="btn btn-primary w-100 mt-3">
+                            Lưu
+                        </button>
+
+                    </form>
+                </div>
+
+                <!-- PASSWORD -->
+                <div id="passwordTab" style="display:none">
+
+                    <form id="changePasswordForm">
+
+                        <div class="form-row">
+                            <label>Mật khẩu hiện tại</label>
+                            <input id="currentPassword" type="password" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Mật khẩu mới</label>
+                            <input id="newPassword" type="password" class="form-control">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Xác nhận</label>
+                            <input id="confirmPassword" type="password" class="form-control">
+                        </div>
+                                               
+                        <button type="submit" id="changePasswordBtn" class="btn btn-primary w-100 mt-3" disabled>
+                            Cập nhật mật khẩu
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/Profile/Profile.js"></script>

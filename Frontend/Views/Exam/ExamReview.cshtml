@@ -1,0 +1,392 @@
+@{
+    ViewData["Title"] = "Kiểm tra hậu kì đề thi";
+    var examId = ViewBag.ExamId ?? 0;
+    var classId = ViewBag.ClassId;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <link rel="stylesheet" href="~/css/Exam/exam_review.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/fib_katex.css" asp-append-version="true" />
+}
+
+<div class="review-wrapper">
+    <!-- Sidebar -->
+    <aside class="review-sidebar">
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary mb-1">Hệ thống hậu kiểm</h6>
+            <div class="text-muted small">Bài thi #@ViewBag.ExamId</div>
+        </div>
+
+        <div class="nav-section-title">Tổng quan</div>
+        <button class="nav-item-custom sidebar-nav active" data-target="view-info">
+            <i class="fas fa-info-circle"></i> Thông tin đề thi
+        </button>
+        <button class="nav-item-custom sidebar-nav" data-target="view-matrix">
+            <i class="fas fa-th"></i> Ma trận đề thi
+        </button>
+        <button class="nav-item-custom sidebar-nav" data-target="view-all-questions">
+            <i class="fas fa-layer-group"></i> Mục lục câu hỏi
+        </button>
+
+        <div class="nav-section-title">Nội dung mã đề</div>
+        <div id="paper-nav-list" class="flex-grow-1">
+            <!-- Dynamic list of papers -->
+            <div class="text-center py-4 text-muted small"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+
+        <div class="pt-4 border-top">
+            <button class="btn btn-success w-100 mb-2 py-2 fw-bold d-none" id="btnApprove" onclick="approveExam()">
+                <i class="fas fa-check-circle me-1"></i> PHÊ DUYỆT
+            </button>
+            <button class="btn btn-warning w-100 mb-2 py-2 fw-bold d-none" id="btnCancel" onclick="cancelExam()">
+                <i class="fas fa-ban me-1"></i> HỦY ĐỀ THI
+            </button>
+            <button class="btn btn-primary w-100 mb-2 py-2 fw-bold d-none" id="btnRestore" onclick="restoreExam()">
+                <i class="fas fa-undo me-1"></i> KHÔI PHỤC
+            </button>
+            <button class="btn btn-danger w-100 mb-2 py-2 fw-bold d-none" id="btnDelete" onclick="deleteExam()">
+                <i class="fas fa-trash me-1"></i> XÓA ĐỀ THI
+            </button>
+            <button class="nav-item-custom text-center justify-content-center bg-transparent border-0 w-100" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="review-content">
+        <!-- View: Exam Info -->
+        <div id="view-info" class="section-view active">
+            <div class="preview-header d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 id="info-exam-title" class="fw-bold mb-1 text-dark">---</h2>
+                    <div class="d-flex gap-2">
+                        <span id="info-subject-code" class="meta-badge">---</span>
+                        <span id="info-status-badge" class="meta-badge">---</span>
+                    </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm d-none" id="btnEditInfo" onclick="toggleEditMode()">
+                    <i class="fas fa-pencil-alt me-1"></i> Chỉnh sửa
+                </button>
+            </div>
+
+            <!-- Read-only view -->
+            <section class="panel-card" id="infoReadOnly">
+                <h2 class="panel-title">Chi tiết cấu hình</h2>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Mã môn</p><p class="summary-value" id="card-subject-code">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Số câu hỏi</p><p class="summary-value" id="card-total-questions">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian làm bài</p><p class="summary-value" id="card-duration">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian hiển thị đề</p><p class="summary-value" id="card-visible-from">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian mở</p><p class="summary-value" id="card-open-at">---</p></div></div>
+                    <div class="col-md-4"><div class="summary-card"><p class="summary-label">Thời gian đóng</p><p class="summary-value" id="card-close-at">---</p></div></div>
+                </div>
+            </section>
+
+            <!-- Editable form (hidden by default) -->
+            <section class="panel-card d-none" id="infoEditForm">
+                <h2 class="panel-title">Chỉnh sửa thông tin đề thi</h2>
+                <div class="row g-3">
+                    <div class="col-12" id="edit-title-group">
+                        <label class="form-label fw-bold">Tên bài thi</label>
+                        <input type="text" class="form-control" id="edit-title" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian hiển thị đề</label>
+                        <input type="datetime-local" class="form-control" id="edit-visible-from" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian mở</label>
+                        <input type="datetime-local" class="form-control" id="edit-open-at" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Thời gian đóng</label>
+                        <input type="datetime-local" class="form-control" id="edit-close-at" />
+                    </div>
+                    <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+                        <button class="btn btn-light" onclick="toggleEditMode()">Hủy</button>
+                        <button class="btn btn-primary" id="btnSaveInfo" onclick="saveExamInfo()">
+                            <i class="fas fa-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <h2 class="panel-title">Metadata</h2>
+                <div class="row g-2">
+                    <div class="col-sm-6"><div class="info-card"><div class="info-label">Giáo viên khởi tạo</div><div class="info-value" id="card-teacher-name">---</div></div></div>
+                    <div class="col-sm-6"><div class="info-card"><div class="info-label">Lần cuối cập nhật</div><div class="info-value" id="card-updated-at">---</div></div></div>
+                    <div class="col-12"><div class="info-card"><div class="info-label">Ghi chú</div><div class="info-value" id="card-description">---</div></div></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- View: Matrix -->
+        <div id="view-matrix" class="section-view">
+            <h3 class="fw-bold mb-4">Ma trận đề thi (Blueprint)</h3>
+            <div class="panel-card">
+                <div class="table-responsive">
+                    <table class="table table-soft align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Chương học</th>
+                                <th class="text-center">Nhận biết</th>
+                                <th class="text-center">Thông hiểu</th>
+                                <th class="text-center">Vận dụng</th>
+                                <th class="text-center">VD Cao</th>
+                                <th class="text-center">Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: All Questions (Overview) -->
+        <div id="view-all-questions" class="section-view">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold mb-0">Mục lục câu hỏi hệ thống</h3>
+                <span class="text-muted">Tổng số câu hỏi duy nhất</span>
+            </div>
+            <div id="overviewQuestionsList"></div>
+        </div>
+
+        <div id="view-paper-detail" class="section-view">
+            <div class="preview-header">
+                <h2 id="paper-detail-title" class="fw-bold mb-1">---</h2>
+            </div>
+            <div id="paperQuestionsList"></div>
+        </div>
+    </main>
+</div>
+
+
+<!-- Swap Question Modal -->
+<div class="modal fade" id="alternativeQuestionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Chọn câu hỏi thay thế</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Hệ thống gợi ý các câu hỏi cùng chương, cùng mức độ khó và chưa có trong mã đề này.</p>
+                <div class="form-check mb-3 ms-1">
+                    <input class="form-check-input" type="checkbox" id="chkSwapGlobal">
+                    <label class="form-check-label fw-bold text-primary" for="chkSwapGlobal">
+                        Đổi câu hỏi này trên TOÀN BỘ các mã đề khác (chứa câu hỏi tương tự)
+                    </label>
+                </div>
+                <div id="alternativesList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Alternative questions will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary px-4" id="btnConfirmSwap" onclick="confirmSwap()" disabled>
+                    Xác nhận đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Templates cho JS -->
+<template id="blueprintMatrixRowTemplate">
+    <tr>
+        <th class="fw-semibold" data-field-chapter></th>
+        <td class="text-center" data-field-recognize></td>
+        <td class="text-center" data-field-understand></td>
+        <td class="text-center" data-field-apply></td>
+        <td class="text-center" data-field-advanced></td>
+        <td class="text-center fw-bold" data-field-total></td>
+    </tr>
+</template>
+
+<template id="blueprintMatrixFooterTemplate">
+    <tr class="table-light fw-bold">
+        <th>Tổng cộng</th>
+        <td class="text-center" data-field-recognize></td>
+        <td class="text-center" data-field-understand></td>
+        <td class="text-center" data-field-apply></td>
+        <td class="text-center" data-field-advanced></td>
+        <td class="text-center text-primary" data-field-total></td>
+    </tr>
+</template>
+
+<template id="overviewQuestionTemplate">
+    <div class="question-item">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold text-primary" data-question-label></span>
+            <div>
+                <span data-paper-tags-container></span>
+                <span class="difficulty-badge" data-difficulty-badge></span>
+            </div>
+        </div>
+        <div class="render-content-target"></div>
+        <div class="text-muted small mt-2" data-chapter-name></div>
+        <div class="mt-3">
+            <button class="btn btn-sm btn-light border text-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-collapse-button>
+                <span class="fw-bold">Xem đáp án & giải thích</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="collapse mt-2" data-collapse-target>
+                <div class="card card-body bg-light border-0 p-3">
+                    <div class="answers-container mb-3"></div>
+                    <div class="explanation-container mb-2 text-dark">
+                        <strong>Giải thích:</strong> <span class="explanation-content d-block mt-1"></span>
+                    </div>
+                    <div class="text-end border-top pt-3 mt-2 swap-button-container d-none">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm" data-btn-swap>
+                            <i class="fas fa-exchange-alt me-1"></i> Đổi câu hỏi này
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="paperQuestionTemplate">
+    <div class="question-item">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold" data-question-label></span>
+            <div class="d-flex align-items-center">
+                <span class="difficulty-badge me-2" data-difficulty-badge></span>
+            </div>
+        </div>
+        <div class="render-content-target"></div>
+        <div class="mt-3">
+            <button class="btn btn-sm btn-light border text-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-collapse-button>
+                <span class="fw-bold">Xem đáp án & giải thích</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="collapse mt-2" data-collapse-target>
+                <div class="card card-body bg-light border-0 p-3">
+                    <div class="answers-container mb-3"></div>
+                    <div class="explanation-container mb-2 text-dark">
+                        <strong>Giải thích:</strong> <span class="explanation-content d-block mt-1"></span>
+                    </div>
+                    <div class="text-end border-top pt-3 mt-2 swap-button-container d-none">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm" data-btn-swap>
+                            <i class="fas fa-exchange-alt me-1"></i> Đổi câu hỏi này
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="answerRowTemplate">
+    <div class="p-2 mb-2 border rounded">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-baseline answer-row">
+                <span class="fw-bold me-2" data-answer-label></span>
+                <div class="latex-content render-target mb-0"></div>
+            </div>
+            <i class="fas fa-check-circle text-success ms-2 d-none" data-correct-icon></i>
+        </div>
+    </div>
+</template>
+
+<template id="alternativeItemTemplate">
+    <div class="alternative-item">
+        <div class="d-flex justify-content-between small text-muted mb-1">
+            <span data-item-info></span>
+            <span class="difficulty-badge" data-difficulty-badge></span>
+        </div>
+        <div class="render-content-target-alt" style="font-size:0.95rem"></div>
+    </div>
+</template>
+
+<template id="matrixEmptyTemplate">
+    <tr><td colspan="6" class="text-center py-3 text-muted">Đề thi không sử dụng ma trận blueprint.</td></tr>
+</template>
+
+<template id="emptyOverviewQuestionsTemplate">
+    <div class="text-center py-5 text-muted">Không có câu hỏi nào.</div>
+</template>
+
+<template id="paperTagTemplate">
+    <span class="paper-tag"></span>
+</template>
+
+<template id="questionContentJsonTemplate">
+    <div>
+        <div class="mb-2 stem-container latex-content"></div>
+        <div class="frame-container latex-content"></div>
+    </div>
+</template>
+
+<template id="questionContentFallbackJsonTemplate">
+    <div class="latex-content">
+        <span class="stem-content"></span><br/>
+        <span class="frame-content"></span>
+    </div>
+</template>
+
+<template id="questionContentStandardTemplate">
+    <div class="latex-content"></div>
+</template>
+
+<template id="questionContentErrorTemplate">
+    <div class="latex-content text-danger"></div>
+</template>
+
+<template id="emptyAnswersTemplate">
+    <em class="text-muted">Không có đáp án (hoặc câu hỏi tự luận)</em>
+</template>
+
+<template id="alternativesLoadingTemplate">
+    <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Đang tìm câu hỏi thay thế...</div>
+</template>
+
+<template id="alternativesErrorTemplate">
+    <div class="alert alert-danger"></div>
+</template>
+
+<template id="alternativesEmptyTemplate">
+    <div class="text-center py-4 text-muted">Không tìm thấy câu hỏi phù hợp.</div>
+</template>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script src="~/js/Shared/fib_katex_renderer.js" asp-append-version="true"></script>
+    <script src="~/js/Question/question_utils.js" asp-append-version="true"></script>
+    <script src="~/js/Exam/exam_review.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Force full width for the review wrapper by bypassing Bootstrap container
+            const wrapper = document.querySelector('.review-wrapper');
+            if (wrapper) {
+                let parent = wrapper.parentElement;
+                while (parent && parent.tagName !== 'BODY') {
+                    if (parent.classList.contains('container')) {
+                        parent.classList.remove('container');
+                        parent.classList.add('container-fluid');
+                        parent.style.padding = '0';
+                        parent.style.maxWidth = '100%';
+                    }
+                    if (parent.tagName === 'MAIN') {
+                        parent.style.padding = '0';
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+
+            if (@examId > 0) {
+                initReviewPage({
+                    examId: @examId,
+                    classId: @(classId ?? "null"),
+                    apiBase: "/api/assign-exam"
+                });
+            }
+        });
+    </script>
+}

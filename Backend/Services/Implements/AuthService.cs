@@ -1,339 +1,253 @@
+using Backend.Common;
+using Backend.Common.Errors;
+using Backend.Common.Models;
+using Backend.Common.Options;
+using Backend.Constants;
 using Backend.DTOs;
 using Backend.DTOs.Auth;
 using Backend.Models;
 using Backend.Repositories.Interfaces;
 using Backend.Services.Interfaces;
 using Google.Apis.Auth;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.Extensions.Caching.Memory;
-using Backend.Constants;
+using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
-namespace Backend.Services.Implements
+namespace Backend.Services.Implements;
+
+public class AuthService(
+    IAuthRepository authRepository,
+    IConfiguration configuration,
+    IEmailService emailService,
+    IOtpStore otpStore,
+    IJwtTokenService jwtTokenService,
+    IRefreshTokenStore refreshTokenStore,
+    IHttpContextAccessor httpContextAccessor,
+    IOptions<AuthCookieOptions> cookieOptions) : IAuthService
 {
-    public class AuthService : IAuthService
+    private readonly AuthCookieOptions _cookie = cookieOptions.Value;
+
+    public async Task<Result<LoginResponse>> LoginAsync(LoginRequest request)
     {
-        private readonly IAuthRepository _authRepository;
-        private readonly IConfiguration _configuration;
-        private readonly IEmailService _emailService;
-        private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
+        var user = await authRepository.GetUserByEmailAsync(request.Email!);
 
-        public AuthService(IAuthRepository authRepository, IConfiguration configuration, IEmailService emailService, Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+            return AuthErrors.InvalidCredentials;
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            return AuthErrors.InvalidCredentials;
+
+        if (user.Status == UserStatus.Locked)
+            return AuthErrors.AccountLocked;
+
+        return await BuildLoginResponseAsync(user, request.RememberMe);
+    }
+
+    public async Task<Result<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest request)
+    {
+        var payloadResult = await ValidateGoogleTokenAsync(request.IdToken!);
+        if (payloadResult.IsFailure)
+            return payloadResult.Error;
+
+        var userEmail = payloadResult.Value.Email;
+        var user = await authRepository.GetUserByEmailAsync(userEmail);
+
+        if (user == null)
+            return AuthErrors.InvalidCredentials;
+
+        if (user.Status == UserStatus.Locked)
+            return AuthErrors.AccountLocked;
+
+        return await BuildLoginResponseAsync(user, request.RememberMe);
+    }
+
+    public async Task<Result> RefreshTokenAsync()
+    {
+        var ctx = httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("RefreshTokenAsync requires HttpContext.");
+
+        var rawToken = ctx.Request.Cookies[AuthCookieDefaults.RefreshName];
+        if (string.IsNullOrEmpty(rawToken))
+            return AuthErrors.RefreshTokenNotFound;
+
+        var validation = await refreshTokenStore.ConsumeAsync(rawToken);
+        if (validation == null)
+            return AuthErrors.InvalidRefreshToken;
+
+        var user = await authRepository.GetUserByIdAsync(validation.UserId);
+        if (user == null)
+            return AuthErrors.UserNotFound;
+
+        var loginResult = await BuildLoginResponseAsync(user, validation.Persistent);
+        return loginResult.IsFailure ? loginResult.Error : Result.Success();
+    }
+
+    public async Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await authRepository.GetUserByEmailAsync(request.Email!);
+        if (user == null)
+            return Result.Success();
+
+        var otp = GenerateOtp();
+        await otpStore.SetResetOtpAsync(request.Email!, otp);
+
+        var html = BuildOtpEmail(
+            heading: "Đặt lại mật khẩu",
+            intro: "Mã OTP để đặt lại mật khẩu của bạn là:",
+            otp: otp,
+            extraNote: "Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.");
+
+        await emailService.SendEmailAsync(request.Email!, "Mã Xác Thực Đặt Lại Mật Khẩu - Math Test Creator", html);
+        return Result.Success();
+    }
+
+    public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var cachedOtp = await otpStore.GetResetOtpAsync(request.Email!);
+        if (string.IsNullOrEmpty(cachedOtp))
+            return AuthErrors.OtpExpired;
+
+        if (cachedOtp != request.OtpCode)
+            return AuthErrors.OtpInvalid;
+
+        await otpStore.RemoveResetOtpAsync(request.Email!);
+
+        var user = await authRepository.GetUserByEmailAsync(request.Email!);
+        if (user == null)
+            return AuthErrors.UserNotFound;
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await authRepository.UpdateUserAsync(user);
+
+        await refreshTokenStore.RevokeAllAsync(user.UserId);
+        ClearAuthCookies();
+
+        return Result.Success();
+    }
+
+    public async Task<Result> LogoutAsync(int userId, string jti)
+    {
+        await refreshTokenStore.RevokeAsync(userId, jti);
+        ClearAuthCookies();
+        return Result.Success();
+    }
+
+    public async Task<Result> ChangePasswordFirstLoginAsync(int userId, ChangePasswordFirstLoginRequest request)
+    {
+        var user = await authRepository.GetUserByIdAsync(userId);
+        if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+            return AuthErrors.UserNotFound;
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            return AuthErrors.CurrentPasswordWrong;
+
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            return AuthErrors.NewPasswordSameAsOld;
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
+        await authRepository.UpdateUserAsync(user);
+
+        await refreshTokenStore.RevokeAllAsync(user.UserId);
+        ClearAuthCookies();
+
+        return Result.Success();
+    }
+
+    private async Task<Result<LoginResponse>> BuildLoginResponseAsync(User user, bool rememberMe)
+    {
+        if (!RoleIds.IsValid(user.RoleId))
+            return AuthErrors.UnknownRole;
+
+        var ctx = httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("BuildLoginResponseAsync requires HttpContext.");
+
+        var authProvider = string.IsNullOrEmpty(user.PasswordHash) ? "google" : "password";
+        var (accessToken, jti, accessExpiresAt) = jwtTokenService.Issue(
+            user.UserId,
+            user.Email,
+            user.RoleId.ToString(),
+            authProvider,
+            user.MustChangePassword
+        );
+
+        var ip = GetClientIp(ctx);
+        var ua = ctx.Request.Headers.UserAgent.ToString();
+        var (refreshToken, refreshExpiresAt) = await refreshTokenStore.IssueAsync(user.UserId, jti, ip, ua, rememberMe);
+
+        DateTimeOffset? accessCookieExpires = rememberMe ? accessExpiresAt : null;
+        DateTimeOffset? refreshCookieExpires = rememberMe ? refreshExpiresAt : null;
+
+        CookieHelper.SetAccessCookie(ctx.Response, accessToken, accessCookieExpires, _cookie);
+        CookieHelper.SetRefreshCookie(ctx.Response, refreshToken, refreshCookieExpires, _cookie);
+
+        var roleName = user.Role?.Name ?? RoleIds.GetName(user.RoleId);
+
+        return new LoginResponse
         {
-            _authRepository = authRepository;
-            _configuration = configuration;
-            _emailService = emailService;
-            _cache = cache;
+            RoleName = roleName,
+            Email = user.Email
+        };
+    }
+
+    private void ClearAuthCookies()
+    {
+        var ctx = httpContextAccessor.HttpContext;
+        if (ctx == null) return;
+        CookieHelper.ClearAuthCookies(ctx.Response, _cookie);
+    }
+
+    private static string? GetClientIp(HttpContext ctx)
+    {
+        var cf = ctx.Request.Headers["CF-Connecting-IP"].ToString();
+        if (!string.IsNullOrEmpty(cf)) return cf;
+
+        var fwd = ctx.Request.Headers["X-Forwarded-For"].ToString();
+        if (!string.IsNullOrEmpty(fwd))
+        {
+            var first = fwd.Split(',')[0].Trim();
+            if (!string.IsNullOrEmpty(first)) return first;
         }
 
-        public async Task<LoginResponse> LoginAsync(LoginRequest request)
+        return ctx.Connection.RemoteIpAddress?.ToString();
+    }
+
+    private static string GenerateOtp() =>
+        RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+    private async Task<Result<GoogleJsonWebSignature.Payload>> ValidateGoogleTokenAsync(string idToken)
+    {
+        var clientId = configuration["Google:ClientId"];
+        var settings = new GoogleJsonWebSignature.ValidationSettings();
+        if (!string.IsNullOrEmpty(clientId) && clientId != "YOUR_GOOGLE_CLIENT_ID_HERE")
+            settings.Audience = new[] { clientId };
+
+        try
         {
-            var user = await _authRepository.GetUserByEmailAsync(request.Email);
+            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+            if (payload == null)
+                return AuthErrors.InvalidGoogleToken;
 
-            if (user == null)
-            {
-                System.Console.WriteLine($"[AUTH_DEBUG] User with email '{request.Email}' is NULL when queried from DB. Checking precise length: {request.Email.Length}");
-                throw new UnauthorizedAccessException(ErrorMessages.InvalidEmailOrPassword);
-            }
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            {
-                System.Console.WriteLine($"[AUTH_DEBUG] Verification failed for '{request.Email}'. PasswordHash in DB was: '{user.PasswordHash}', requested password length: {request.Password.Length}");
-                throw new UnauthorizedAccessException(ErrorMessages.InvalidEmailOrPassword);
-            }
-
-            var token = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshTokenAsJwt(user);
-
-            return new LoginResponse
-            {
-                Token = token,
-                RefreshToken = refreshToken,
-                RoleName = user.Role?.Name ?? "User",
-                Email = user.Email
-            };
+            return payload;
         }
-
-        public async Task<LoginResponse> GoogleLoginAsync(GoogleLoginRequest request)
+        catch (InvalidJwtException)
         {
-            var payload = await ValidateGoogleTokenAsync(request.IdToken);
-            var userEmail = payload.Email;
-
-            var user = await _authRepository.GetUserByEmailAsync(userEmail);
-
-            if (user == null)
-            {
-                return new LoginResponse
-                {
-                    NeedsRegistration = true,
-                    Email = userEmail
-                };
-            }
-
-            var token = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshTokenAsJwt(user);
-
-            return new LoginResponse
-            {
-                Token = token,
-                RefreshToken = refreshToken,
-                RoleName = user.Role?.Name ?? "User",
-                Email = user.Email
-            };
+            return AuthErrors.InvalidGoogleToken;
         }
+    }
 
-        public async Task<LoginResponse> GoogleRegisterAsync(GoogleRegisterRequest request)
-        {
-            var payload = await ValidateGoogleTokenAsync(request.IdToken);
-            var userEmail = payload.Email;
+    private static string BuildOtpEmail(string heading, string intro, string otp, string? extraNote = null)
+    {
+        var note = "Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.";
+        if (!string.IsNullOrEmpty(extraNote))
+            note += " " + extraNote;
 
-            var existingUser = await _authRepository.GetUserByEmailAsync(userEmail);
-            if (existingUser != null)
-            {
-                throw new InvalidOperationException(ErrorMessages.UserAlreadyExists);
-            }
-
-            var user = new User
-            {
-                PasswordHash = Guid.NewGuid().ToString(),
-                RoleId = request.RoleId,
-                Email = userEmail,
-                SecurityStamp = DateTime.UtcNow
-            };
-
-            await _authRepository.AddUserAsync(user);
-
-            var token = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshTokenAsJwt(user);
-
-            return new LoginResponse
-            {
-                Token = token,
-                RefreshToken = refreshToken,
-                RoleName = user.Role?.Name ?? "User",
-                Email = user.Email
-            };
-        }
-
-        public async Task SendOtpAsync(RegisterRequest request)
-        {
-            // 1. Check if email already exists
-            var existingUserByEmail = await _authRepository.GetUserByEmailAsync(request.Email);
-            if (existingUserByEmail != null && existingUserByEmail.Email == request.Email)
-                throw new InvalidOperationException(ErrorMessages.EmailAlreadyRegistered);
-
-            // 2. Generate 6-digit OTP
-            var otp = new Random().Next(100000, 999999).ToString();
-
-            // 3. Save Registration Info and OTP to Cache (expires in 10 minutes)
-            var cacheKey = $"OTP_{request.Email}";
-            var cacheData = new { Request = request, Otp = otp };
-            _cache.Set(cacheKey, cacheData, TimeSpan.FromMinutes(10));
-
-            // 4. Send Email
-            var htmlMessage = $@"
-                <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                    <h2>Xác thực Email đăng ký</h2>
-                    <p>Chào bạn,</p>
-                    <p>Mã OTP để hoàn tất đăng ký tài khoản của bạn là:</p>
-                    <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{otp}</h1>
-                    <p>Mã này chỉ được sử dụng một lần và sẽ hết hạn sau 10 phút.</p>
-                </div>";
-
-            await _emailService.SendEmailAsync(request.Email, "Mã Xác Thực OTP - Math Test Creator", htmlMessage);
-        }
-
-        public async Task<LoginResponse> VerifyOtpAndRegisterAsync(VerifyOtpRequest request)
-        {
-            var cacheKey = $"OTP_{request.Email}";
-
-            if (!_cache.TryGetValue(cacheKey, out dynamic? cacheData) || cacheData == null)
-            {
-                throw new UnauthorizedAccessException(ErrorMessages.OtpExpiredOrNotExists);
-            }
-
-            if (cacheData.Otp != request.OtpCode)
-            {
-                throw new UnauthorizedAccessException(ErrorMessages.InvalidOtp);
-            }
-
-            // ONE-TIME USE: Remove OTP from cache IMMEDIATELY upon verification
-            _cache.Remove(cacheKey);
-
-            // OTP valid, proceed to register
-            RegisterRequest regRequest = cacheData.Request;
-
-            var existingUser = await _authRepository.GetUserByEmailAsync(regRequest.Email);
-            if (existingUser != null)
-            {
-                _cache.Remove(cacheKey); // Cleanup
-                throw new InvalidOperationException(ErrorMessages.UserAlreadyExists);
-            }
-
-            var user = new User
-            {
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(regRequest.Password),
-                RoleId = regRequest.RoleId,
-                Email = regRequest.Email,
-                SecurityStamp = DateTime.UtcNow
-            };
-
-            await _authRepository.AddUserAsync(user);
-
-            var token = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshTokenAsJwt(user);
-
-            return new LoginResponse
-            {
-                Token = token,
-                RefreshToken = refreshToken,
-                RoleName = user.Role?.Name ?? "User",
-                Email = user.Email
-            };
-        }
-
-        public async Task<TokenModel> RefreshTokenAsync(TokenModel request)
-        {
-            if (request == null || string.IsNullOrEmpty(request.RefreshToken))
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            // Parse existing Refresh Token
-            var principal = CreatePrincipalFromExpiredToken(request.RefreshToken, isRefreshToken: true);
-            if (principal == null)
-            {
-                throw new UnauthorizedAccessException("Invalid refresh token.");
-            }
-
-            // Get Email and SecurityStamp from token claims
-            string userEmail = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
-            string tokenSecurityStamp = principal.Claims.FirstOrDefault(c => c.Type == "AspNet.Identity.SecurityStamp")?.Value ?? "";
-
-            var user = await _authRepository.GetUserByEmailAsync(userEmail);
-
-            // Validate User & check if SecurityStamp hasn't been changed
-            if (user == null || user.SecurityStamp.ToString("o") != tokenSecurityStamp)
-            {
-                // SecurityStamp mismatch means the token was invalidated (e.g. by password change)
-                throw new UnauthorizedAccessException("Refresh token is invalid or has been revoked.");
-            }
-
-            // Issue new tokens
-            var newAccessToken = GenerateJwtToken(user);
-            var newRefreshToken = GenerateRefreshTokenAsJwt(user);
-
-            return new TokenModel
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            };
-        }
-
-        private ClaimsPrincipal? CreatePrincipalFromExpiredToken(string? token, bool isRefreshToken = false)
-        {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
-            var audience = isRefreshToken ? _configuration["Jwt:Audience"] + "_Refresh" : _configuration["Jwt:Audience"];
-
-            var tokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateAudience = true,
-                ValidAudience = audience,
-                ValidateIssuer = true,
-                ValidIssuer = _configuration["Jwt:Issuer"],
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = key,
-                ValidateLifetime = isRefreshToken // Validate expiry ONLY for refresh tokens
-            };
-
-            try 
-            {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
-                if (securityToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-                    throw new SecurityTokenException("Invalid token signature.");
-
-                return principal;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private string GenerateRefreshTokenAsJwt(User user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim("AspNet.Identity.SecurityStamp", user.SecurityStamp.ToString("o")) // Embed SecurityStamp
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            
-            // Refresh Token lives much longer, e.g., 7 days
-            var expires = DateTime.UtcNow.AddDays(7); 
-            var audience = _configuration["Jwt:Audience"] + "_Refresh"; // Distinguish visually from access tokens
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: audience, 
-                claims: claims,
-                expires: expires,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken)
-        {
-            var clientId = _configuration["Google:ClientId"];
-            var settings = new GoogleJsonWebSignature.ValidationSettings();
-            if (!string.IsNullOrEmpty(clientId) && clientId != "YOUR_GOOGLE_CLIENT_ID_HERE")
-            {
-                settings.Audience = new[] { clientId };
-            }
-
-            try
-            {
-                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
-                if (payload == null)
-                    throw new UnauthorizedAccessException(ErrorMessages.InvalidGoogleToken);
-
-                return payload;
-            }
-            catch (InvalidJwtException)
-            {
-                throw new UnauthorizedAccessException(ErrorMessages.InvalidGoogleTokenSignature);
-            }
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role?.Name ?? "User")
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? ""));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.UtcNow.AddMinutes(15); // Adjust access token lifetime appropriately, usually shorter when using Refresh Tokens. 
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: expires,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+        return $@"
+            <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                <h2>{heading}</h2>
+                <p>Chào bạn,</p>
+                <p>{intro}</p>
+                <h1 style='color: #2b6cb0; letter-spacing: 5px;'>{otp}</h1>
+                <p>{note}</p>
+            </div>";
     }
 }

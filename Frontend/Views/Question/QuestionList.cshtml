@@ -1,0 +1,272 @@
+@{
+	ViewData["Title"] = "Danh sách câu hỏi";
+}
+
+@section Styles {
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="/css/Question/question_list.css">
+	<link rel="stylesheet" href="/css/fib_katex.css" asp-append-version="true">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+	<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+	<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+}
+
+<div class="container-fluid px-4 py-4 question-list-page">
+	<div class="mb-3">
+		<h4 class="mb-1 fw-normal text-dark">Ngân Hàng Câu Hỏi</h4>
+	</div>
+
+	<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+		<div class="d-flex align-items-center gap-3">
+			<span class="fw-medium" id="selectedCountText">Đã chọn 0 câu hỏi</span>
+			<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" id="bulkArchiveBtn" type="button">
+				<i class="bi bi-archive me-1"></i> Lưu trữ hàng loạt
+			</button>
+		</div>
+		<div class="d-flex gap-2">
+			<div class="dropdown">
+				<button class="btn btn-outline-custom border text-secondary fw-medium btn-sm py-2 px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="filterDropdownBtn">
+					<i class="bi bi-filter"></i> Bộ lọc
+				</button>
+				<div class="dropdown-menu dropdown-menu-end p-4 filter-dropdown" style="width: 380px; border-radius: 0.75rem;">
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<h6 class="mb-0 fw-bold fs-6">Bộ lọc tìm kiếm</h6>
+						<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="dropdown" aria-label="Close"></button>
+					</div>
+					<div class="mb-3">
+						<label class="form-label text-secondary small fw-medium">Nội dung câu hỏi</label>
+						<div class="input-group input-group-sm input-group-search">
+							<span class="input-group-text bg-white text-secondary border-end-0"><i class="bi bi-search"></i></span>
+							<input type="text" class="form-control border-start-0 ps-0 shadow-none" id="filterKeyword" placeholder="Nhập từ khóa...">
+						</div>
+					</div>
+					<div class="row g-2 mb-3">
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Môn học</label>
+							<select class="form-select form-select-sm shadow-none" id="filterSubject">
+								<option value="">Tất cả</option>
+							</select>
+						</div>
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Chương</label>
+							<select class="form-select form-select-sm shadow-none" id="filterChapter">
+								<option value="">Tất cả</option>
+							</select>
+						</div>
+					</div>
+					<div class="row g-2 mb-3">
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Loại</label>
+							<select class="form-select form-select-sm shadow-none" id="filterQuestionType">
+								<option value="">Tất cả</option>
+								<option value="MultipleChoice">Trắc nghiệm</option>
+								<option value="FillInBlank">Điền ô trống</option>
+							</select>
+						</div>
+						<div class="col-6">
+							<label class="form-label text-secondary small fw-medium">Mức độ</label>
+							<select class="form-select form-select-sm shadow-none" id="filterDifficulty">
+								<option value="">Tất cả</option>
+								<option value="1">Nhận biết</option>
+								<option value="2">Thông hiểu</option>
+								<option value="3">Vận dụng</option>
+								<option value="4">Vận dụng cao</option>
+							</select>
+						</div>
+					</div>
+					<div class="mb-4">
+						<label class="form-label text-secondary small fw-medium">Trạng thái</label>
+						<select class="form-select form-select-sm shadow-none" id="filterStatus">
+							<option value="">Tất cả</option>
+							<option value="Draft">Bản nháp</option>
+							<option value="Active">Đã duyệt</option>
+							<option value="Archived">Đã lưu trữ</option>
+						</select>
+					</div>
+					<div class="mb-4">
+						<label class="form-label text-secondary small fw-medium">Mục đích</label>
+						<select class="form-select form-select-sm shadow-none" id="filterPurpose">
+							<option value="">Tất cả</option>
+							<option value="1">Kiểm tra</option>
+							<option value="2">Luyện tập</option>
+						</select>
+					</div>
+					<div class="d-flex justify-content-end gap-2 border-top pt-3">
+						<button type="button" class="btn btn-light btn-sm px-3 fw-medium" id="clearFilterBtn">Xóa lọc</button>
+						<button type="button" class="btn btn-primary btn-sm px-4 fw-medium" id="applyFilterBtn">Áp dụng</button>
+					</div>
+				</div>
+			</div>
+			<a class="btn btn-primary fw-medium btn-sm py-2 px-3" href="/Question/Create">
+				<i class="bi bi-plus-lg"></i> Thêm câu hỏi
+			</a>
+		</div>
+	</div>
+
+	<div class="bg-white border rounded-3 question-table-wrapper">
+		<div class="table-responsive">
+		<table class="table table-hover mb-0 question-table">
+			<thead class="table-light text-dark fw-bold border-bottom">
+				<tr>
+					<th style="width: 40px;"><input class="form-check-input" type="checkbox" id="questionMasterCheckbox" aria-label="Chọn tất cả"></th>
+					<th style="width: 90px;">ID</th>
+					<th style="width: 150px;">Môn học</th>
+					<th style="width: 110px;">Chương</th>
+					<th style="width: 35%;">Nội dung</th>
+					<th style="width: 140px;">Loại</th>
+					<th style="width: 130px;">Mức độ</th>
+					<th style="width: 130px;">Trạng thái</th>
+					<th style="width: 110px;">Mục đích</th>
+					<th style="width: 60px;" class="text-center">Hành động</th>
+				</tr>
+			</thead>
+			<tbody id="questionTableBody">
+				<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+			</tbody>
+		</table>
+		</div>
+	</div>
+
+	<div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
+		<span class="text-secondary" style="font-size: 0.95rem;" id="paginationSummary"></span>
+		<nav>
+			<ul class="pagination mb-0" id="paginationContainer"></ul>
+		</nav>
+	</div>
+</div>
+
+<!-- Row template (hidden) -->
+<template id="questionRowTemplate">
+	<tr class="question-row" data-question-id>
+		<td><input class="form-check-input question-item-checkbox" type="checkbox" aria-label="Chọn câu hỏi"></td>
+		<td data-field-id></td>
+		<td data-field-subject></td>
+		<td data-field-chapter></td>
+		<td><span class="content-preview" data-field-content></span></td>
+		<td data-field-type></td>
+		<td><span class="badge" data-field-difficulty></span></td>
+		<td><span class="badge" data-field-status></span></td>
+		<td><span class="badge" data-field-purpose></span></td>
+		<td class="text-center">
+			<button class="btn btn-link text-dark p-0 expand-btn" type="button" aria-label="Mở rộng"><i class="bi bi-chevron-down"></i></button>
+		</td>
+	</tr>
+</template>
+<template id="questionDetailRowTemplate">
+	<tr class="table-light question-detail-row" data-question-id>
+		<td colspan="10" class="border-top-0 pt-0 pb-4 px-0 detail-cell">
+			<div class="question-detail-content px-4">
+				<div class="mb-3 detail-row">
+					<span class="fw-bold me-2 text-nowrap detail-label">Đề bài:</span>
+					<span class="detail-stem"></span>
+				</div>
+				<div class="mb-3 detail-row">
+					<span class="fw-bold me-2 text-nowrap detail-label">Đáp án:</span>
+					<div class="detail-answers" style="max-width: 450px;"></div>
+				</div>
+				<div class="mb-4 detail-row detail-explanation-wrap">
+					<span class="fw-bold me-2 text-nowrap detail-label">Giải thích:</span>
+					<span class="detail-explanation"></span>
+				</div>
+				<div class="d-flex justify-content-end gap-4 border-top pt-3 border-secondary-subtle">
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-edit" type="button"><i class="bi bi-pencil"></i> Sửa</button>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-delete text-danger" type="button"><i class="bi bi-trash"></i> Xóa</button>
+					<button class="btn btn-link text-secondary text-decoration-none fw-medium p-0 d-flex align-items-center gap-1 btn-action-text btn-archive text-warning" type="button"><i class="bi bi-archive"></i> Lưu trữ</button>
+				</div>
+			</div>
+		</td>
+	</tr>
+</template>
+<template id="tableLoadingTemplate">
+	<tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+</template>
+<template id="tableEmptyTemplate">
+	<tr><td colspan="10" class="text-center text-muted py-4">Không tìm thấy câu hỏi nào.</td></tr>
+</template>
+<template id="tableErrorTemplate">
+	<tr><td colspan="10" class="text-center text-danger py-4">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>
+</template>
+<template id="paginationButtonTemplate">
+	<li class="page-item"><button class="page-link" type="button"></button></li>
+</template>
+<template id="paginationPrevTemplate">
+	<li class="page-item"><button class="page-link" type="button">«</button></li>
+</template>
+<template id="paginationNextTemplate">
+	<li class="page-item"><button class="page-link" type="button">»</button></li>
+</template>
+<template id="paginationEllipsisTemplate">
+	<li class="page-item disabled"><span class="page-link">…</span></li>
+</template>
+
+<!-- Archive Confirmation Modal -->
+<div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content border-0 shadow-lg">
+			<div class="modal-header bg-warning text-dark border-0">
+				<h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">Xác nhận lưu trữ</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-4">
+				<div class="d-flex align-items-center mb-3">
+					<div class="text-warning me-3">
+						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+					</div>
+					<div>
+						<h6 class="mb-1 text-dark fw-bold">Cảnh báo quan trọng!</h6>
+						<p class="mb-0 text-muted small">Bạn đang thực hiện lưu trữ câu hỏi.</p>
+					</div>
+				</div>
+				<div class="alert alert-warning border-0 mb-0 small">
+					<ul class="mb-0 ps-3">
+						<li>Các câu hỏi khi sang trạng thái <strong>Lưu trữ</strong> sẽ <strong>không sửa được nữa</strong>.</li>
+						<li>Không thể sử dụng để <strong>giao đề thi</strong> nữa.</li>
+					</ul>
+				</div>
+			</div>
+			<div class="modal-footer border-0 p-3">
+				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+				<button type="button" class="btn btn-warning px-4 fw-bold text-dark" id="confirmArchiveBtn">Đồng ý lưu trữ</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content border-0 shadow-lg">
+			<div class="modal-header bg-danger text-white border-0">
+				<h5 class="modal-title fw-bold" id="deleteConfirmModalLabel">Xác nhận xóa câu hỏi</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body p-4">
+				<div class="d-flex align-items-center mb-3">
+					<div class="text-danger me-3">
+						<i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+					</div>
+					<div>
+						<h6 class="mb-1 text-dark fw-bold">Cảnh báo xóa vĩnh viễn!</h6>
+						<p class="mb-0 text-muted small">Hành động này không thể hoàn tác.</p>
+					</div>
+				</div>
+				<div class="alert alert-danger border-0 mb-0 small">
+					Bạn có chắc chắn muốn xóa vĩnh viễn câu hỏi này không? (Chỉ câu hỏi ở trạng thái Bản nháp hoặc Đã duyệt mới có thể xóa)
+				</div>
+			</div>
+			<div class="modal-footer border-0 p-3">
+				<button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+				<button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">Xóa vĩnh viễn</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+	<script>
+		setBreadcrumb([{ text: "Ngân hàng câu hỏi", url: null }]);
+	</script>
+	<script src="/js/Shared/fib_katex_renderer.js" asp-append-version="true"></script>
+	<script src="/js/Question/question_utils.js" asp-append-version="true"></script>
+	<script src="/js/Question/question_list.js"></script>
+}
